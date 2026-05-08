@@ -14,4 +14,4 @@ export const deepseek = createOpenAI({
   apiKey: process.env.OPENROUTER_API_KEY!,
 });
 
-export const DEEPSEEK_MODEL = 'minimax/minimax-m2.7';
+export const DEEPSEEK_MODEL = 'deepseek/deepseek-chat';
