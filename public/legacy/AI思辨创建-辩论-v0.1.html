@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>辩论智能体创建 · v0.1 Demo</title>
+<script src="prototype-tokens.js"></script>
+<style>
+  /* ============ 页面专属（共享部分见 prototype-tokens.css）============ */
+  .container {
+    max-width: var(--container-form);
+    margin: 0 auto;
+    padding: 24px 32px 80px;
+  }
+
+  /* ============ 步骤指示器 ============ */
+  .stepper {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: 24px 40px;
+  }
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    user-select: none;
+  }
+  .step-num {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--color-border);
+    color: var(--color-text-4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: var(--font-md);
+    font-weight: 600;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+  }
+  .step.active .step-num {
+    background: var(--color-primary);
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(54,143,255,0.15);
+  }
+  .step.done .step-num { background: var(--color-primary); color: #fff; }
+  .step-label { font-size: var(--font-sm); color: var(--color-text-4); transition: color 0.2s; }
+  .step.active .step-label, .step.done .step-label {
+    color: var(--color-primary);
+    font-weight: 500;
+  }
+  .step-line {
+    flex: 1;
+    height: 2px;
+    background: var(--color-border);
+    margin: 17px 12px 0;
+    transition: background 0.2s;
+  }
+  .step-line.done { background: var(--color-primary); }
+
+  /* ============ Step Panel ============ */
+  .step-panel {
+    display: none;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: 32px 36px;
+  }
+  .step-panel.active { display: block; }
+  .panel-title { font-size: var(--font-2xl); font-weight: 600; margin-bottom: 6px; }
+  .panel-desc {
+    font-size: var(--font-base);
+    color: var(--color-text-4);
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--color-border-soft);
+  }
+
+  /* ============ AI 生成 ============ */
+  .ai-generate-panel {
+    background: linear-gradient(135deg, var(--color-primary-soft), var(--color-primary-bg));
+    border: 1.5px dashed var(--color-primary);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    margin-bottom: 24px;
+  }
+  .ai-generate-title {
+    font-size: var(--font-md);
+    font-weight: 600;
+    color: var(--color-primary);
+    margin-bottom: 4px;
+  }
+  .ai-generate-desc { font-size: var(--font-sm); color: var(--color-text-4); margin-bottom: 12px; }
+  .ai-input-row { display: flex; gap: 8px; align-items: center; }
+  .ai-input-row input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--color-primary-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-base);
+    outline: none;
+    background: var(--color-bg-card);
+    font-family: inherit;
+  }
+  .ai-input-row input:focus { border-color: var(--color-primary); }
+  .ai-generate-btn {
+    padding: 10px 18px;
+    background: var(--color-primary);
+    color: #fff;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-base);
+    font-weight: 500;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .ai-generate-btn:hover { background: var(--color-primary-dark); box-shadow: 0 4px 12px var(--color-primary-shadow); }
+  .ai-generate-btn:disabled { background: #a0a8b8; cursor: not-allowed; box-shadow: none; }
+  .ai-examples { margin-top: 8px; font-size: var(--font-xs); color: var(--color-text-5); line-height: 1.6; }
+  .ai-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0 20px;
+    color: var(--color-text-6);
+    font-size: var(--font-sm);
+  }
+  .ai-divider::before, .ai-divider::after {
+    content: ""; flex: 1; height: 1px; background: var(--color-border);
+  }
+  @keyframes flashFill {
+    0%, 100% { background: var(--color-bg-card); }
+    50% { background: #fff5d6; }
+  }
+  .field-flash { animation: flashFill 1.4s ease-in-out 2; }
+
+  /* ============ 正反方角色 ============ */
+  .role-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 16px;
+    align-items: stretch;
+  }
+  .role-block {
+    background: var(--color-bg-mute);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+  }
+  .role-name {
+    display: block;
+    font-size: var(--font-base);
+    font-weight: 600;
+    color: var(--color-primary);
+    margin-bottom: 10px;
+  }
+  .role-block.con .role-name { color: var(--color-debate); }
+  .radio-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-right: 14px;
+    font-size: var(--font-base);
+    cursor: pointer;
+  }
+  .radio-inline input { cursor: pointer; }
+  .role-vs {
+    align-self: center;
+    font-size: var(--font-xl);
+    font-weight: 700;
+    color: var(--color-text-5);
+  }
+  /* ---- 角色形象 ---- */
+  .role-identity { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--color-border-soft); }
+  .role-avatar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .role-avatar-preview {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--color-primary-bg); color: var(--color-primary);
+    border: 2px solid var(--color-primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; flex-shrink: 0;
+  }
+  .role-block.con .role-avatar-preview { background: var(--color-debate-bg); color: var(--color-debate); border-color: var(--color-debate); }
+  .role-mini-grid { display: flex; gap: 4px; flex-wrap: wrap; }
+  .role-avatar-item {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--color-bg-card); border: 1.5px solid var(--color-border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.12s;
+  }
+  .role-avatar-item:hover { border-color: var(--color-primary); }
+  .role-avatar-item.active { background: var(--color-primary-bg); color: var(--color-primary); border-color: var(--color-primary); }
+  .role-block.con .role-avatar-item.active { background: var(--color-debate-bg); color: var(--color-debate); border-color: var(--color-debate); }
+  .role-name-label { font-size: 11px; color: var(--color-text-5); display: block; margin-bottom: 3px; }
+  .role-name-field { width: 100%; padding: 5px 8px; border: 1px solid var(--color-border); border-radius: var(--radius-xs); font-size: 13px; box-sizing: border-box; }
+  .role-name-field:focus { outline: none; border-color: var(--color-primary); }
+  /* ====== 模板来源 chip ====== */
+  .template-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--color-debate-bg); border: 1px solid #e8a0a0;
+    color: var(--color-debate); border-radius: var(--radius-pill);
+    padding: 5px 14px; font-size: var(--font-sm); font-weight: 500;
+    margin-bottom: 16px;
+  }
+  .template-chip a { color: var(--color-debate); text-decoration: underline; cursor: pointer; font-weight: 400; }
+
+  /* ============ 模板行 ============ */
+  .template-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .template-row select { flex: 1; }
+
+  /* ============ 资源库 ============ */
+  .resource-filter-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .resource-result-hint { font-size: var(--font-sm); color: var(--color-text-4); margin-bottom: 10px; }
+  .resource-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .resource-card {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+  }
+  .resource-card:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  }
+  .resource-thumb {
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(0,0,0,0.4);
+    font-size: 28px;
+    position: relative;
+    background: linear-gradient(135deg, var(--color-bg), var(--color-border));
+  }
+  .resource-card[data-type="video"] .resource-thumb { background: linear-gradient(135deg, var(--color-debate-bg), #ffcccc); color: var(--color-debate); }
+  .resource-card[data-type="pdf"] .resource-thumb { background: linear-gradient(135deg, var(--color-prep-bg), #ffe0b8); color: var(--color-prep); }
+  .resource-card[data-type="image"] .resource-thumb { background: linear-gradient(135deg, var(--color-primary-bg), #c8e8e6); color: var(--color-primary); }
+  .resource-card[data-type="audio"] .resource-thumb { background: linear-gradient(135deg, var(--color-discussion-bg), #ccd9ff); color: var(--color-discussion); }
+  .resource-type-tag {
+    position: absolute;
+    top: 6px; left: 6px;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 3px;
+  }
+  .resource-thumb-icon { font-size: 22px; }
+  .resource-info {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+  .resource-title {
+    font-size: var(--font-base);
+    font-weight: 600;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .resource-meta { font-size: var(--font-xs); color: var(--color-text-4); margin-bottom: 10px; }
+  .resource-add-btn {
+    margin-top: auto;
+    width: 100%;
+    padding: 6px 0;
+    background: var(--color-bg);
+    color: var(--color-primary);
+    border: 1px solid transparent;
+    border-radius: var(--radius-xs);
+    font-size: var(--font-sm);
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .resource-add-btn:hover {
+    background: var(--color-primary);
+    color: #fff;
+  }
+  .resource-add-btn.added {
+    background: var(--color-primary-bg);
+    color: var(--color-primary);
+    border-color: var(--color-primary-border);
+  }
+  .resource-add-btn.added:hover {
+    background: var(--color-debate-bg);
+    color: var(--color-debate);
+    border-color: #f0d0d0;
+  }
+  .empty-resource {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--color-text-5);
+    font-size: var(--font-base);
+    background: var(--color-bg-soft);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+  }
+
+  /* ============ 已添加 ============ */
+  .added-section {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px dashed var(--color-border);
+  }
+  .added-label {
+    display: block;
+    font-size: var(--font-base);
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #444;
+  }
+  .file-count { color: var(--color-text-4); font-weight: normal; font-size: var(--font-sm); }
+  .added-list { display: flex; flex-direction: column; gap: 6px; }
+  .added-empty { padding: 24px 20px; margin: 0; font-size: var(--font-sm); }
+  .added-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 14px;
+    background: var(--color-bg-mute);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+  }
+  .added-type-badge {
+    width: 38px;
+    font-size: 10px;
+    padding: 2px 6px;
+    text-align: center;
+    border-radius: var(--radius-xs);
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .added-type-badge.video { background: var(--color-debate); }
+  .added-type-badge.pdf { background: var(--color-prep); }
+  .added-type-badge.image { background: var(--color-primary); }
+  .added-type-badge.audio { background: var(--color-discussion); }
+  .added-name {
+    font-size: var(--font-base);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .added-remove {
+    font-size: var(--font-sm);
+    color: var(--color-debate);
+    padding: 4px 10px;
+    border-radius: var(--radius-xs);
+    transition: background 0.15s;
+  }
+  .added-remove:hover { background: var(--color-debate-bg); }
+</style>
+<link rel="stylesheet" href="prototype-capture.css">
+</head>
+<body>
+
+<div class="meta-bar">
+  <span><strong>辩论智能体创建 v0.1 Demo</strong> · 3 步向导：基本信息 / 辩论规则 / 辩论资料</span>
+  <span>评审用 · 仅 PC Web</span>
+</div>
+
+<header class="topbar">
+  <a class="back-link" href="/">← 智能体中心</a>
+  <span class="crumb-sep">/</span>
+  <span class="crumb">创作工坊</span>
+  <span class="crumb-sep">/</span>
+  <span class="page-title">辩论智能体创建</span>
+</header>
+
+<main class="container">
+
+  <div class="stepper">
+    <div class="step active" data-step="1"><div class="step-num">1</div><div class="step-label">基本信息</div></div>
+    <div class="step-line" data-line="1"></div>
+    <div class="step" data-step="2"><div class="step-num">2</div><div class="step-label">辩论规则</div></div>
+    <div class="step-line" data-line="2"></div>
+    <div class="step" data-step="3"><div class="step-num">3</div><div class="step-label">辩论资料</div></div>
+  </div>
+
+  <!-- Step 1 -->
+  <section class="step-panel active" id="panel-1">
+    <h2 class="panel-title">基本信息</h2>
+    <p class="panel-desc">给辩论起个名字，写清辩题，并选择适用年级和学科</p>
+
+    <div class="template-chip" id="templateChip" hidden>
+      ✓ 已选模板：<span id="templateChipName"></span>
+      &nbsp;·&nbsp;<a href="模板选择-v0.1.html">更换</a>
+    </div>
+
+    <div class="ai-generate-panel">
+      <div class="ai-generate-title">✨ AI 帮你快速生成</div>
+      <div class="ai-generate-desc">用一句话描述你想要的辩论，AI 会自动填好下方字段并匹配相关资料</div>
+      <div class="ai-input-row">
+        <input type="text" id="aiPrompt" placeholder='如："给五年级科学课做一个塑料禁令辩论"' />
+        <button class="ai-generate-btn" id="aiGenerateBtn">✨ AI 生成</button>
+      </div>
+      <div class="ai-examples">
+        示例：给四年级做关于手机进校园的辩论 · 围绕动物保护设置辩题 · 给初中做 AI 替代教师的辩论
+      </div>
+    </div>
+
+    <div class="ai-divider">或手动填写</div>
+
+    <div class="form-field">
+      <label>辩论名称 <span class="required">*</span></label>
+      <input type="text" id="debateName" value="塑料禁令辩论" placeholder="如：塑料禁令辩论" />
+      <div class="hint">用于在智能体广场和我的记录中识别这次辩论</div>
+    </div>
+
+    <div class="form-field">
+      <label>辩论主题（辩题）<span class="required">*</span></label>
+      <input type="text" id="debateTopic" value="一次性塑料袋是否应该禁止使用" placeholder='如："一次性塑料袋是否应该禁止使用"' />
+      <div class="hint">清晰具体的辩题，AI 会基于此生成正反方观点</div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-field">
+        <label>辩论年级</label>
+        <select id="debateGrade">
+          <option value="all">适用全年级</option>
+          <option value="g1-3">1-3 年级</option>
+          <option value="g4-6" selected>4-6 年级</option>
+          <option value="middle">初中</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>学科主题</label>
+        <select id="debateSubject">
+          <option value="science" selected>科学</option>
+          <option value="ai">人工智能</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="step-actions">
+      <div class="left"><button class="btn-ghost" data-action="cancel">取消</button></div>
+      <div class="right"><button class="btn-primary" data-step-next="2">下一步 →</button></div>
+    </div>
+  </section>
+
+  <!-- Step 2 -->
+  <section class="step-panel" id="panel-2">
+    <h2 class="panel-title">辩论规则</h2>
+    <p class="panel-desc">设置辩论流程和 AI 评委策略</p>
+
+    <div class="form-field">
+      <label>正反方角色</label>
+      <div class="role-row">
+        <div class="role-block pro">
+          <span class="role-name">正方</span>
+          <div class="role-identity">
+            <div class="role-avatar-row">
+              <div class="role-avatar-preview" id="proAvatarPreview">E</div>
+              <div class="role-mini-grid" id="proAvatarGrid">
+                <div class="role-avatar-item active" data-side="pro" data-avatar="E">E</div>
+                <div class="role-avatar-item" data-side="pro" data-avatar="AI">AI</div>
+                <div class="role-avatar-item" data-side="pro" data-avatar="N">N</div>
+                <div class="role-avatar-item" data-side="pro" data-avatar="环">环</div>
+                <div class="role-avatar-item" data-side="pro" data-avatar="甲">甲</div>
+              </div>
+            </div>
+            <span class="role-name-label">名称</span>
+            <input type="text" class="role-name-field" id="proRoleName" value="环保卫士" />
+          </div>
+          <label class="radio-inline"><input type="radio" name="proRole" value="ai" checked> AI</label>
+          <label class="radio-inline"><input type="radio" name="proRole" value="student"> 学生</label>
+        </div>
+        <div class="role-vs">VS</div>
+        <div class="role-block con">
+          <span class="role-name">反方</span>
+          <div class="role-identity">
+            <div class="role-avatar-row">
+              <div class="role-avatar-preview" id="conAvatarPreview">生</div>
+              <div class="role-mini-grid" id="conAvatarGrid">
+                <div class="role-avatar-item active" data-side="con" data-avatar="生">生</div>
+                <div class="role-avatar-item" data-side="con" data-avatar="同">同</div>
+                <div class="role-avatar-item" data-side="con" data-avatar="A">A</div>
+                <div class="role-avatar-item" data-side="con" data-avatar="乙">乙</div>
+                <div class="role-avatar-item" data-side="con" data-avatar="AI">AI</div>
+              </div>
+            </div>
+            <span class="role-name-label">名称</span>
+            <input type="text" class="role-name-field" id="conRoleName" value="同学代表" />
+          </div>
+          <label class="radio-inline"><input type="radio" name="conRole" value="ai"> AI</label>
+          <label class="radio-inline"><input type="radio" name="conRole" value="student" checked> 学生</label>
+        </div>
+      </div>
+      <div class="hint">推荐 AI vs 学生（最常见的教学场景）。"学生"即"真人参与"</div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-field">
+        <label>正方论点 <span class="required">*</span></label>
+        <textarea id="proArgument" rows="3" placeholder="用一两句话写明正方核心立场和主要论据，如：一次性塑料袋应该全面禁止 — 因为塑料污染对海洋生态破坏严重">一次性塑料袋应该全面禁止使用 — 塑料污染对海洋生态破坏严重，且现有可降解材料已经成熟，禁令带来的不便相对污染代价微不足道。</textarea>
+        <div class="hint">AI 角色按此论点自动发言；学生角色作为发言参考</div>
+      </div>
+      <div class="form-field">
+        <label>反方论点 <span class="required">*</span></label>
+        <textarea id="conArgument" rows="3" placeholder="用一两句话写明反方核心立场和主要论据">不应全面禁止 — 一次性塑料袋在医疗、食品安全等领域不可替代；强行禁令会增加经济负担，应优先推广可降解替代品和回收体系。</textarea>
+        <div class="hint">AI 角色按此论点自动发言；学生角色作为发言参考</div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-field">
+        <label>每轮倒计时</label>
+        <select id="timer">
+          <option value="60">60 秒</option>
+          <option value="120" selected>120 秒</option>
+          <option value="180">180 秒</option>
+          <option value="300">300 秒</option>
+        </select>
+        <div class="hint">每轮发言时间上限。倒计时归零时会浮出红色提示「本轮 [发言方] 时间到」，**系统自动切换到对方发言**或自动进入下一轮。老师可继续点评，或主动点【结束辩论·生成报告】。不会强制结束。</div>
+      </div>
+      <div class="form-field">
+        <label>辩论轮数</label>
+        <select id="rounds">
+          <option value="2">2 轮</option>
+          <option value="3" selected>3 轮</option>
+          <option value="4">4 轮</option>
+          <option value="5">5 轮</option>
+        </select>
+        <div class="hint">每方可发言的次数。最后一轮双方都发言完后，**控制条的【结束辩论 · 生成报告】会高亮闪烁**提示老师，点击即跳到 AI 评委评分报告页。</div>
+      </div>
+    </div>
+
+    <div class="form-field">
+      <label>辩论评委提示词</label>
+      <div class="template-row">
+        <span class="hint-inline">选择模板：</span>
+        <select id="judgeTemplate">
+          <option value="default" selected>默认评委</option>
+          <option value="strict">严格评委 · 重点评论证逻辑</option>
+          <option value="encouraging">鼓励评委 · 强调亮点与成长</option>
+          <option value="neutral">中性评委 · 客观陈述双方</option>
+        </select>
+      </div>
+      <textarea id="judgePrompt" rows="6">你是一位中立的辩论评委。请从论点清晰度、论据支撑、表达力、逻辑性四个维度对正反方进行点评，并给出综合评分（0-10 分）。鼓励学生独立思考，避免过度批评。</textarea>
+      <div class="hint">基于模板修改，或自由编写。AI 评委会按此提示词点评辩论。</div>
+    </div>
+
+    <div class="step-actions">
+      <div class="left"><button class="btn-secondary" data-step-prev="1">← 上一步</button></div>
+      <div class="right"><button class="btn-primary" data-step-next="3">下一步 →</button></div>
+    </div>
+  </section>
+
+  <!-- Step 3 -->
+  <section class="step-panel" id="panel-3">
+    <h2 class="panel-title">辩论资料</h2>
+    <p class="panel-desc">从外部资源库搜索浏览，把适合的资料添加到本次辩论</p>
+
+    <div class="form-field">
+      <label>搜索资源库</label>
+      <input type="text" id="resourceSearch" placeholder="输入关键词，如：塑料污染、环保政策" />
+    </div>
+
+    <div class="form-field">
+      <label>类别</label>
+      <div class="resource-filter-row">
+        <button class="filter-chip active" data-rtype="all">全部</button>
+        <button class="filter-chip" data-rtype="video">视频</button>
+        <button class="filter-chip" data-rtype="pdf">文档</button>
+        <button class="filter-chip" data-rtype="image">图片</button>
+        <button class="filter-chip" data-rtype="audio">音频</button>
+      </div>
+    </div>
+
+    <div class="resource-result-hint" id="resourceHint">浏览结果 10 项</div>
+
+    <div class="resource-grid" id="resourceGrid">
+      <article class="resource-card" data-rid="r1" data-type="video" data-name="塑料污染纪录片片段">
+        <div class="resource-thumb"><span class="resource-type-tag">视频</span><span class="resource-thumb-icon">▶</span></div>
+        <div class="resource-info"><div class="resource-title">塑料污染纪录片片段</div><div class="resource-meta">视频 · 5:32 · BBC</div><button class="resource-add-btn">+ 添加</button></div>
+      </article>
+      <article class="resource-card" data-rid="r2" data-type="pdf" data-name="塑料污染白皮书">
+        <div class="resource-thumb"><span class="resource-type-tag">PDF</span><span class="resource-thumb-icon">📄</span></div>
+        <div class="resource-info"><div class="resource-title">塑料污染白皮书</div><div class="resource-meta">PDF · 28 页 · 政府报告</div><button class="resource-add-btn">+ 添加</button></div>
+      </article>
+      <article class="resource-card" data-rid="r3" data-type="image" data-name="海洋塑料垃圾摄影集">
+        <div class="resource-thumb"><span class="resource-type-tag">图片</span><span class="resource-thumb-icon">🖼</span></div>
+        <div class="resource-info"><div class="resource-title">海洋塑料垃圾摄影集</div><div class="resource-meta">图集 · 10 张</div><button class="resource-add-btn">+ 添加</button></div>
+      </article>
+      <article class="resource-card" data-rid="r4" data-type="audio" data-name="环保专家访谈">
+        <div class="resource-thumb"><span class="resource-type-tag">音频</span><span class="resource-thumb-icon">🎙</span></div>
+        <div class="resource-info"><div class="resource-title">环保专家访谈</div><div class="resource-meta">音频 · 12:08</div><button class="resource-add-btn">+ 添加</button></div>
+      </article>
+      <article class="resource-card" data-rid="r5" data-type="video" data-name="塑料降解原理科普">
+        <div class="resource-thumb"><span class="resource-type-tag">视频</span><span class="resource-thumb-icon">▶</span></div>
+        <div class="resource-info"><div class="resource-title">塑料降解原理科普</div><div class="resource-meta">视频 · 3:15</div><button class="resource-add-btn">+ 添加</button></div>
+      </article>
+      <article class="resource-card" data-rid="r6" data-type="pdf" data-name="国际塑料禁令对比研究">
+        <div class="resource-thumb"><span class="resource-type-tag">PDF</span><span class="resource-thumb-icon">📄</span></div>
+        <div class="resource-info"><div class="resource-title">国际塑料禁令对比研究</div><div class="resource-meta">PDF · 16 页</div><button class="resource-add-btn">+ 添加</button></div>
+      </article>
+      <article class="resource-card" data-rid="r7" data-type="video" data-name="一次性塑料的生产过程">
+        <div class="resource-thumb"><span class="resource-type-tag">视频</span><span class="resource-thumb-icon">▶</span></div>
+        <div class="resource-info"><div class="resource-title">一次性塑料的生产过程</div><div class="resource-meta">视频 · 4:48</div><button class="resource-add-btn">+ 添加</button></div>
+      </article>
+      <article class="resource-card" data-rid="r8" data-type="image" data-name="可降解塑料对比图">
+        <div class="resource-thumb"><span class="resource-type-tag">图片</span><span class="resource-thumb-icon">🖼</span></div>
+        <div class="resource-info"><div class="resource-title">可降解塑料对比图</div><div class="resource-meta">图集 · 6 张</div><button class="resource-add-btn">+ 添加</button></div>
+      </article>
+      <article class="resource-card" data-rid="r9" data-type="pdf" data-name="中国塑料禁令政策文件">
+        <div class="resource-thumb"><span class="resource-type-tag">PDF</span><span class="resource-thumb-icon">📄</span></div>
+        <div class="resource-info"><div class="resource-title">中国塑料禁令政策文件</div><div class="resource-meta">PDF · 12 页</div><button class="resource-add-btn">+ 添加</button></div>
+      </article>
+      <article class="resource-card" data-rid="r10" data-type="audio" data-name="中学生环保辩论赛录音">
+        <div class="resource-thumb"><span class="resource-type-tag">音频</span><span class="resource-thumb-icon">🎙</span></div>
+        <div class="resource-info"><div class="resource-title">中学生环保辩论赛录音</div><div class="resource-meta">音频 · 8:22</div><button class="resource-add-btn">+ 添加</button></div>
+      </article>
+    </div>
+
+    <div class="empty-resource" id="emptyResource" style="display:none;">没有找到匹配的资源，换个关键词或类别试试</div>
+
+    <div class="added-section">
+      <label class="added-label">已添加 <span class="file-count" id="addedCount">0 个</span></label>
+      <div class="added-list" id="addedList">
+        <div class="empty-resource added-empty" id="addedEmpty">还没有添加任何资源 · 从上方搜索或浏览后添加</div>
+      </div>
+    </div>
+
+    <div class="step-actions">
+      <div class="left"><button class="btn-secondary" data-step-prev="2">← 上一步</button></div>
+      <div class="right">
+        <button class="btn-ghost" data-action="cancel">取消</button>
+        <button class="btn-secondary" data-action="save-only">保存到我的智能体</button>
+        <button class="btn-primary" data-action="save-and-start">立即辩论</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const toast = document.getElementById('toast');
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+
+  function goToStep(n) {
+    n = parseInt(n);
+    document.querySelectorAll('.step').forEach(s => {
+      const num = parseInt(s.dataset.step);
+      s.classList.toggle('active', num === n);
+      s.classList.toggle('done', num < n);
+    });
+    document.querySelectorAll('.step-line').forEach(l => l.classList.toggle('done', parseInt(l.dataset.line) < n));
+    document.querySelectorAll('.step-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + n));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.querySelectorAll('[data-step-next]').forEach(b => b.addEventListener('click', () => goToStep(b.dataset.stepNext)));
+  document.querySelectorAll('[data-step-prev]').forEach(b => b.addEventListener('click', () => goToStep(b.dataset.stepPrev)));
+  document.querySelectorAll('.step').forEach(s => s.addEventListener('click', () => goToStep(s.dataset.step)));
+
+  // ===== 角色形象选取 =====
+  document.querySelectorAll('.role-avatar-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const side = item.dataset.side;
+      document.querySelectorAll(`.role-avatar-item[data-side="${side}"]`).forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      const preview = document.getElementById(side + 'AvatarPreview');
+      if (preview) preview.textContent = item.dataset.avatar;
+    });
+  });
+
+  document.getElementById('aiGenerateBtn').addEventListener('click', () => {
+    const prompt = document.getElementById('aiPrompt').value.trim();
+    if (!prompt) { showToast('请先描述你想创建的辩论'); return; }
+    const btn = document.getElementById('aiGenerateBtn');
+    btn.disabled = true; btn.textContent = '生成中...';
+    setTimeout(() => {
+      let name, topic, grade = 'g4-6', subject = 'science';
+      let resourceMatch = [];
+
+      if (prompt.includes('塑料') || prompt.includes('环保')) {
+        name = '塑料禁令辩论'; topic = '一次性塑料袋是否应该禁止使用';
+        resourceMatch = ['塑料污染纪录片片段', '塑料污染白皮书', '中国塑料禁令政策文件'];
+      } else if (prompt.includes('手机')) {
+        name = '手机进校园辩论'; topic = '手机是否应该允许带进校园';
+      } else if (prompt.includes('动物')) {
+        name = '动物保护辩论'; topic = '动物园应当被保留还是被废除';
+      } else if (prompt.includes('AI') || prompt.includes('人工智能')) {
+        name = 'AI 教师辩论'; topic = 'AI 是否应该取代部分课堂教学'; subject = 'ai';
+      } else {
+        name = '新辩论';
+        topic = prompt.length > 30 ? prompt.slice(0, 30) + '...' : prompt;
+      }
+
+      if (prompt.match(/[一二三]年级|低年级/)) grade = 'g1-3';
+      else if (prompt.includes('初中')) grade = 'middle';
+
+      document.getElementById('debateName').value = name;
+      document.getElementById('debateTopic').value = topic;
+      document.getElementById('debateGrade').value = grade;
+      document.getElementById('debateSubject').value = subject;
+
+      ['debateName', 'debateTopic'].forEach(id => {
+        const el = document.getElementById(id);
+        el.classList.add('field-flash');
+        setTimeout(() => el.classList.remove('field-flash'), 2900);
+      });
+
+      let addedCount = 0;
+      document.querySelectorAll('.resource-card').forEach(card => {
+        if (resourceMatch.includes(card.dataset.name)) {
+          const addBtn = card.querySelector('.resource-add-btn');
+          if (addBtn && !addBtn.classList.contains('added')) {
+            addBtn.click();
+            addedCount++;
+          }
+        }
+      });
+
+      btn.disabled = false; btn.textContent = '✨ AI 生成';
+      const resMsg = addedCount > 0 ? ` + 自动添加 ${addedCount} 个资料` : '';
+      showToast(`AI 已生成基本信息${resMsg}，可在下方继续核对`);
+    }, 1000);
+  });
+
+  const judgeTemplates = {
+    default: '你是一位中立的辩论评委。请从论点清晰度、论据支撑、表达力、逻辑性四个维度对正反方进行点评，并给出综合评分（0-10 分）。鼓励学生独立思考，避免过度批评。',
+    strict: '你是一位严格的辩论评委。重点评估双方的论证逻辑严密性、论据可信度、反驳力度。指出每个明显的逻辑漏洞，并对论证不充分之处给出尖锐批评。最后给出综合评分（0-10 分）。',
+    encouraging: '你是一位鼓励型评委。重点表扬双方表现亮点：清晰的论点、有力的论据、出色的反驳。同时温和指出可改进之处，并对成长空间给出具体建议。最后给出综合评分（0-10 分）。',
+    neutral: '你是一位中性的辩论评委。客观陈述双方观点和论据，不偏袒任何一方。总结争议焦点和共识，最后给出综合评分（0-10 分），但不引导价值判断。'
+  };
+  document.getElementById('judgeTemplate').addEventListener('change', e => {
+    document.getElementById('judgePrompt').value = judgeTemplates[e.target.value];
+  });
+
+  // 资源库
+  let resourceFilter = 'all';
+  const addedIds = new Set();
+  const TYPE_LABEL = { video: '视频', pdf: 'PDF', image: '图片', audio: '音频' };
+
+  document.getElementById('resourceSearch').addEventListener('input', applyResourceFilter);
+  document.querySelectorAll('.filter-chip[data-rtype]').forEach(chip => {
+    chip.addEventListener('click', () => {
+      resourceFilter = chip.dataset.rtype;
+      document.querySelectorAll('.filter-chip[data-rtype]').forEach(c => c.classList.toggle('active', c === chip));
+      applyResourceFilter();
+    });
+  });
+
+  function applyResourceFilter() {
+    const keyword = document.getElementById('resourceSearch').value.trim().toLowerCase();
+    const cards = document.querySelectorAll('.resource-card');
+    let visible = 0;
+    cards.forEach(card => {
+      const type = card.dataset.type;
+      const name = (card.dataset.name || '').toLowerCase();
+      const typeMatch = resourceFilter === 'all' || type === resourceFilter;
+      const searchMatch = !keyword || name.includes(keyword);
+      const match = typeMatch && searchMatch;
+      card.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+    document.getElementById('resourceHint').textContent = `浏览结果 ${visible} 项`;
+    document.getElementById('emptyResource').style.display = visible === 0 ? 'block' : 'none';
+  }
+
+  document.querySelectorAll('.resource-add-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const card = btn.closest('.resource-card');
+      const id = card.dataset.rid; const name = card.dataset.name; const type = card.dataset.type;
+      if (addedIds.has(id)) {
+        addedIds.delete(id);
+        btn.textContent = '+ 添加'; btn.classList.remove('added');
+        removeFromAddedList(id);
+        showToast(`已取消：${name}`);
+      } else {
+        addedIds.add(id);
+        btn.textContent = '✓ 已添加'; btn.classList.add('added');
+        addToAddedList(id, name, type);
+        showToast(`已添加：${name}`);
+      }
+    });
+  });
+
+  function addToAddedList(id, name, type) {
+    const list = document.getElementById('addedList');
+    const empty = document.getElementById('addedEmpty');
+    if (empty) empty.remove();
+    const item = document.createElement('div');
+    item.className = 'added-item';
+    item.dataset.aid = id;
+    item.innerHTML = `
+      <span class="added-type-badge ${type}">${TYPE_LABEL[type]}</span>
+      <span class="added-name">${name}</span>
+      <button class="added-remove">移除</button>
+    `;
+    list.appendChild(item);
+    item.querySelector('.added-remove').addEventListener('click', () => {
+      addedIds.delete(id);
+      item.remove();
+      const card = document.querySelector(`.resource-card[data-rid="${id}"]`);
+      if (card) {
+        const btn = card.querySelector('.resource-add-btn');
+        btn.textContent = '+ 添加'; btn.classList.remove('added');
+      }
+      updateAddedCount();
+      showToast(`已移除：${name}`);
+    });
+    updateAddedCount();
+  }
+  function removeFromAddedList(id) {
+    const item = document.querySelector(`.added-item[data-aid="${id}"]`);
+    if (item) item.remove();
+    updateAddedCount();
+  }
+  function updateAddedCount() {
+    const count = addedIds.size;
+    document.getElementById('addedCount').textContent = `${count} 个`;
+    if (count === 0) {
+      document.getElementById('addedList').innerHTML = '<div class="empty-resource added-empty" id="addedEmpty">还没有添加任何资源 · 从上方搜索或浏览后添加</div>';
+    }
+  }
+
+  document.querySelectorAll('[data-action]').forEach(el => {
+    el.addEventListener('click', () => {
+      const a = el.dataset.action;
+      if (a === 'cancel') { showToast('返回创作工坊（未保存的内容将丢失）'); return; }
+      const name = document.getElementById('debateName').value.trim() || '未命名辩论';
+      const topic = document.getElementById('debateTopic').value.trim() || '（未填辩题）';
+
+      if (a === 'save-only') {
+        showToast(`保存成功：${name}`);
+        setTimeout(() => {
+          window.location.href = `首页-v0.5.html?saved=${encodeURIComponent(name)}`;
+        }, 600);
+      } else if (a === 'save-and-start') {
+        window.location.href = `AI思辨使用-辩论-v0.1.html?agent=${encodeURIComponent(name)}&topic=${encodeURIComponent(topic)}&from=create`;
+      }
+    });
+  });
+
+  // ===== 模板预填 =====
+  (function() {
+    const TEMPLATES = {
+      'plastic-ban': { displayName: '环保议题辩论：塑料禁令', debateName: '环保议题辩论：塑料禁令', debateTopic: '塑料禁令是否应该全面推行', debateGrade: 'g4-6', debateSubject: 'science', proRole: 'ai', proRoleName: '环保卫士', proArgument: '一次性塑料袋应该全面禁止使用 — 塑料污染对海洋生态破坏严重，且现有可降解材料已经成熟，禁令带来的不便相对污染代价微不足道。', proAvatar: 'E', conRole: 'student', conRoleName: '同学代表', conArgument: '不应全面禁止 — 一次性塑料袋在医疗、食品安全等领域不可替代；应优先推广可降解替代品和回收体系。', conAvatar: '生' },
+      'ai-ethics':  { displayName: '科技伦理：AI 课堂使用争议', debateName: '科技伦理：AI 课堂使用争议', debateTopic: 'AI 是否应该限制在课堂使用', debateGrade: 'g4-6', debateSubject: 'science', proRole: 'ai', proRoleName: 'AI 卫士', proArgument: 'AI 在课堂中应当受到严格规范 — 过度依赖 AI 会削弱学生独立思考能力，影响基础知识的真实掌握。', proAvatar: 'AI', conRole: 'student', conRoleName: '同学代表', conArgument: 'AI 工具本身无罪 — 关键在于如何使用；合理引入 AI 可以帮助学生更高效地学习，提升课堂质量。', conAvatar: '生' },
+      'phone-school':{ displayName: '生活习惯：手机禁令辩论', debateName: '生活习惯：手机禁令辩论', debateTopic: '手机是否应该禁止带入课堂', debateGrade: 'all', debateSubject: 'science', proRole: 'student', proRoleName: '甲方同学', proArgument: '手机应当禁止带入课堂 — 手机干扰学习专注度，影响课堂效果，集中管理更有利于学习秩序。', proAvatar: '甲', conRole: 'student', conRoleName: '乙方同学', conArgument: '禁止不如培养自律 — 完全禁止会剥夺学生使用工具的机会，应引导合理使用而非一刀切禁止。', conAvatar: '乙' }
+    };
+    const tid = new URLSearchParams(location.search).get('template');
+    if (!tid || !TEMPLATES[tid]) return;
+    const t = TEMPLATES[tid];
+    const chip = document.getElementById('templateChip');
+    if (chip) { document.getElementById('templateChipName').textContent = t.displayName; chip.hidden = false; }
+    const nameEl = document.getElementById('debateName'); if (nameEl) nameEl.value = t.debateName;
+    const topicEl = document.getElementById('debateTopic'); if (topicEl) topicEl.value = t.debateTopic;
+    const gradeEl = document.getElementById('debateGrade'); if (gradeEl) gradeEl.value = t.debateGrade;
+    const subjectEl = document.getElementById('debateSubject'); if (subjectEl) subjectEl.value = t.debateSubject;
+    document.querySelectorAll('[name="proRole"]').forEach(r => { r.checked = r.value === t.proRole; });
+    const proNameEl = document.getElementById('proRoleName'); if (proNameEl) proNameEl.value = t.proRoleName;
+    const proArgEl = document.getElementById('proArgument'); if (proArgEl) proArgEl.value = t.proArgument;
+    document.querySelectorAll('.role-avatar-item[data-side="pro"]').forEach(i => i.classList.toggle('active', i.dataset.avatar === t.proAvatar));
+    const proPreview = document.getElementById('proAvatarPreview'); if (proPreview) proPreview.textContent = t.proAvatar;
+    document.querySelectorAll('[name="conRole"]').forEach(r => { r.checked = r.value === t.conRole; });
+    const conNameEl = document.getElementById('conRoleName'); if (conNameEl) conNameEl.value = t.conRoleName;
+    const conArgEl = document.getElementById('conArgument'); if (conArgEl) conArgEl.value = t.conArgument;
+    document.querySelectorAll('.role-avatar-item[data-side="con"]').forEach(i => i.classList.toggle('active', i.dataset.avatar === t.conAvatar));
+    const conPreview = document.getElementById('conAvatarPreview'); if (conPreview) conPreview.textContent = t.conAvatar;
+  })();
+</script>
+
+<script src="prototype-capture.js"></script>
+
+<!-- ========== 评审用 PRD 侧边栏数据 ========== -->
+<script src="prototype-review-panel.js"></script>
+<script>
+  window.PRD_REVIEW_DATA = {
+    pageName: 'AI 思辨·辩论 创建',
+    groups: [
+      {
+        title: '步骤指示器',
+        items: [
+          {
+            target: '.stepper',
+            title: '3 步向导：基本信息 → 辩论规则 → 辩论资料',
+            how:  '点【下一步】推进；点已完成的步骤号回退',
+            what: '当前步骤实心红橙、未到达灰底（与学问创建用同一 stepper 但主色随类型变）',
+            from: '本期 3 步固定；与"AI 学问创建"对齐为 3 步骨架便于教师跨类型记忆'
+          }
+        ]
+      },
+      {
+        title: 'Step 1 · 基本信息',
+        items: [
+          {
+            target: '#panel-1',
+            title: '基本信息面板',
+            how:  '默认 active',
+            what: '上半 AI 一句话生成区，下半手动表单（名称 / 辩题 / 年级 / 学科）',
+            from: '名称和辩题必填；年级默认"4-6 年级"、学科默认"科学"'
+          },
+          {
+            target: '#aiGenerateBtn',
+            title: 'AI 一句话生成',
+            how:  '输入"想要一个什么辩题" → 点【AI 生成】',
+            what: '1 秒后自动填充名称/辩题/背景；同时自动把匹配的预设资料添加到 Step 3 已选清单',
+            from: '本期 mock；下期接入真实大模型，并自动召回相关教学资料'
+          }
+        ]
+      },
+      {
+        title: 'Step 2 · 辩论规则',
+        items: [
+          {
+            target: '#panel-2',
+            title: '正反方设置（核心配置）',
+            how:  '正方 / 反方 各自选 AI 或 真人 + 输入论点（必填）',
+            what: '4 种组合：AI vs AI / AI vs 真人 / 真人 vs AI / 真人 vs 真人 — 对应使用页擂台不同的发言交互（AI 自动按论点发言 vs 真人手动输入）；4 真人组合下 AI 仅当评委',
+            from: '论点字段是必填（一两句话写明立场和主要论据）。使用页擂台主区会显示头像 + 类型标（AI/真人）+ 论点副标题。本期 PRD 已补完整规格，demo HTML 表单待补'
+          },
+          {
+            target: '#timerSelect',
+            title: '每轮倒计时（核心规则）',
+            how:  '下拉选 60s / 120s（默认）/ 180s / 300s',
+            what: '决定使用页每轮倒计时长。归零时浮红色提示"本轮 [发言方] 时间到"，控制条按钮高亮闪烁，老师手动继续；不强制结束',
+            from: '4 档预设；下期可能改为自由数字输入。设计原则：到点不打断，给老师"留白"做点评'
+          },
+          {
+            target: '#roundSelect',
+            title: '辩论轮数（核心规则）',
+            how:  '下拉选 2 / 3（默认）/ 4 / 5 轮',
+            what: '决定使用页总轮数。最后一轮双方都发言完后，控制条【结束辩论·生成报告】高亮闪烁提示老师',
+            from: '4 档预设；3 轮是科学课堂教研推荐值'
+          },
+          {
+            target: '#judgePromptBox',
+            title: '评委提示词',
+            how:  '点模板（默认/严格/鼓励/中性）→ textarea 自动填充 → 可微调',
+            what: '决定 AI 评委的语气和评分倾向，影响使用页右下"评委点评"的输出',
+            from: '4 档模板固定；下期支持教师保存自建模板'
+          }
+        ]
+      },
+      {
+        title: 'Step 3 · 辩论资料',
+        items: [
+          {
+            target: '#panel-3',
+            title: '资料库 + 已添加清单',
+            how:  '左资料库选 →【添加】→ 进入下方"已添加"清单',
+            what: '资料库支持搜索 + 4 类别筛选；已添加清单每条可【移除】；0 个时显示"还没有添加任何资源"',
+            from: '本期 10 条预设资料；下期接入资源平台，支持上传'
+          },
+          {
+            target: '.material-search',
+            title: '资料库搜索 + 筛选',
+            how:  '输入关键词或点筛选 chip',
+            what: '资料卡按名称匹配 + 类别（课文/视频/数据/全部）',
+            from: '类别 4 档；空结果显示"没有找到匹配的资源"'
+          }
+        ]
+      },
+      {
+        title: '保存与跳转',
+        items: [
+          {
+            target: '[data-action="save"]',
+            title: '【保存到我的智能体】',
+            how:  '完成 3 步后点保存',
+            what: '跳首页 ?saved={名称}（编辑模式下用 ?updated）',
+            from: '同 AI 学问创建的回首页流程，便于跨类型一致体验'
+          },
+          {
+            target: '[data-action="use-now"]',
+            title: '【立即辩论】',
+            how:  '完成 3 步后点立即辩论',
+            what: '直接跳辩论使用页 ?agent={名称}&topic={辩题}&from=create',
+            from: '"边创边用"路径'
+          }
+        ]
+      }
+    ]
+  };
+</script>
+</body>
+</html>

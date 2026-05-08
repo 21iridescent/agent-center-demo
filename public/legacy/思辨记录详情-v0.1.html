@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>思辨记录详情 · v0.1 Demo</title>
+<script src="prototype-tokens.js"></script>
+<style>
+  /* ============ 页面专属（共享部分见 prototype-tokens.css）============ */
+  .container {
+    max-width: var(--container-list);
+    margin: 0 auto;
+    padding: 24px 32px 60px;
+  }
+
+  /* ============ Hero ============ */
+  .hero {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: 24px 28px;
+    margin-bottom: 18px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 20px;
+    align-items: center;
+  }
+  .hero-info { min-width: 0; }
+  .hero-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .hero-title {
+    font-size: var(--font-3xl);
+    font-weight: 600;
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .hero-subtitle {
+    font-size: var(--font-base);
+    color: var(--color-text-4);
+  }
+  .hero-stats { display: flex; gap: 24px; }
+  .hero-stat { text-align: center; }
+  .hero-stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--color-primary);
+    margin-bottom: 2px;
+  }
+  .hero-stat[data-mode="debate"] .hero-stat-value { color: var(--color-debate); }
+  .hero-stat[data-mode="discussion"] .hero-stat-value { color: var(--color-discussion); }
+  .hero-stat-label {
+    font-size: var(--font-xs);
+    color: var(--color-text-4);
+  }
+
+  /* ============ Section ============ */
+  .section {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: 22px 26px;
+    margin-bottom: 18px;
+  }
+
+  /* ============ 基本信息 ============ */
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  .info-item {
+    background: var(--color-bg-mute);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+  }
+  .info-label {
+    font-size: var(--font-xs);
+    color: var(--color-text-4);
+    margin-bottom: 4px;
+  }
+  .info-value {
+    font-size: var(--font-md);
+    font-weight: 500;
+    color: var(--color-text);
+  }
+
+  /* ============ 评分（辩论）============ */
+  .score-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  .score-block {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+  }
+  .score-block.pro { border-left: 3px solid var(--color-primary); }
+  .score-block.con { border-left: 3px solid var(--color-debate); }
+  .score-side {
+    font-size: var(--font-sm);
+    font-weight: 600;
+    color: var(--color-primary);
+    margin-bottom: 6px;
+  }
+  .score-block.con .score-side { color: var(--color-debate); }
+  .score-actor {
+    font-size: var(--font-xs);
+    color: var(--color-text-4);
+    margin-bottom: 12px;
+  }
+  .score-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 32px;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: var(--font-sm);
+  }
+  .score-bar {
+    height: 6px;
+    background: var(--color-border-soft);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .score-bar-fill {
+    height: 100%;
+    background: var(--color-primary);
+    border-radius: 3px;
+  }
+  .score-block.con .score-bar-fill { background: var(--color-debate); }
+  .score-num {
+    font-size: var(--font-sm);
+    color: var(--color-text-2);
+    text-align: right;
+  }
+  .judge-comment {
+    margin-top: 16px;
+    padding: 14px;
+    background: var(--color-warn-bg);
+    border: 1px dashed var(--color-warn-border);
+    border-radius: var(--radius-md);
+    font-size: var(--font-base);
+    color: var(--color-warn);
+    line-height: 1.7;
+  }
+  .judge-comment strong { color: var(--color-primary); }
+
+  /* ============ 支架统计（讨论）============ */
+  .scaffold-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .scaffold-stat-card {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    background: var(--color-bg-mute);
+  }
+  .scaffold-stat-name {
+    font-size: var(--font-sm);
+    color: var(--color-discussion);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .scaffold-stat-count {
+    font-size: var(--font-3xl);
+    font-weight: 700;
+    color: var(--color-text);
+  }
+  .scaffold-stat-count small {
+    font-size: var(--font-xs);
+    font-weight: normal;
+    color: var(--color-text-4);
+    margin-left: 4px;
+  }
+
+  /* ============ 时间线 ============ */
+  .timeline {
+    position: relative;
+    padding-left: 22px;
+  }
+  .timeline::before {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 4px;
+    bottom: 4px;
+    width: 1.5px;
+    background: var(--color-border);
+  }
+  .tl-item {
+    position: relative;
+    padding-bottom: 14px;
+  }
+  .tl-item:last-child { padding-bottom: 0; }
+  .tl-item::before {
+    content: "";
+    position: absolute;
+    left: -19px;
+    top: 6px;
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    background: var(--color-bg-card);
+    border: 2px solid var(--color-primary);
+  }
+  .tl-item.con::before { border-color: var(--color-debate); }
+  .tl-item.discussion::before { border-color: var(--color-discussion); }
+  .tl-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 4px;
+    font-size: var(--font-xs);
+    color: var(--color-text-5);
+  }
+  .tl-side {
+    font-size: var(--font-xs);
+    padding: 2px 8px;
+    border-radius: var(--radius-md);
+    background: var(--color-primary-bg);
+    color: var(--color-primary);
+    font-weight: 500;
+  }
+  .tl-side.con { background: var(--color-debate-bg); color: var(--color-debate); }
+  .tl-side.discussion { background: var(--color-discussion-bg); color: var(--color-discussion); }
+  .tl-content {
+    font-size: var(--font-base);
+    color: var(--color-text);
+    line-height: 1.6;
+  }
+  .tl-scaffold {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 1px 6px;
+    background: var(--color-discussion);
+    color: #fff;
+    border-radius: 3px;
+    font-size: var(--font-xs);
+  }
+
+  /* ============ 资料引用 ============ */
+  .ref-list { display: flex; flex-direction: column; gap: 8px; }
+  .ref-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--color-bg-mute);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+  }
+  .ref-type {
+    font-size: var(--font-xs);
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: var(--radius-xs);
+    color: #fff;
+    letter-spacing: 0.5px;
+  }
+  .ref-type.video { background: var(--color-debate); }
+  .ref-type.pdf { background: var(--color-prep); }
+  .ref-type.image { background: var(--color-primary); }
+  .ref-type.audio { background: var(--color-discussion); }
+  .ref-name { font-size: var(--font-base); font-weight: 500; }
+  .ref-meta { font-size: var(--font-xs); color: var(--color-text-4); }
+  .ref-view {
+    padding: 5px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-card);
+    color: var(--color-primary);
+    font-size: var(--font-sm);
+  }
+  .ref-view:hover {
+    background: var(--color-primary-bg);
+    border-color: var(--color-primary);
+  }
+
+  /* ============ 底部操作 ============ */
+  .footer-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px dashed var(--color-border);
+  }
+  .footer-btn {
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-base);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-card);
+    color: var(--color-text-3);
+    transition: all 0.15s;
+  }
+  .footer-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+  .footer-btn.primary {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+  }
+  .footer-btn.primary:hover {
+    background: var(--color-primary-dark);
+  }
+  .footer-btn.danger:hover {
+    border-color: var(--color-debate);
+    color: var(--color-debate);
+  }
+
+  .mode-block { display: none; }
+  .mode-block.active { display: block; }
+</style>
+<link rel="stylesheet" href="prototype-capture.css">
+</head>
+<body>
+
+<div class="meta-bar">
+  <span><strong>思辨记录详情 v0.1 Demo</strong> · 一页覆盖 辩论 / 讨论 两种模式 · 通过 <code>?mode=debate|discussion</code> 切换</span>
+  <span>评审用 · 仅 PC Web</span>
+</div>
+
+<header class="topbar">
+  <a class="back-link" href="/records">← 我的记录</a>
+  <span class="crumb-sep">/</span>
+  <span class="page-title" id="reportTitle">一次性塑料袋是否应禁用</span>
+  <span class="type-badge debate" id="reportTypeBadge">场景类 · 辩论</span>
+  <div class="topbar-right">
+    <button class="topbar-action" id="exportBtn">导出报告</button>
+    <button class="topbar-action primary" id="reEnterBtn">重新进入活动</button>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-info">
+      <div class="hero-meta">
+        <span class="type-badge debate" id="heroBadge">场景类 · 辩论</span>
+        <span class="hero-subtitle" id="heroTime">2026-04-26 10:15 · 5 年级科学 · 时长 28 分钟</span>
+      </div>
+      <h1 class="hero-title" id="heroTopic">一次性塑料袋是否应该禁止使用</h1>
+      <div class="hero-subtitle">使用智能体：<strong id="heroAgent">塑料禁令辩论</strong></div>
+    </div>
+    <div class="hero-stats" id="heroStats"></div>
+  </section>
+
+  <!-- 基本信息 -->
+  <section class="section">
+    <div class="section-title">基本信息</div>
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="info-label">活动类型</div>
+        <div class="info-value" id="infoType">辩论</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">适用年级</div>
+        <div class="info-value">4-6 年级</div>
+      </div>
+      <div class="info-item">
+        <div class="info-label">学科</div>
+        <div class="info-value">科学</div>
+      </div>
+      <div class="info-item" id="infoExtraSlot">
+        <div class="info-label">轮数</div>
+        <div class="info-value">3 轮 · 每轮 120 秒</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 辩论评分 -->
+  <section class="section mode-block" data-mode="debate">
+    <div class="section-title">
+      AI 评委评分
+      <span class="tag">综合评分 7.2 / 10</span>
+    </div>
+    <div class="score-grid">
+      <div class="score-block pro">
+        <div class="score-side">正方 · AI 激进派</div>
+        <div class="score-actor">AI · 5 轮发言</div>
+        <div class="score-row"><span>论点清晰</span><div class="score-bar"><div class="score-bar-fill" style="width:82%"></div></div><span class="score-num">8.2</span></div>
+        <div class="score-row"><span>论据支撑</span><div class="score-bar"><div class="score-bar-fill" style="width:75%"></div></div><span class="score-num">7.5</span></div>
+        <div class="score-row"><span>表达力</span><div class="score-bar"><div class="score-bar-fill" style="width:70%"></div></div><span class="score-num">7.0</span></div>
+        <div class="score-row"><span>逻辑性</span><div class="score-bar"><div class="score-bar-fill" style="width:78%"></div></div><span class="score-num">7.8</span></div>
+      </div>
+      <div class="score-block con">
+        <div class="score-side">反方 · 学生</div>
+        <div class="score-actor">学生 · 4 轮发言</div>
+        <div class="score-row"><span>论点清晰</span><div class="score-bar"><div class="score-bar-fill" style="width:65%"></div></div><span class="score-num">6.5</span></div>
+        <div class="score-row"><span>论据支撑</span><div class="score-bar"><div class="score-bar-fill" style="width:55%"></div></div><span class="score-num">5.5</span></div>
+        <div class="score-row"><span>表达力</span><div class="score-bar"><div class="score-bar-fill" style="width:80%"></div></div><span class="score-num">8.0</span></div>
+        <div class="score-row"><span>逻辑性</span><div class="score-bar"><div class="score-bar-fill" style="width:62%"></div></div><span class="score-num">6.2</span></div>
+      </div>
+    </div>
+
+    <div class="judge-comment">
+      <strong>评委综合点评：</strong>
+      正方引用《塑料污染白皮书》中"年使用 5 兆个塑料袋"的数据，论据有力；但部分论证略显激进。反方表达自然，举出"替代品成本高"的真实顾虑，但缺乏数据支撑，易被反驳。建议反方下次准备时多补充国际禁塑案例数据。
+    </div>
+  </section>
+
+  <!-- 讨论支架统计 -->
+  <section class="section mode-block" data-mode="discussion">
+    <div class="section-title">
+      支架使用统计
+      <span class="tag">28 条学生发言 · 6 个支架</span>
+    </div>
+    <div class="scaffold-stat-grid">
+      <div class="scaffold-stat-card"><div class="scaffold-stat-name">① 提出新观点</div><div class="scaffold-stat-count">8 <small>次</small></div></div>
+      <div class="scaffold-stat-card"><div class="scaffold-stat-name">② 反驳，新观点</div><div class="scaffold-stat-count">3 <small>次</small></div></div>
+      <div class="scaffold-stat-card"><div class="scaffold-stat-name">③ 同意，补证据</div><div class="scaffold-stat-count">6 <small>次</small></div></div>
+      <div class="scaffold-stat-card"><div class="scaffold-stat-name">④ 同意，修订证据</div><div class="scaffold-stat-count">4 <small>次</small></div></div>
+      <div class="scaffold-stat-card"><div class="scaffold-stat-name">⑤ 同意，修订自己观点</div><div class="scaffold-stat-count">3 <small>次</small></div></div>
+      <div class="scaffold-stat-card"><div class="scaffold-stat-name">⑥ 坚持，补证据</div><div class="scaffold-stat-count">4 <small>次</small></div></div>
+    </div>
+  </section>
+
+  <!-- 发言时间线（辩论）-->
+  <section class="section mode-block" data-mode="debate">
+    <div class="section-title">
+      发言时间线
+      <span class="tag">9 条发言</span>
+    </div>
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-meta"><span class="tl-side">正方 · AI</span><span>10:01 · 第 1 轮</span></div>
+        <div class="tl-content">塑料袋造成的环境污染成本远超替代品的经济成本，根据《塑料污染白皮书》数据，每年全球生产 5 兆个塑料袋...</div>
+      </div>
+      <div class="tl-item con">
+        <div class="tl-meta"><span class="tl-side con">反方 · 学生</span><span>10:03 · 第 1 轮</span></div>
+        <div class="tl-content">完全禁止不太现实，替代品成本太高，会加重普通家庭的生活负担。</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-meta"><span class="tl-side">正方 · AI</span><span>10:06 · 第 2 轮</span></div>
+        <div class="tl-content">日本和欧盟已经实施了部分塑料禁令，国民生活并未受到明显影响，相反推动了可降解材料产业升级。</div>
+      </div>
+      <div class="tl-item con">
+        <div class="tl-meta"><span class="tl-side con">反方 · 学生</span><span>10:09 · 第 2 轮</span></div>
+        <div class="tl-content">但是中国国情和日本欧盟不一样，制造业体量更大，转型周期会更长。</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-meta"><span class="tl-side">正方 · AI</span><span>10:13 · 第 3 轮</span></div>
+        <div class="tl-content">这正是为什么需要"分阶段、有梯度"地推行，而不是不推行。</div>
+      </div>
+      <div class="tl-item con">
+        <div class="tl-meta"><span class="tl-side con">反方 · 学生</span><span>10:15 · 第 3 轮</span></div>
+        <div class="tl-content">同意分阶段，但应优先治理工业塑料而不是日常塑料袋。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 发言时间线（讨论）-->
+  <section class="section mode-block" data-mode="discussion">
+    <div class="section-title">
+      发言时间线
+      <span class="tag">28 条 · 仅显示前 6 条</span>
+    </div>
+    <div class="timeline">
+      <div class="tl-item discussion">
+        <div class="tl-meta"><span class="tl-side discussion">学生 A</span><span>10:01</span></div>
+        <div class="tl-content"><span class="tl-scaffold">① 新观点</span>我的观点是塑料袋有利有弊，依据是日常使用便利但难降解。</div>
+      </div>
+      <div class="tl-item discussion">
+        <div class="tl-meta"><span class="tl-side discussion">学生 C</span><span>10:03</span></div>
+        <div class="tl-content"><span class="tl-scaffold">③ 补证据</span>我赞同 A 的观点，证据是塑料袋自然降解需要 400 年。</div>
+      </div>
+      <div class="tl-item discussion">
+        <div class="tl-meta"><span class="tl-side discussion">学生 D</span><span>10:05</span></div>
+        <div class="tl-content"><span class="tl-scaffold">② 反驳新观点</span>我不赞同 A，便利性不可忽视，应该改进回收而非完全禁止。</div>
+      </div>
+      <div class="tl-item discussion">
+        <div class="tl-meta"><span class="tl-side discussion">学生 B</span><span>10:08</span></div>
+        <div class="tl-content"><span class="tl-scaffold">④ 修订证据</span>我同意 D，但他的"改进回收"证据不够充分，因为目前回收率不到 9%。</div>
+      </div>
+      <div class="tl-item discussion">
+        <div class="tl-meta"><span class="tl-side discussion">学生 A</span><span>10:11</span></div>
+        <div class="tl-content"><span class="tl-scaffold">⑤ 修订自己观点</span>我同意 D 的观点，修订我的"利大于弊"的原观点为"应该限塑而非禁塑"。</div>
+      </div>
+      <div class="tl-item discussion">
+        <div class="tl-meta"><span class="tl-side discussion">学生 E</span><span>10:14</span></div>
+        <div class="tl-content"><span class="tl-scaffold">⑥ 坚持补证据</span>感谢质疑，我补充证据：日本限塑成功后人均使用量降了 60%，所以限塑是有效的。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 资料引用 -->
+  <section class="section">
+    <div class="section-title">
+      资料引用
+      <span class="tag">本次活动使用了 3 份资料</span>
+    </div>
+    <div class="ref-list">
+      <div class="ref-item">
+        <span class="ref-type pdf">PDF</span>
+        <div>
+          <div class="ref-name">塑料污染白皮书</div>
+          <div class="ref-meta">PDF · 28 页 · 政府报告 · 被引用 4 次</div>
+        </div>
+        <button class="ref-view">查看</button>
+      </div>
+      <div class="ref-item">
+        <span class="ref-type video">视频</span>
+        <div>
+          <div class="ref-name">塑料污染纪录片片段</div>
+          <div class="ref-meta">视频 · 5:32 · BBC · 被引用 2 次</div>
+        </div>
+        <button class="ref-view">查看</button>
+      </div>
+      <div class="ref-item">
+        <span class="ref-type pdf">PDF</span>
+        <div>
+          <div class="ref-name">中国塑料禁令政策文件</div>
+          <div class="ref-meta">PDF · 12 页 · 被引用 1 次</div>
+        </div>
+        <button class="ref-view">查看</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 底部操作 -->
+  <div class="footer-actions">
+    <button class="footer-btn danger" id="deleteBtn">删除记录</button>
+    <button class="footer-btn" id="copyToNewBtn">复制为新活动</button>
+    <button class="footer-btn primary" id="footerReEnter">重新进入活动</button>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const toast = document.getElementById('toast');
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const mode = params.get('mode') || 'debate';
+  const passedTitle = params.get('title');
+
+  document.querySelectorAll('.mode-block').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+
+  if (mode === 'discussion') {
+    document.getElementById('reportTypeBadge').textContent = '场景类 · 讨论';
+    document.getElementById('reportTypeBadge').className = 'type-badge discussion';
+    document.getElementById('heroBadge').textContent = '场景类 · 讨论';
+    document.getElementById('heroBadge').className = 'type-badge discussion';
+    document.getElementById('reportTitle').textContent = passedTitle || '如何改善班级气候';
+    document.getElementById('heroTopic').textContent = passedTitle || '如何改善班级气候';
+    document.getElementById('heroAgent').textContent = '班级讨论助手';
+    document.getElementById('heroTime').textContent = '2026-04-22 14:05 · 4 年级科学 · 时长 30 分钟';
+    document.getElementById('infoType').textContent = '讨论';
+    document.getElementById('infoExtraSlot').innerHTML = '<div class="info-label">时长</div><div class="info-value">30 分钟 · 6 个观点支架</div>';
+
+    document.getElementById('heroStats').innerHTML = `
+      <div class="hero-stat" data-mode="discussion">
+        <div class="hero-stat-value">28</div>
+        <div class="hero-stat-label">学生发言</div>
+      </div>
+      <div class="hero-stat" data-mode="discussion">
+        <div class="hero-stat-value">6/6</div>
+        <div class="hero-stat-label">支架使用率</div>
+      </div>
+    `;
+  } else {
+    document.getElementById('heroStats').innerHTML = `
+      <div class="hero-stat" data-mode="debate">
+        <div class="hero-stat-value">7.2</div>
+        <div class="hero-stat-label">综合评分</div>
+      </div>
+      <div class="hero-stat" data-mode="debate">
+        <div class="hero-stat-value">9</div>
+        <div class="hero-stat-label">总发言</div>
+      </div>
+    `;
+  }
+
+  function reEnter() {
+    const target = mode === 'discussion'
+      ? `AI思辨使用-讨论-v0.1.html?from=record`
+      : `AI思辨使用-辩论-v0.1.html?from=record`;
+    window.location.href = target;
+  }
+  document.getElementById('reEnterBtn').addEventListener('click', reEnter);
+  document.getElementById('footerReEnter').addEventListener('click', reEnter);
+
+  document.getElementById('exportBtn').addEventListener('click', () => showToast('导出报告（demo 不真出文件）'));
+  document.getElementById('copyToNewBtn').addEventListener('click', () => {
+    const target = mode === 'discussion' ? 'AI思辨创建-讨论-v0.1.html' : 'AI思辨创建-辩论-v0.1.html';
+    showToast('复制为新活动，进入创建页');
+    setTimeout(() => { window.location.href = target; }, 500);
+  });
+  document.getElementById('deleteBtn').addEventListener('click', () => {
+    if (confirm('删除后无法恢复，确认删除？')) {
+      showToast('已删除，返回我的记录');
+      setTimeout(() => { window.location.href = '我的记录-v0.1.html'; }, 600);
+    }
+  });
+
+  document.querySelectorAll('.ref-view').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const name = btn.previousElementSibling.querySelector('.ref-name').textContent;
+      showToast(`查看资料：${name}（与使用页同样的全屏 Modal）`);
+    });
+  });
+</script>
+
+<script src="prototype-capture.js"></script>
+
+<!-- ========== 评审用 PRD 侧边栏数据 ========== -->
+<script src="prototype-review-panel.js"></script>
+<script>
+  window.PRD_REVIEW_DATA = {
+    pageName: '思辨记录详情',
+    groups: [
+      {
+        title: '页面机制',
+        items: [
+          {
+            target: '.hero',
+            title: '一页双模（核心）',
+            how:  '由 URL ?mode=debate / discussion 决定',
+            what: '同一页面通过参数切换显示不同区块：debate 显示评分区，discussion 显示支架统计区',
+            from: '设计原则：辩论与讨论的"成果产出"差异大，但前后置上下文（hero / 时间线 / 资料 / 底部操作）一致，故合一页双模'
+          }
+        ]
+      },
+      {
+        title: 'Hero 区',
+        items: [
+          {
+            target: '.hero',
+            title: 'Hero 头部',
+            how:  '看（不点）',
+            what: '左：标题 + 日期/时长/人数；右：统计数值（辩论 7.2/9；讨论 28/24）',
+            from: '标题来自 ?title 参数；统计数值由活动结束时计算'
+          }
+        ]
+      },
+      {
+        title: '基本信息',
+        items: [
+          {
+            target: '.info-grid',
+            title: '4 列基本信息',
+            how:  '看（不点）',
+            what: '智能体名称 / 学科 + 年级 / 开始-结束时间 / 参与人数',
+            from: '由活动配置 + 实际进行时数据合成'
+          }
+        ]
+      },
+      {
+        title: '评分区（仅辩论）',
+        items: [
+          {
+            target: '.section[data-mode="debate"]',
+            title: '4 维度评分（仅 mode=debate）',
+            how:  '看（不点）',
+            what: '论点清晰 / 论据支撑 / 表达力 / 逻辑性，每项进度条 + 0-10 分；下方评委评论',
+            from: '评分由 AI 评委生成，话术风格由创建页"评委提示词"模板决定'
+          }
+        ]
+      },
+      {
+        title: '支架统计区（仅讨论）',
+        items: [
+          {
+            target: '.section[data-mode="discussion"]',
+            title: '6 支架使用统计（仅 mode=discussion）',
+            how:  '看（不点）',
+            what: '6 卡（3 列 × 2 行）：支架名称 + 使用次数 + 占比',
+            from: '与使用页"左卡：支架使用统计"对齐；6 个支架由创建页配置'
+          }
+        ]
+      },
+      {
+        title: '发言时间线',
+        items: [
+          {
+            target: '.timeline',
+            title: '发言时间线',
+            how:  '滚动浏览；【显示更多】展开（讨论页）',
+            what: '每条：时间戳 + 发言人 + 内容；辩论默认 9 条全展；讨论默认 6 条 + 显示更多',
+            from: '完整记录使用过程中的所有发言，老师可课后回顾'
+          }
+        ]
+      },
+      {
+        title: '资料引用',
+        items: [
+          {
+            target: '.ref-list',
+            title: '资料引用列表',
+            how:  '点【查看】弹全屏 modal',
+            what: '3 项资料（PDF / 视频 / PDF）；与使用页浮动资料一致',
+            from: '资料来源于创建页"已添加"清单'
+          }
+        ]
+      },
+      {
+        title: '底部操作',
+        items: [
+          {
+            target: '.footer-actions',
+            title: '底部操作（3 个按钮）',
+            how:  '看完报告后选择下一步',
+            what: '【重新进入活动】 / 【复制为新活动】 / 【删除记录】',
+            from: '设计意图：报告不是死档案，是"再用 / 复制 / 清理"的中转站'
+          },
+          {
+            target: '#reEnterBtn',
+            title: '【重新进入活动】',
+            how:  '点击',
+            what: '跳对应使用页 ?from=record，让老师可基于本次配置再次开课',
+            from: 'mode=debate → 辩论使用页；mode=discussion → 讨论使用页'
+          },
+          {
+            target: '#copyToNewBtn',
+            title: '【复制为新活动】',
+            how:  '点击',
+            what: '跳对应创建页，预填本次的辩题/主题/资料 → 老师可微调后保存为新智能体',
+            from: '让"做得好的活动"快速变成"模板"复用'
+          },
+          {
+            target: '#deleteBtn',
+            title: '【删除记录】',
+            how:  '点击 → confirm 确认',
+            what: '回我的记录页 + toast"已删除"',
+            from: '本期前端模拟，刷新恢复；下期接入真实持久化'
+          }
+        ]
+      }
+    ]
+  };
+</script>
+</body>
+</html>

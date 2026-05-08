@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 学问使用 · v0.1 Demo</title>
+<script src="prototype-tokens.js"></script>
+<style>
+  /* ============ 页面专属（共享部分见 prototype-tokens.css）============ */
+  .container {
+    max-width: var(--container-mid);
+    margin: 0 auto;
+    padding: 24px 32px 100px;
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 18px;
+  }
+
+  /* ============ 左侧 角色卡 ============ */
+  .role-card {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 20px 18px;
+    height: fit-content;
+    position: sticky;
+    top: 80px;
+  }
+  .role-avatar {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: var(--color-primary-bg);
+    color: var(--color-primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    font-weight: 600;
+    margin: 0 auto 12px;
+    border: 2px solid var(--color-primary-border);
+  }
+  .role-name {
+    font-size: var(--font-xl);
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .role-tags {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .role-tag {
+    font-size: var(--font-xs);
+    color: var(--color-text-4);
+    padding: 2px 8px;
+    background: var(--color-bg);
+    border-radius: var(--radius-md);
+  }
+  .role-section {
+    border-top: 1px dashed var(--color-border-soft);
+    margin-top: 14px;
+    padding-top: 14px;
+  }
+  .role-section-title {
+    font-size: var(--font-xs);
+    color: var(--color-text-4);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .role-section-content {
+    font-size: var(--font-sm);
+    color: var(--color-text-2);
+    line-height: 1.6;
+  }
+  .role-kb-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    font-size: var(--font-sm);
+    color: var(--color-text-2);
+  }
+  .role-kb-item::before {
+    content: "";
+    width: 6px; height: 6px;
+    background: var(--color-primary);
+    border-radius: 50%;
+  }
+  .role-edit-btn {
+    width: 100%;
+    margin-top: 12px;
+    padding: 7px 0;
+    border: 1px solid var(--color-mine-soft);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-card);
+    color: var(--color-mine);
+    font-size: var(--font-sm);
+    transition: all 0.15s;
+  }
+  .role-edit-btn:hover {
+    background: #f5f1fc;
+    border-color: var(--color-mine);
+  }
+
+  /* ============ 主区 对话流 ============ */
+  .chat-main {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 160px);
+  }
+  .chat-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--color-border-soft);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--color-bg-soft);
+  }
+  .chat-header-title {
+    font-size: var(--font-base);
+    color: var(--color-text-2);
+  }
+  .chat-header-meta {
+    margin-left: auto;
+    font-size: var(--font-xs);
+    color: var(--color-text-5);
+  }
+
+  .chat-body {
+    flex: 1;
+    padding: 24px 28px;
+    overflow-y: auto;
+    background: linear-gradient(var(--color-bg-card), var(--color-bg-soft));
+  }
+  .msg {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
+    animation: msgIn 0.25s ease-out;
+  }
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .msg.user { flex-direction: row-reverse; }
+  .msg-avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--color-primary-bg);
+    color: var(--color-primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: var(--font-md);
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .msg.user .msg-avatar {
+    background: var(--color-mine-bg);
+    color: var(--color-mine);
+  }
+  .msg-bubble {
+    max-width: 70%;
+    padding: 11px 14px;
+    border-radius: var(--radius-lg);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: var(--font-base);
+    line-height: 1.7;
+  }
+  .msg.user .msg-bubble {
+    background: var(--color-primary);
+    color: #fff;
+  }
+  .msg-bubble strong { color: var(--color-primary); }
+  .msg.user .msg-bubble strong { color: #fff; }
+  .msg-meta {
+    margin-top: 4px;
+    font-size: var(--font-xs);
+    color: var(--color-text-6);
+  }
+  .msg.user .msg-meta { text-align: right; }
+
+  .chat-suggest {
+    padding: 8px 28px 0;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .suggest-chip {
+    padding: 6px 12px;
+    font-size: var(--font-sm);
+    color: var(--color-primary);
+    border: 1px solid var(--color-primary-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-bg-card);
+    transition: all 0.15s;
+  }
+  .suggest-chip:hover {
+    background: var(--color-primary);
+    color: #fff;
+  }
+
+  /* ============ 输入区 ============ */
+  .chat-input {
+    padding: 16px 20px 20px;
+    border-top: 1px solid var(--color-border-soft);
+    background: var(--color-bg-card);
+  }
+  .input-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .input-textarea {
+    flex: 1;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    font-size: var(--font-base);
+    font-family: inherit;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+    min-height: 42px;
+    max-height: 120px;
+    transition: border-color 0.15s;
+  }
+  .input-textarea:focus { border-color: var(--color-primary); }
+  .input-btn {
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    font-size: var(--font-base);
+    transition: all 0.15s;
+    flex-shrink: 0;
+    height: 42px;
+  }
+  .input-btn.voice {
+    background: var(--color-bg-card);
+    color: var(--color-text-3);
+    border: 1px solid var(--color-border);
+  }
+  .input-btn.voice:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+  .input-btn.send {
+    background: var(--color-primary);
+    color: #fff;
+    padding: 10px 22px;
+    font-weight: 500;
+  }
+  .input-btn.send:hover {
+    background: var(--color-primary-dark);
+  }
+  .input-hint {
+    margin-top: 6px;
+    font-size: var(--font-xs);
+    color: var(--color-text-6);
+  }
+
+  /* ============ 底部退出 bar（统一外观）============ */
+  .exit-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--color-bg-card);
+    border-top: 1px solid var(--color-border);
+    padding: 10px 32px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    z-index: 50;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.04);
+  }
+
+  /* ============ 主图模式：用线上界面图替代 demo 内容 ============ */
+  .online-canvas {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 8px 0 32px;
+  }
+  .online-canvas img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.10);
+  }
+  .online-canvas-note {
+    margin-top: 18px;
+    color: var(--color-text-4);
+    font-size: var(--font-sm);
+    line-height: 1.7;
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: left;
+    background: var(--color-bg-soft);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+  }
+  .online-canvas-note strong { color: var(--color-primary); }
+  /* 隐藏现有 demo 的复用部分（保留 DOM 让 JS 不报错）*/
+  .role-card, .chat-main { display: none !important; }
+  .exit-bar-btn {
+    padding: 8px 22px;
+    border: 1px solid var(--color-debate);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-card);
+    color: var(--color-debate);
+    font-size: var(--font-base);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .exit-bar-btn:hover {
+    background: var(--color-debate);
+    color: #fff;
+  }
+  body { padding-bottom: 56px; }
+</style>
+<link rel="stylesheet" href="prototype-capture.css">
+</head>
+<body>
+
+<div class="meta-bar">
+  <span><strong>AI 学问使用 v0.1 Demo</strong> · 学生与角色对话；左卡显示角色信息，右上可结束并保存为对话历史</span>
+  <span>评审用 · 仅 PC Web</span>
+</div>
+
+<header class="topbar">
+  <a class="back-link" href="/">← 智能体中心</a>
+  <span class="crumb-sep">/</span>
+  <span class="page-title" id="topbarName">牛顿</span>
+  <span class="type-badge dialogue">对话类</span>
+  <div class="topbar-right">
+    <button class="topbar-action" id="endBtn">结束并保存</button>
+  </div>
+</header>
+
+<!-- 底部退出 bar（统一：所有使用页底部都有这个）-->
+<div class="exit-bar">
+  <button class="exit-bar-btn" id="exitBtn">退出</button>
+</div>
+
+<main class="container">
+
+  <div class="online-canvas">
+    <img src="assets/ai-xuewen.png" alt="AI 学问对话界面" />
+  </div>
+
+  <!-- 左侧 角色卡 -->
+  <aside class="role-card">
+    <div class="role-avatar" id="roleAvatar">N</div>
+    <div class="role-name" id="roleName">牛顿</div>
+    <div class="role-tags">
+      <span class="role-tag">4-6 年级</span>
+      <span class="role-tag">科学</span>
+    </div>
+
+    <div class="role-section">
+      <div class="role-section-title">角色背景</div>
+      <div class="role-section-content" id="roleBackground">
+        经典物理学开创者，1643-1727 年。专长力学、光学、万有引力。可与学生探讨"为什么苹果会落下""为什么月亮不掉下来"等运动与引力相关问题。
+      </div>
+    </div>
+
+    <div class="role-section">
+      <div class="role-section-title">关联知识库</div>
+      <div class="role-kb-item">教科版 六年级科学</div>
+    </div>
+
+    <div class="role-section">
+      <div class="role-section-title">语音</div>
+      <div class="role-section-content">沉稳男声 · 适合历史人物</div>
+    </div>
+
+    <button class="role-edit-btn" id="editBtn">✏ 编辑这个智能体</button>
+  </aside>
+
+  <!-- 主区 对话流 -->
+  <section class="chat-main">
+    <div class="chat-header">
+      <span class="chat-header-title">和 <strong id="chatHeaderName">牛顿</strong> 对话</span>
+      <span class="chat-header-meta" id="chatMeta">对话第 1 轮 · 今天 14:30</span>
+    </div>
+
+    <div class="chat-body" id="chatBody">
+
+      <article class="msg">
+        <div class="msg-avatar" id="msgAvatar1">N</div>
+        <div>
+          <div class="msg-bubble">你好！我是<strong>牛顿</strong>。今天我们想聊点什么？比如苹果为什么会从树上落下来，或者你心里其它关于运动和力的疑问？</div>
+          <div class="msg-meta">14:30</div>
+        </div>
+      </article>
+
+      <article class="msg user">
+        <div class="msg-avatar">生</div>
+        <div>
+          <div class="msg-bubble">牛顿先生，为什么苹果会从树上落下来？</div>
+          <div class="msg-meta">14:31</div>
+        </div>
+      </article>
+
+      <article class="msg">
+        <div class="msg-avatar">N</div>
+        <div>
+          <div class="msg-bubble">这是个非常好的问题！其实，苹果落地，是因为地球对它有一种看不见的吸引力。我把它叫做<strong>万有引力</strong>。不只是苹果，世界上任何两个有质量的东西，都在互相吸引。地球太大，所以我们感觉不到自己也在拉地球，但苹果却乖乖被地球拉了下来。</div>
+          <div class="msg-meta">14:31</div>
+        </div>
+      </article>
+
+      <article class="msg user">
+        <div class="msg-avatar">生</div>
+        <div>
+          <div class="msg-bubble">那为什么月亮不会落下来？</div>
+          <div class="msg-meta">14:33</div>
+        </div>
+      </article>
+
+      <article class="msg">
+        <div class="msg-avatar">N</div>
+        <div>
+          <div class="msg-bubble">很聪明的追问！月亮其实<em>一直在"落"</em>，但它同时还在很快地横向飞。你可以想象一个绳子上的小球，它一边被你往中心拉，一边又因为你转得很快而飞开 —— 月亮就是这样，地球的引力一直在拉它，可它的横向速度刚好让它"绕"着地球转，而不是直接掉下来。所以表面上看，它是<strong>掉不下来</strong>，其实是一直在掉。</div>
+          <div class="msg-meta">14:34</div>
+        </div>
+      </article>
+
+    </div>
+
+    <div class="chat-suggest" id="chatSuggest">
+      <button class="suggest-chip">为什么人不会浮起来？</button>
+      <button class="suggest-chip">引力和重力一样吗？</button>
+      <button class="suggest-chip">如果地球停转会怎样？</button>
+    </div>
+
+    <div class="chat-input">
+      <div class="input-row">
+        <textarea class="input-textarea" id="inputBox" placeholder="向牛顿提一个问题... 按 Enter 发送，Shift+Enter 换行"></textarea>
+        <button class="input-btn voice" id="voiceBtn">🎤</button>
+        <button class="input-btn send" id="sendBtn">发送</button>
+      </div>
+      <div class="input-hint">回答基于角色背景与关联知识库 · 如果不准，请告诉老师 · 不会保留个人隐私信息</div>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const toast = document.getElementById('toast');
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+
+  const ROLES = {
+    '牛顿':       { avatar: 'N', grade: '4-6 年级', subject: '科学', background: '经典物理学开创者，1643-1727 年。专长力学、光学、万有引力。', kb: '教科版 六年级科学', voice: '沉稳男声 · 适合历史人物' },
+    '居里夫人':    { avatar: 'M', grade: '4-6 年级', subject: '科学', background: '放射性研究先驱，1867-1934 年。两次诺贝尔奖得主。', kb: '教科版 六年级科学', voice: '温柔女声 · 适合引导式' },
+    '达尔文':     { avatar: 'D', grade: '4-6 年级', subject: '科学', background: '进化论之父，1809-1882 年。环球航行 5 年，对自然观察细致入微。', kb: '通用科学百科', voice: '沉稳男声 · 适合历史人物' },
+    '通用 AI 学问': { avatar: '学', grade: '全年级', subject: '科学', background: '跨学科科学问答，适合一般性提问。', kb: '通用科学百科', voice: '温柔女声 · 适合引导式' },
+    'AI 通识助手': { avatar: 'AI', grade: '全年级', subject: '人工智能', background: '面向中小学生的 AI 通识答疑助手。讲解 AI 基础概念、算法原理、AI 的应用与边界。', kb: 'AI 通识资料库', voice: '温柔女声 · 适合引导式' }
+  };
+
+  const params = new URLSearchParams(window.location.search);
+  const requestedName = params.get('agent') || '牛顿';
+  const fromMode = params.get('from');
+
+  const cleanName = requestedName.replace(/^我的-/, '');
+  const role = ROLES[cleanName] || ROLES['牛顿'];
+
+  document.getElementById('topbarName').textContent = cleanName;
+  document.getElementById('roleName').textContent = cleanName;
+  document.getElementById('roleAvatar').textContent = role.avatar;
+  document.getElementById('msgAvatar1').textContent = role.avatar;
+  document.getElementById('chatHeaderName').textContent = cleanName;
+  document.querySelectorAll('.role-tag')[0].textContent = role.grade;
+  document.querySelectorAll('.role-tag')[1].textContent = role.subject;
+  document.getElementById('roleBackground').textContent = role.background;
+  document.querySelector('.role-kb-item').textContent = role.kb;
+
+  if (fromMode === 'create') {
+    showToast(`已保存"${cleanName}"，开始对话`);
+  } else if (fromMode === 'restore') {
+    showToast(`已恢复"${cleanName}"的历史对话`);
+  }
+
+  const inputBox = document.getElementById('inputBox');
+  const sendBtn = document.getElementById('sendBtn');
+  const voiceBtn = document.getElementById('voiceBtn');
+  const chatBody = document.getElementById('chatBody');
+
+  function pushMsg(side, text) {
+    const article = document.createElement('article');
+    article.className = side === 'user' ? 'msg user' : 'msg';
+    const avatar = side === 'user' ? '生' : role.avatar;
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    article.innerHTML = `
+      <div class="msg-avatar">${avatar}</div>
+      <div>
+        <div class="msg-bubble">${text}</div>
+        <div class="msg-meta">${time}</div>
+      </div>
+    `;
+    chatBody.appendChild(article);
+    chatBody.scrollTop = chatBody.scrollHeight;
+  }
+
+  function sendCurrent() {
+    const text = inputBox.value.trim();
+    if (!text) return;
+    pushMsg('user', text);
+    inputBox.value = '';
+    setTimeout(() => {
+      pushMsg('ai', `（${cleanName} 模拟回答）这个问题让我想到了...请稍候，老师会在课堂上展开。`);
+    }, 600);
+  }
+
+  sendBtn.addEventListener('click', sendCurrent);
+  inputBox.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendCurrent();
+    }
+  });
+  voiceBtn.addEventListener('click', () => showToast('语音输入（demo 不接录音）'));
+
+  document.querySelectorAll('.suggest-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      inputBox.value = chip.textContent;
+      inputBox.focus();
+    });
+  });
+
+  document.getElementById('endBtn').addEventListener('click', () => {
+    showToast('已结束并保存到 我的记录');
+    setTimeout(() => {
+      window.location.href = `我的记录-v0.1.html?just-saved=${encodeURIComponent(cleanName)}`;
+    }, 700);
+  });
+  document.getElementById('exitBtn').addEventListener('click', () => {
+    if (confirm('退出后未保存的对话将丢失，确认退出？')) {
+      window.location.href = '首页-v0.5.html';
+    }
+  });
+  document.getElementById('editBtn').addEventListener('click', () => {
+    window.location.href = `AI学问创建-v0.1.html?mode=edit&agent=${encodeURIComponent(cleanName)}`;
+  });
+</script>
+
+<script src="prototype-capture.js"></script>
+
+<!-- ========== 评审用 PRD 侧边栏数据 ========== -->
+<script src="prototype-review-panel.js"></script>
+<script>
+  window.PRD_REVIEW_DATA = {
+    pageName: 'AI 学问使用',
+    groups: [
+      {
+        title: '⚠️ 页面本质',
+        items: [
+          {
+            target: '.container',
+            title: '复用已有界面 + 新增控制栏',
+            how:  '从智能体广场点对话类卡片进入',
+            what: '进入产品线上已有的 AI 学问对话界面，本期仅在其上新增控制栏让用户能保存/退出并返回智能体中心',
+            from: '复用：左角色卡 / 中央对话流 / 建议追问 / 输入区 / 语音 / 发送 ｜ 新增：顶栏【结束并保存】+ 底部退出 bar【退出】（与思辨页统一）+ 入口链路参数 + 角色卡【编辑】'
+          }
+        ]
+      },
+      {
+        title: '左侧角色卡',
+        items: [
+          {
+            target: '.role-card',
+            title: '角色信息卡（吸顶）',
+            how:  '默认展示，向下滚动时跟随',
+            what: '上半头像 + 名字 + 类型/学科/年级标签；下半背景介绍 + 知识库标签 + 编辑按钮',
+            from: 'URL 参数 ?agent={名称} 决定角色；本期 4 个预定义角色（牛顿/居里夫人/达尔文/通用）'
+          },
+          {
+            target: '#editBtn',
+            title: '【编辑这个智能体】',
+            how:  '点击左侧角色卡底部按钮',
+            what: '跳 AI 学问创建页 ?mode=edit&agent={名称}，预填表单',
+            from: '仅"我创建的"角色才理论上有意义；本期 demo 全部角色都开启此入口'
+          }
+        ]
+      },
+      {
+        title: '聊天主区',
+        items: [
+          {
+            target: '.chat-header',
+            title: '聊天顶栏',
+            how:  '看（不点）',
+            what: '左：当前角色名 + 状态点；右：【结束并保存】 /【退出】',
+            from: '状态点本期固定为"在线"，下期接入"思考中 / 离线"'
+          },
+          {
+            target: '#chatBody',
+            title: '对话流',
+            how:  '阅读；自动滚到底部',
+            what: '左 AI 头像气泡，右用户气泡；新消息加入后平滑滚到底部',
+            from: '进入页时预设 4 条消息作为 demo 起始；下期接入真实历史会话'
+          },
+          {
+            target: '#chatSuggest',
+            title: '建议追问 chip',
+            how:  '点击任一 chip',
+            what: '直接作为用户消息发送（不需手动确认）',
+            from: '本期 3 个固定文案；下期由 AI 基于上一轮回复实时生成'
+          },
+          {
+            target: '#inputBox',
+            title: '输入框',
+            how:  '输入文字 → 回车发送（Shift+Enter 换行）',
+            what: '高度自适应（42-120px）；超过 120 滚动；空时发送按钮 disabled',
+            from: '本期 placeholder 固定；下期可按角色定制（如牛顿："想问什么物理问题？"）'
+          },
+          {
+            target: '#voiceBtn',
+            title: '语音按钮',
+            how:  '点击切换录音态',
+            what: '本期占位 + toast 提示；下期接入实时语音转文字',
+            from: '与发送按钮并列在输入框右侧'
+          },
+          {
+            target: '#sendBtn',
+            title: '发送按钮',
+            how:  '点击或回车',
+            what: '将 textarea 内容作为用户消息加入对话流；600ms 后 AI 模拟回复',
+            from: '本期 AI 回复是预设话术，下期接入真实对话模型'
+          }
+        ]
+      },
+      {
+        title: '退出与保存',
+        items: [
+          {
+            target: '#endBtn',
+            title: '【结束并保存】',
+            how:  '点击右上保存按钮',
+            what: 'toast"已保存到我的记录" → 跳我的记录页 ?just-saved={名称}',
+            from: '本期前端模拟保存；下期接入端上持久化（按对话回合落库）'
+          },
+          {
+            target: '#exitBtn',
+            title: '【退出】（底部退出 bar）',
+            how:  '点击底部退出 bar 中的【退出】',
+            what: 'confirm"确定退出？已对话内容不会保存" → 跳首页',
+            from: '与"结束并保存"区分：退出 = 丢弃，结束 = 留档。底部 bar 跨 3 个使用页位置一致'
+          }
+        ]
+      },
+      {
+        title: 'URL 参数响应',
+        items: [
+          {
+            target: '.chat-input',
+            title: '?agent / ?from 参数',
+            how:  '由其他页跳入时携带',
+            what: '?agent= 决定角色配置；?from=create → toast"创建成功"；?from=restore → toast"已恢复 xx 的对话"',
+            from: '从 AI 学问创建页（立即对话）/ 我的记录页（恢复对话）/ 首页卡片（直接进入）三个入口跳入'
+          }
+        ]
+      }
+    ]
+  };
+</script>
+</body>
+</html>

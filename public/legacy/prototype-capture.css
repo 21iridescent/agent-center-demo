@@ -1,0 +1,75 @@
+/* Shared 16:9 capture toolbar for prototype pages. */
+.proto-capture-toolbar {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px;
+  background: #ffffff;
+  border: 1px solid #d8dde5;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(24, 36, 52, 0.10);
+}
+
+.proto-capture-btn {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid #cdd5df;
+  border-radius: 4px;
+  background: #fff;
+  color: #3f4852;
+  font: 12px/1.4 "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.proto-capture-btn.primary {
+  background: #2f3437;
+  border-color: #2f3437;
+  color: #fff;
+}
+
+.proto-capture-btn:hover {
+  transform: translateY(-1px);
+}
+
+.proto-capture-toast {
+  position: fixed;
+  top: 58px;
+  right: 16px;
+  z-index: 10000;
+  padding: 10px 13px;
+  background: #2f3944;
+  color: #fff;
+  border-radius: 4px;
+  box-shadow: 0 6px 18px rgba(24, 36, 52, 0.14);
+  font: 12px/1.4 "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, sans-serif;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-6px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.proto-capture-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.proto-capture-toast.success { background: #2a8c85; }
+.proto-capture-toast.error { background: #b33a3a; }
+
+body.proto-capturing .proto-capture-toolbar,
+body.proto-capturing .copy-strip {
+  visibility: hidden !important;
+}
+
+@media (max-width: 720px) {
+  .proto-capture-toolbar {
+    top: auto;
+    right: 12px;
+    bottom: 12px;
+  }
+}

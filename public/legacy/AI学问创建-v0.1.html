@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 学问智能体创建 · v0.1 Demo</title>
+<script src="prototype-tokens.js"></script>
+<style>
+  /* ============ 页面专属（共享部分见 prototype-tokens.css）============ */
+  .container {
+    max-width: var(--container-form);
+    margin: 0 auto;
+    padding: 24px 32px 80px;
+  }
+
+  /* ============ 步骤指示器 ============ */
+  .stepper {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: 24px 40px;
+  }
+  .step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    user-select: none;
+  }
+  .step-num {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--color-border);
+    color: var(--color-text-4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: var(--font-md);
+    font-weight: 600;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+  }
+  .step.active .step-num {
+    background: var(--color-primary);
+    color: #fff;
+    box-shadow: 0 0 0 4px rgba(42,140,133,0.15);
+  }
+  .step.done .step-num { background: var(--color-primary); color: #fff; }
+  .step-label { font-size: var(--font-sm); color: var(--color-text-4); transition: color 0.2s; }
+  .step.active .step-label, .step.done .step-label {
+    color: var(--color-primary);
+    font-weight: 500;
+  }
+  .step-line {
+    flex: 1;
+    height: 2px;
+    background: var(--color-border);
+    margin: 17px 12px 0;
+    transition: background 0.2s;
+  }
+  .step-line.done { background: var(--color-primary); }
+
+  /* ============ Step Panel ============ */
+  .step-panel {
+    display: none;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: 32px 36px;
+  }
+  .step-panel.active { display: block; }
+  .panel-title { font-size: var(--font-2xl); font-weight: 600; margin-bottom: 6px; }
+  .panel-desc {
+    font-size: var(--font-base);
+    color: var(--color-text-4);
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--color-border-soft);
+  }
+
+  /* ============ AI 生成入口 ============ */
+  .ai-generate-panel {
+    background: linear-gradient(135deg, var(--color-primary-soft), #e0f2ef);
+    border: 1.5px dashed var(--color-primary);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    margin-bottom: 24px;
+  }
+  .ai-generate-title {
+    font-size: var(--font-md);
+    font-weight: 600;
+    color: var(--color-primary);
+    margin-bottom: 4px;
+  }
+  .ai-generate-desc { font-size: var(--font-sm); color: var(--color-text-4); margin-bottom: 12px; }
+  .ai-input-row { display: flex; gap: 8px; align-items: center; }
+  .ai-input-row input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--color-primary-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-base);
+    outline: none;
+    background: var(--color-bg-card);
+    font-family: inherit;
+  }
+  .ai-input-row input:focus { border-color: var(--color-primary); }
+  .ai-generate-btn {
+    padding: 10px 18px;
+    background: var(--color-primary);
+    color: #fff;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-base);
+    font-weight: 500;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .ai-generate-btn:hover { background: var(--color-primary-dark); box-shadow: 0 4px 12px rgba(42,140,133,0.2); }
+  .ai-generate-btn:disabled { background: #a0a8b8; cursor: not-allowed; box-shadow: none; }
+  .ai-examples { margin-top: 8px; font-size: var(--font-xs); color: var(--color-text-5); line-height: 1.6; }
+  .ai-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0 20px;
+    color: var(--color-text-6);
+    font-size: var(--font-sm);
+  }
+  .ai-divider::before, .ai-divider::after {
+    content: ""; flex: 1; height: 1px; background: var(--color-border);
+  }
+  @keyframes flashFill {
+    0%, 100% { background: var(--color-bg-card); }
+    50% { background: #fff5d6; }
+  }
+  .field-flash { animation: flashFill 1.4s ease-in-out 2; }
+
+  /* ============ 人物形象 ============ */
+  .avatar-section {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 18px;
+    align-items: flex-start;
+  }
+  .avatar-preview {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: var(--color-primary-bg);
+    color: var(--color-primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    font-weight: 600;
+    border: 3px solid var(--color-primary);
+  }
+  .avatar-options { display: flex; flex-direction: column; gap: 12px; }
+  .avatar-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+  .avatar-item {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: var(--color-bg);
+    color: var(--color-text-3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: var(--font-xl);
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+  }
+  .avatar-item:hover { border-color: var(--color-primary); }
+  .avatar-item.active {
+    background: var(--color-primary-bg);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+  }
+  .avatar-actions { display: flex; gap: 8px; }
+  .avatar-action-btn {
+    padding: 6px 12px;
+    background: var(--color-bg-card);
+    color: var(--color-primary);
+    border: 1px solid var(--color-primary-border);
+    border-radius: var(--radius-pill);
+    font-size: var(--font-sm);
+    transition: all 0.15s;
+  }
+  .avatar-action-btn:hover { background: var(--color-primary-bg); }
+
+  /* ============ 音色 ============ */
+  .voice-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .voice-card {
+    background: var(--color-bg-card);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 14px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .voice-card:hover { border-color: var(--color-primary); }
+  .voice-card.active {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+  }
+  .voice-icon {
+    width: 38px; height: 38px;
+    margin: 0 auto 8px;
+    border-radius: 50%;
+    background: var(--color-primary-bg);
+    color: var(--color-primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: var(--font-md);
+    font-weight: 600;
+  }
+  .voice-card.active .voice-icon { background: var(--color-primary); color: #fff; }
+  .voice-name { font-size: var(--font-base); font-weight: 600; margin-bottom: 2px; }
+  .voice-style { font-size: var(--font-xs); color: var(--color-text-4); margin-bottom: 8px; }
+  .voice-play {
+    font-size: var(--font-xs);
+    color: var(--color-primary);
+    padding: 4px 10px;
+    border: 1px solid var(--color-primary-border);
+    border-radius: var(--radius-pill);
+    transition: all 0.15s;
+  }
+  .voice-play:hover, .voice-play.playing { background: var(--color-primary); color: #fff; }
+
+  /* ============ 系统提示词模板行 ============ */
+  .template-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .template-row select { flex: 1; }
+
+  /* ============ 知识库 ============ */
+  .kb-list { display: flex; flex-direction: column; gap: 6px; }
+  .kb-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--color-bg-mute);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .kb-item:hover { border-color: var(--color-primary); background: var(--color-primary-soft); }
+  .kb-item input[type="checkbox"] {
+    width: 16px; height: 16px;
+    cursor: pointer;
+    accent-color: var(--color-primary);
+  }
+  .kb-item-name { font-size: var(--font-base); font-weight: 500; flex: 1; }
+  .kb-item-meta { font-size: var(--font-xs); color: var(--color-text-5); }
+  .kb-item.checked { border-color: var(--color-primary); background: var(--color-primary-soft); }
+
+  /* ====== 模板来源 chip ====== */
+  .template-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--color-primary-bg); border: 1px solid var(--color-primary-border);
+    color: var(--color-primary); border-radius: var(--radius-pill);
+    padding: 5px 14px; font-size: var(--font-sm); font-weight: 500;
+    margin-bottom: 16px;
+  }
+  .template-chip a { color: var(--color-primary); text-decoration: underline; cursor: pointer; font-weight: 400; }
+</style>
+<link rel="stylesheet" href="prototype-capture.css">
+</head>
+<body>
+
+<div class="meta-bar">
+  <span><strong>AI 学问智能体创建 v0.1 Demo</strong> · 3 步向导：基本信息 / 形象与音色 / 知识与提示词</span>
+  <span>评审用 · 仅 PC Web</span>
+</div>
+
+<header class="topbar">
+  <a class="back-link" href="/">← 智能体中心</a>
+  <span class="crumb-sep">/</span>
+  <span class="crumb">创作工坊</span>
+  <span class="crumb-sep">/</span>
+  <span class="page-title">AI 学问智能体创建</span>
+</header>
+
+<main class="container">
+
+  <div class="stepper">
+    <div class="step active" data-step="1"><div class="step-num">1</div><div class="step-label">基本信息</div></div>
+    <div class="step-line" data-line="1"></div>
+    <div class="step" data-step="2"><div class="step-num">2</div><div class="step-label">形象与音色</div></div>
+    <div class="step-line" data-line="2"></div>
+    <div class="step" data-step="3"><div class="step-num">3</div><div class="step-label">知识与提示词</div></div>
+  </div>
+
+  <!-- Step 1 -->
+  <section class="step-panel active" id="panel-1">
+    <h2 class="panel-title">基本信息</h2>
+    <p class="panel-desc">给智能体起个标题，写清角色背景</p>
+
+    <div class="template-chip" id="templateChip" hidden>
+      ✓ 已选模板：<span id="templateChipName"></span>
+      &nbsp;·&nbsp;<a href="模板选择-v0.1.html">更换</a>
+    </div>
+
+    <div class="ai-generate-panel">
+      <div class="ai-generate-title">✨ AI 帮你快速生成</div>
+      <div class="ai-generate-desc">用一句话描述你想要的对话智能体，AI 会自动填好所有字段</div>
+      <div class="ai-input-row">
+        <input type="text" id="aiPrompt" placeholder='如："给五年级科学课做一个牛顿对话助手"' />
+        <button class="ai-generate-btn" id="aiGenerateBtn">✨ AI 生成</button>
+      </div>
+      <div class="ai-examples">
+        示例：让学生跟居里夫人对话学化学 · 给四年级做达尔文进化论助手 · AI 通识答疑助手
+      </div>
+    </div>
+
+    <div class="ai-divider">或手动填写</div>
+
+    <div class="form-field">
+      <label>标题 <span class="required">*</span></label>
+      <input type="text" id="agentName" value="牛顿" placeholder="如：牛顿、居里夫人、AI 通识助手" />
+      <div class="hint">老师和学生看到的智能体名字</div>
+    </div>
+
+    <div class="form-field">
+      <label>背景 <span class="required">*</span></label>
+      <textarea id="agentBackground" rows="3">经典物理学开创者，1643-1727 年。专长力学、光学、万有引力。与学生探讨"为什么苹果会落下""为什么月亮不掉下来"等运动与引力相关问题。</textarea>
+      <div class="hint">角色背景设定，会作为对话基调影响 AI 回答风格</div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-field">
+        <label>适用年级</label>
+        <select id="agentGrade">
+          <option value="all">适用全年级</option>
+          <option value="g1-3">1-3 年级</option>
+          <option value="g4-6" selected>4-6 年级</option>
+          <option value="middle">初中</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>学科主题</label>
+        <select id="agentSubject">
+          <option value="science" selected>科学</option>
+          <option value="ai">人工智能</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="step-actions">
+      <div class="left"><button class="btn-ghost" data-action="cancel">取消</button></div>
+      <div class="right"><button class="btn-primary" data-step-next="2">下一步 →</button></div>
+    </div>
+  </section>
+
+  <!-- Step 2 -->
+  <section class="step-panel" id="panel-2">
+    <h2 class="panel-title">形象与音色</h2>
+    <p class="panel-desc">选择虚拟人物形象和说话声音风格</p>
+
+    <div class="form-field">
+      <label>人物形象</label>
+      <div class="avatar-section">
+        <div class="avatar-preview" id="avatarPreview">N</div>
+        <div class="avatar-options">
+          <div class="avatar-grid" id="avatarGrid">
+            <div class="avatar-item active" data-avatar="N">N</div>
+            <div class="avatar-item" data-avatar="M">M</div>
+            <div class="avatar-item" data-avatar="D">D</div>
+            <div class="avatar-item" data-avatar="E">E</div>
+            <div class="avatar-item" data-avatar="F">F</div>
+            <div class="avatar-item" data-avatar="G">G</div>
+            <div class="avatar-item" data-avatar="AI">AI</div>
+            <div class="avatar-item" data-avatar="学">学</div>
+          </div>
+          <div class="avatar-actions">
+            <button class="avatar-action-btn" data-action="ai-avatar">✨ AI 生成形象</button>
+            <button class="avatar-action-btn" data-action="upload-avatar">📤 本地上传</button>
+          </div>
+        </div>
+      </div>
+      <div class="hint">可以是真人科学家、虚拟角色或科创主题的形象</div>
+    </div>
+
+    <div class="form-field">
+      <label>音色</label>
+      <div class="voice-grid">
+        <div class="voice-card active" data-voice="m1">
+          <div class="voice-icon">男1</div>
+          <div class="voice-name">沉稳男声</div>
+          <div class="voice-style">适合历史人物</div>
+          <button class="voice-play" data-voice-play="m1">▶ 试听</button>
+        </div>
+        <div class="voice-card" data-voice="f1">
+          <div class="voice-icon">女1</div>
+          <div class="voice-name">温柔女声</div>
+          <div class="voice-style">适合引导式</div>
+          <button class="voice-play" data-voice-play="f1">▶ 试听</button>
+        </div>
+        <div class="voice-card" data-voice="m2">
+          <div class="voice-icon">男2</div>
+          <div class="voice-name">活泼男声</div>
+          <div class="voice-style">适合儿童段</div>
+          <button class="voice-play" data-voice-play="m2">▶ 试听</button>
+        </div>
+        <div class="voice-card" data-voice="f2">
+          <div class="voice-icon">女2</div>
+          <div class="voice-name">甜美女声</div>
+          <div class="voice-style">适合低年级</div>
+          <button class="voice-play" data-voice-play="f2">▶ 试听</button>
+        </div>
+      </div>
+      <div class="hint">智能体回答时使用的 TTS 声音；点试听听 5 秒样例</div>
+    </div>
+
+    <div class="step-actions">
+      <div class="left"><button class="btn-secondary" data-step-prev="1">← 上一步</button></div>
+      <div class="right"><button class="btn-primary" data-step-next="3">下一步 →</button></div>
+    </div>
+  </section>
+
+  <!-- Step 3 -->
+  <section class="step-panel" id="panel-3">
+    <h2 class="panel-title">知识与提示词</h2>
+    <p class="panel-desc">配置 AI 的回答风格和知识来源</p>
+
+    <div class="form-field">
+      <label>系统提示词</label>
+      <div class="template-row">
+        <span class="hint-inline">选择模板：</span>
+        <select id="promptTemplate">
+          <option value="historical" selected>历史人物 · 第一人称对话</option>
+          <option value="guiding">引导式 · 用问题引发思考</option>
+          <option value="socratic">苏格拉底式 · 反问与追问</option>
+          <option value="general">通识答疑 · 直接清晰回答</option>
+        </select>
+      </div>
+      <textarea id="promptContent" rows="6">你是牛顿，请用第一人称与学生对话。基于你的科学发现（运动定律、万有引力、光学）回答学生的问题。优先用学生熟悉的生活现象做类比（如苹果落地、月球绕地）。语气沉稳但不古板，避免使用现代术语，鼓励学生自己观察和思考。</textarea>
+      <div class="hint">基于模板修改或自由编写。AI 会按此 prompt 与学生对话。</div>
+    </div>
+
+    <div class="form-field">
+      <label>关联知识库（可选）</label>
+      <div class="kb-list">
+        <label class="kb-item checked"><input type="checkbox" checked /><span class="kb-item-name">教科版 六年级科学</span><span class="kb-item-meta">120 篇文献</span></label>
+        <label class="kb-item"><input type="checkbox" /><span class="kb-item-name">教科版 五年级科学</span><span class="kb-item-meta">98 篇文献</span></label>
+        <label class="kb-item"><input type="checkbox" /><span class="kb-item-name">苏教版 五年级科学</span><span class="kb-item-meta">102 篇文献</span></label>
+        <label class="kb-item"><input type="checkbox" /><span class="kb-item-name">苏教版 六年级科学</span><span class="kb-item-meta">115 篇文献</span></label>
+        <label class="kb-item"><input type="checkbox" /><span class="kb-item-name">通用科学百科</span><span class="kb-item-meta">通识资料 · 跨年级</span></label>
+        <label class="kb-item"><input type="checkbox" /><span class="kb-item-name">AI 通识资料库</span><span class="kb-item-meta">人工智能基础</span></label>
+      </div>
+      <div class="hint">勾选后 AI 在回答时会从这些知识库主动搜索相关内容</div>
+    </div>
+
+    <div class="step-actions">
+      <div class="left"><button class="btn-secondary" data-step-prev="2">← 上一步</button></div>
+      <div class="right">
+        <button class="btn-ghost" data-action="cancel">取消</button>
+        <button class="btn-secondary" data-action="save-only">保存到我的智能体</button>
+        <button class="btn-primary" data-action="save-and-start">立即对话</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const toast = document.getElementById('toast');
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+
+  function goToStep(n) {
+    n = parseInt(n);
+    document.querySelectorAll('.step').forEach(s => {
+      const num = parseInt(s.dataset.step);
+      s.classList.toggle('active', num === n);
+      s.classList.toggle('done', num < n);
+    });
+    document.querySelectorAll('.step-line').forEach(l => {
+      const num = parseInt(l.dataset.line);
+      l.classList.toggle('done', num < n);
+    });
+    document.querySelectorAll('.step-panel').forEach(p => {
+      p.classList.toggle('active', p.id === 'panel-' + n);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  document.querySelectorAll('[data-step-next]').forEach(b => b.addEventListener('click', () => goToStep(b.dataset.stepNext)));
+  document.querySelectorAll('[data-step-prev]').forEach(b => b.addEventListener('click', () => goToStep(b.dataset.stepPrev)));
+  document.querySelectorAll('.step').forEach(s => s.addEventListener('click', () => goToStep(s.dataset.step)));
+
+  // AI 生成（mock）
+  document.getElementById('aiGenerateBtn').addEventListener('click', () => {
+    const prompt = document.getElementById('aiPrompt').value.trim();
+    if (!prompt) { showToast('请先描述你想创建的智能体'); return; }
+    const btn = document.getElementById('aiGenerateBtn');
+    btn.disabled = true; btn.textContent = '生成中...';
+    setTimeout(() => {
+      let name, background, avatar = 'N', voice = 'm1', promptKey = 'historical', promptContent;
+      let grade = 'g4-6', subject = 'science';
+      let kbChecks = ['教科版 六年级科学'];
+
+      if (prompt.includes('牛顿') || prompt.includes('物理') || prompt.includes('力学')) {
+        name = '牛顿';
+        background = '经典物理学开创者，1643-1727 年。专长力学、光学、万有引力。';
+        avatar = 'N'; voice = 'm1';
+        promptContent = '你是牛顿，请用第一人称与学生对话。基于你的科学发现回答问题，多用生活现象做类比。';
+      } else if (prompt.includes('居里') || prompt.includes('化学')) {
+        name = '居里夫人';
+        background = '放射性研究先驱，1867-1934 年。两次诺贝尔奖得主。';
+        avatar = 'M'; voice = 'f1';
+        promptContent = '你是居里夫人，请用温柔但坚定的语气与学生对话。';
+      } else if (prompt.includes('达尔文') || prompt.includes('进化') || prompt.includes('生物')) {
+        name = '达尔文';
+        background = '进化论之父，1809-1882 年。环球航行 5 年，对自然观察细致入微。';
+        avatar = 'D'; voice = 'm1';
+        promptContent = '你是达尔文，请用第一人称与学生对话。基于你的进化论研究回答问题。';
+      } else if (prompt.includes('AI') || prompt.includes('人工智能') || prompt.includes('通识')) {
+        name = 'AI 通识助手';
+        background = '面向中小学生的 AI 通识答疑助手。';
+        avatar = 'AI'; voice = 'f1'; subject = 'ai';
+        promptKey = 'general';
+        promptContent = '你是 AI 通识助手。用清晰直接的语言回答学生关于人工智能的问题。';
+        kbChecks = ['AI 通识资料库'];
+      } else {
+        name = '新对话智能体'; background = prompt;
+        promptContent = '基于上述背景与学生对话，回答风格友好、清晰、鼓励思考。';
+      }
+
+      if (prompt.match(/[一二三]年级|低年级/)) grade = 'g1-3';
+      else if (prompt.includes('初中')) grade = 'middle';
+
+      document.getElementById('agentName').value = name;
+      document.getElementById('agentBackground').value = background;
+      document.getElementById('agentGrade').value = grade;
+      document.getElementById('agentSubject').value = subject;
+      ['agentName', 'agentBackground'].forEach(id => {
+        const el = document.getElementById(id);
+        el.classList.add('field-flash');
+        setTimeout(() => el.classList.remove('field-flash'), 2900);
+      });
+
+      document.querySelectorAll('.avatar-item').forEach(it => it.classList.toggle('active', it.dataset.avatar === avatar));
+      document.getElementById('avatarPreview').textContent = avatar;
+      document.querySelectorAll('.voice-card').forEach(v => v.classList.toggle('active', v.dataset.voice === voice));
+      document.getElementById('promptTemplate').value = promptKey;
+      document.getElementById('promptContent').value = promptContent;
+      document.querySelectorAll('.kb-item').forEach(item => {
+        const cb = item.querySelector('input[type="checkbox"]');
+        const name = item.querySelector('.kb-item-name').textContent;
+        cb.checked = kbChecks.includes(name);
+        item.classList.toggle('checked', cb.checked);
+      });
+
+      btn.disabled = false; btn.textContent = '✨ AI 生成';
+      showToast(`AI 已生成：${name} · 完整配置`);
+    }, 1000);
+  });
+
+  document.querySelectorAll('.avatar-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const ch = item.dataset.avatar;
+      document.querySelectorAll('.avatar-item').forEach(i => i.classList.toggle('active', i === item));
+      document.getElementById('avatarPreview').textContent = ch;
+    });
+  });
+
+  document.querySelectorAll('.voice-card').forEach(card => {
+    card.addEventListener('click', e => {
+      if (e.target.classList.contains('voice-play')) return;
+      document.querySelectorAll('.voice-card').forEach(c => c.classList.toggle('active', c === card));
+    });
+  });
+  document.querySelectorAll('.voice-play').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const voiceName = btn.closest('.voice-card').querySelector('.voice-name').textContent;
+      btn.classList.add('playing'); btn.textContent = '■ 播放中';
+      setTimeout(() => { btn.classList.remove('playing'); btn.textContent = '▶ 试听'; }, 1500);
+      showToast(`试听：${voiceName}`);
+    });
+  });
+
+  const promptTemplates = {
+    historical: '你是 [角色]，请用第一人称与学生对话。基于你的研究和经历回答问题，使用学生熟悉的生活现象做类比。语气符合你的时代和性格，鼓励学生自己观察和思考。',
+    guiding: '你是一位科学引导者。当学生提问时，先问 1-2 个反问帮他们梳理思路，再给出答案的方向，让学生自己得出结论。鼓励多角度思考。',
+    socratic: '采用苏格拉底式对话。学生提问时，先以一个相关的反问回应，引导学生自己挖掘答案。不要直接给出结论，而是逐步引导。当学生卡住时，给出微妙的提示。',
+    general: '你是一位科学通识答疑助手。用清晰直接的语言回答学生的问题，多用生活中熟悉的例子做类比。回答控制在 100 字以内，避免冗长。'
+  };
+  document.getElementById('promptTemplate').addEventListener('change', e => {
+    document.getElementById('promptContent').value = promptTemplates[e.target.value] || '';
+  });
+
+  document.querySelectorAll('.kb-item').forEach(item => {
+    const cb = item.querySelector('input[type="checkbox"]');
+    cb.addEventListener('change', () => item.classList.toggle('checked', cb.checked));
+  });
+
+  document.querySelectorAll('[data-action]').forEach(el => {
+    el.addEventListener('click', () => {
+      const a = el.dataset.action;
+      if (a === 'ai-avatar') { showToast('打开 AI 形象生成（输入描述 → 生成图）'); return; }
+      if (a === 'upload-avatar') { showToast('打开本地图片选择'); return; }
+      if (a === 'cancel') { showToast('返回创作工坊（未保存的内容将丢失）'); return; }
+      const name = document.getElementById('agentName').value.trim() || '未命名智能体';
+
+      if (a === 'save-only') {
+        showToast(`保存成功：${name}`);
+        setTimeout(() => {
+          window.location.href = `首页-v0.5.html?saved=${encodeURIComponent(name)}`;
+        }, 600);
+      } else if (a === 'save-and-start') {
+        window.location.href = `AI学问使用-v0.1.html?agent=${encodeURIComponent(name)}&from=create`;
+      }
+    });
+  });
+
+  // ===== 模板预填 =====
+  (function() {
+    const TEMPLATES = {
+      newton: { name: '牛顿', agentName: '牛顿', agentBackground: '经典物理学开创者，1643-1727年。专长力学、光学、万有引力。与学生探讨"为什么苹果会落下""为什么月亮不掉下来"等运动与引力相关问题。', agentGrade: 'g4-6', agentSubject: 'science', avatar: 'N', voice: 'm1', promptKey: 'socratic', promptContent: '你是牛顿，请用第一人称与学生对话。用苏格拉底式提问引导学生主动思考，而不是直接给出答案。当学生提问时，先反问"你觉得呢？"再逐步引导。' },
+      curie: { name: '居里夫人', agentName: '居里夫人', agentBackground: '玛丽·居里，1867-1934年。首位两次获诺贝尔奖的科学家，发现了镭和钋。与学生分享实验探索经历，鼓励好奇心与坚持精神。', agentGrade: 'g4-6', agentSubject: 'science', avatar: 'M', voice: 'f1', promptKey: 'historical', promptContent: '你是居里夫人，请用第一人称与学生对话。分享你发现镭元素的经历，鼓励学生对科学保持好奇心与坚持探索的精神。' },
+      darwin: { name: '达尔文', agentName: '达尔文', agentBackground: '查尔斯·达尔文，1809-1882年。进化论创立者。引导学生观察身边生物，思考生命多样性与演化规律。', agentGrade: 'g4-6', agentSubject: 'science', avatar: 'D', voice: 'm1', promptKey: 'guiding', promptContent: '你是达尔文，请用引导式对话与学生交流。鼓励学生观察身边的生物现象，用问题引发对生命和进化的思考。' },
+      'ai-general': { name: 'AI 通识助手', agentName: 'AI 通识助手', agentBackground: '面向全年级学生的科学通识答疑助手。清晰解答各类科学问题，语言简洁易懂。', agentGrade: 'all', agentSubject: 'science', avatar: 'AI', voice: 'f1', promptKey: 'general', promptContent: '你是一个科学通识助手，面向中小学生。用清晰、准确、易懂的语言回答科学问题，适当举例。' }
+    };
+    const tid = new URLSearchParams(location.search).get('template');
+    if (!tid || !TEMPLATES[tid]) return;
+    const t = TEMPLATES[tid];
+    const chip = document.getElementById('templateChip');
+    if (chip) { document.getElementById('templateChipName').textContent = t.name; chip.hidden = false; }
+    document.getElementById('agentName').value = t.agentName;
+    document.getElementById('agentBackground').value = t.agentBackground;
+    const gradeEl = document.getElementById('agentGrade'); if (gradeEl) gradeEl.value = t.agentGrade;
+    const subjectEl = document.getElementById('agentSubject'); if (subjectEl) subjectEl.value = t.agentSubject;
+    document.querySelectorAll('.avatar-item').forEach(a => a.classList.toggle('active', a.dataset.avatar === t.avatar));
+    const prev = document.getElementById('avatarPreview'); if (prev) prev.textContent = t.avatar;
+    document.querySelectorAll('.voice-card').forEach(v => v.classList.toggle('active', v.dataset.voice === t.voice));
+    const tplSelect = document.getElementById('promptTemplate'); if (tplSelect) tplSelect.value = t.promptKey;
+    const tplContent = document.getElementById('promptContent'); if (tplContent) tplContent.value = t.promptContent;
+  })();
+</script>
+
+<script src="prototype-capture.js"></script>
+
+<!-- ========== 评审用 PRD 侧边栏数据 ========== -->
+<script src="prototype-review-panel.js"></script>
+<script>
+  window.PRD_REVIEW_DATA = {
+    pageName: 'AI 学问创建',
+    groups: [
+      {
+        title: '步骤指示器',
+        items: [
+          {
+            target: '.stepper',
+            title: '3 步向导：基本信息 → 形象与音色 → 知识与提示词',
+            how:  '点击步骤号回退已完成步骤；【下一步】校验后推进',
+            what: '当前步骤实心绿、未到达步骤灰底；不允许跳到尚未完成的步骤',
+            from: '本期固定 3 步；后续不打算扩展为更多步，避免向导过长'
+          }
+        ]
+      },
+      {
+        title: 'Step 1 · 基本信息',
+        items: [
+          {
+            target: '#panel-1',
+            title: '基本信息面板',
+            how:  '看到的是默认 active 面板',
+            what: '上半 AI 一句话生成区，下半手动表单（名称 / 背景 / 年级 / 学科）',
+            from: '名称必填；背景（系统提示词）必填，提供 5-10 张预置模板供选择；年级默认"4-6 年级"、学科默认"科学"'
+          },
+          {
+            target: '#aiGenerateBtn',
+            title: 'AI 一句话生成',
+            how:  '在 #aiPrompt 输入"想要一个什么样的智能体" → 点【AI 生成】',
+            what: '1 秒模拟延迟后，自动填充名称/主题/背景，字段闪现高亮（.field-flash）',
+            from: '本期纯前端 mock；下期接入真实大模型，输入到生成约 3-5 秒'
+          }
+        ]
+      },
+      {
+        title: 'Step 2 · 形象与音色',
+        items: [
+          {
+            target: '#panel-2',
+            title: '形象与音色面板',
+            how:  '【下一步】或点步骤 2 进入',
+            what: '左 8 张头像网格，右 4 张音色卡',
+            from: '头像/音色 demo 期固定，后续支持自定义上传'
+          },
+          {
+            target: '.avatar-item',
+            title: '人物形象（三种来源）',
+            how:  '① 选预设 ② 点【AI 生成】输入描述自动生成 ③ 点【本地上传】上传图片',
+            what: '选定后实时更新右侧"头像预览"；形象不限于真人，以科创主题为主',
+            from: '三来源任选；本期 demo 仅暴露"预设"路径，AI 生成 + 本地上传待补；下期与 AI 思辨创建对齐'
+          },
+          {
+            target: '.voice-card',
+            title: '音色选择',
+            how:  '点击音色卡选定 / 点【试听】按钮',
+            what: '选定→该卡描绿边；试听→本期 toast 提示，下期播放真实音频',
+            from: '4 档音色（男 1/女 1/男 2/女 2）；下期可能扩展年龄/语速维度'
+          }
+        ]
+      },
+      {
+        title: 'Step 3 · 知识与提示词',
+        items: [
+          {
+            target: '#panel-3',
+            title: '知识与提示词面板',
+            how:  '点【下一步】进入',
+            what: '上半提示词模板 + textarea，下半知识库勾选',
+            from: '本期是 demo 简化版，下期会拆分为"提示词"和"知识库"两个独立子步骤'
+          },
+          {
+            target: '.kb-item',
+            title: '知识库勾选',
+            how:  '点击 checkbox（多选）',
+            what: '选中卡片描绿边；保存时与该智能体绑定',
+            from: '本期固定 6 个预设知识库；下期支持教师上传自有教材'
+          }
+        ]
+      },
+      {
+        title: '保存与跳转',
+        items: [
+          {
+            target: '[data-action="save"]',
+            title: '【保存到我的智能体】',
+            how:  '完成 3 步后点保存',
+            what: '跳回首页 ?saved={名称} → 浮出绿色 Banner + 自动滚到目标卡 + 脉冲高亮 4 次',
+            from: '编辑模式（?mode=edit）下保存改用 ?updated={名称}，首页文案变"已更新"'
+          },
+          {
+            target: '[data-action="use-now"]',
+            title: '【立即对话】',
+            how:  '完成 3 步后点立即对话',
+            what: '直接跳 AI 学问使用页 ?agent={名称}&from=create，进入后 toast"创建成功，开始对话吧"',
+            from: '提供"边创边用"路径，避免回首页找卡'
+          },
+          {
+            target: '.footer-actions',
+            title: '【插入课件 / 课程】（630 上线）',
+            how:  '保存后选择目标课件 / 课程',
+            what: '把当前智能体插入到目标课件，备课时可搜索调用',
+            from: '出口连接"智能体中心 → 备授课平台"；本期 demo 不实现，PRD 仅描述按钮存在；需定统一插入协议'
+          }
+        ]
+      }
+    ]
+  };
+</script>
+</body>
+</html>

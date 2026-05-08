@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 思辨使用过程 · 悬浮查看资料 v0.1</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #eef2f5;
+    color: #2b3138;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  button { font-family: inherit; cursor: pointer; }
+  .page {
+    width: 1440px;
+    height: 900px;
+    padding: 24px 32px;
+    overflow: hidden;
+  }
+  .header {
+    height: 58px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 16px;
+  }
+  h1 { font-size: 24px; margin-bottom: 5px; letter-spacing: 0; }
+  .sub { color: #697581; font-size: 13px; }
+  .tag {
+    padding: 6px 10px;
+    border: 1px solid #d5dde6;
+    border-radius: 6px;
+    background: #fff;
+    color: #66717c;
+    font-size: 12px;
+  }
+  .mock {
+    width: 1376px;
+    height: 760px;
+    background: #fff;
+    border: 1px solid #dce4ed;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 12px 28px rgba(20, 35, 55, 0.06);
+    display: grid;
+    grid-template-rows: 58px 1fr 68px;
+    position: relative;
+  }
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 20px;
+    border-bottom: 1px solid #e3e9ef;
+    background: #fbfcfd;
+  }
+  .back {
+    padding: 6px 10px;
+    border: 1px solid #d5dde6;
+    border-radius: 6px;
+    background: #fff;
+    color: #56616c;
+  }
+  .title { font-weight: 700; font-size: 15px; }
+  .mode {
+    padding: 3px 8px;
+    border-radius: 10px;
+    background: #edf6f5;
+    color: #246f69;
+    font-size: 11px;
+  }
+  .main {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 0;
+  }
+  .side {
+    padding: 18px;
+    border-right: 1px solid #e3e9ef;
+    background: #f8fafb;
+  }
+  .side-card {
+    padding: 13px;
+    border: 1px solid #dfe7ee;
+    border-radius: 10px;
+    background: #fff;
+    margin-bottom: 10px;
+  }
+  .side-card strong { display: block; margin-bottom: 4px; }
+  .side-card span { color: #75808a; font-size: 12px; }
+  .content {
+    padding: 18px 20px;
+    background: linear-gradient(#fff, #fbfcfd);
+  }
+  .line {
+    margin-bottom: 13px;
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 10px;
+  }
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #e8f4f3;
+    color: #2a8c85;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+  .bubble {
+    border: 1px solid #e0e7ef;
+    border-radius: 10px;
+    padding: 11px 13px;
+    background: #fff;
+    color: #3f4852;
+  }
+  .footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 20px;
+    border-top: 1px solid #e3e9ef;
+    background: #fff;
+  }
+  .input {
+    flex: 1;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    border: 1px solid #d8e1ea;
+    border-radius: 8px;
+    color: #8a949e;
+    background: #fbfcfd;
+  }
+  .primary {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: 0;
+    background: #2a8c85;
+    color: #fff;
+    font-weight: 600;
+  }
+  .float-material {
+    position: absolute;
+    right: 24px;
+    bottom: 86px;
+    z-index: 20;
+  }
+  .float-btn {
+    min-width: 112px;
+    padding: 11px 16px;
+    border: 0;
+    border-radius: 22px;
+    background: #2a8c85;
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 10px 24px rgba(42, 140, 133, 0.22);
+  }
+  .material-pop {
+    display: none;
+    position: absolute;
+    right: 0;
+    bottom: 52px;
+    width: 320px;
+    border: 1px solid #dce4ed;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 14px 36px rgba(20, 35, 55, 0.16);
+    overflow: hidden;
+  }
+  .material-pop.show { display: block; }
+  .material-head {
+    padding: 12px 14px;
+    border-bottom: 1px solid #edf1f5;
+    display: flex;
+    justify-content: space-between;
+    color: #56616c;
+  }
+  .material-item {
+    padding: 12px 14px;
+    border-bottom: 1px solid #edf1f5;
+  }
+  .material-item:last-child { border-bottom: 0; }
+  .material-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .material-name {
+    flex: 1;
+    font-weight: 600;
+  }
+  .view-btn {
+    padding: 5px 10px;
+    border: 1px solid #d8e1ea;
+    border-radius: 6px;
+    background: #fff;
+    color: #246f69;
+    font-size: 12px;
+  }
+  .material-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(22, 31, 40, 0.58);
+  }
+  .material-modal.show { display: flex; }
+  .modal-card {
+    width: 920px;
+    height: 560px;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.28);
+    display: grid;
+    grid-template-rows: 58px 1fr;
+    overflow: hidden;
+  }
+  .modal-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 20px;
+    border-bottom: 1px solid #e3e9ef;
+    background: #fbfcfd;
+  }
+  .modal-head strong { font-size: 16px; }
+  .modal-close {
+    margin-left: auto;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #d8e1ea;
+    border-radius: 8px;
+    background: #fff;
+    color: #56616c;
+    font-size: 18px;
+  }
+  .modal-body {
+    padding: 24px 28px;
+    color: #3f5058;
+    font-size: 15px;
+    line-height: 1.9;
+  }
+  .modal-body .doc-box {
+    height: 100%;
+    border: 1px solid #dce4ed;
+    border-radius: 12px;
+    background: #fbfcfd;
+    padding: 22px;
+  }
+  .modal-body .doc-label {
+    color: #2a8c85;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .flow {
+    margin-top: 14px;
+    display: flex;
+    gap: 10px;
+    color: #6b7680;
+    font-size: 12px;
+  }
+  .flow span {
+    padding: 8px 11px;
+    border: 1px solid #d8e1ea;
+    border-radius: 8px;
+    background: #fff;
+  }
+</style>
+<link rel="stylesheet" href="prototype-capture.css">
+</head>
+<body>
+<main class="page">
+  <div class="header">
+    <div>
+      <h1>辩论 / 讨论使用过程 · 查看资料交互</h1>
+      <div class="sub">资料入口是悬浮按钮：点击展开资料列表，再点击“查看”打开全屏资料 Modal。</div>
+    </div>
+    <div class="tag">v0.1 · 悬浮按钮</div>
+  </div>
+
+  <section class="mock">
+    <div class="topbar">
+      <button class="back">返回</button>
+      <div class="title">塑料袋是否应该被禁止？</div>
+      <span class="mode">辩论 / 讨论共用</span>
+    </div>
+
+    <div class="main">
+      <aside class="side">
+        <div class="side-card">
+          <strong>当前活动</strong>
+          <span>第 2 轮 · 学生补充证据</span>
+        </div>
+        <div class="side-card">
+          <strong>交互原则</strong>
+          <span>资料不占固定区域，只通过悬浮按钮唤起。</span>
+        </div>
+      </aside>
+
+      <section class="content">
+        <div class="line">
+          <div class="avatar">AI</div>
+          <div class="bubble">可降解材料并不等于可以随意丢弃，需要结合处理条件判断。</div>
+        </div>
+        <div class="line">
+          <div class="avatar">生</div>
+          <div class="bubble">我想看一下相关资料，再补充我的观点。</div>
+        </div>
+        <div class="line">
+          <div class="avatar">师</div>
+          <div class="bubble">点击右下角悬浮“查看资料”，展开后点“查看”即可。</div>
+        </div>
+      </section>
+    </div>
+
+    <div class="footer">
+      <div class="input">输入发言 / 选择观点支架后发言</div>
+      <button class="primary">发送</button>
+    </div>
+
+    <div class="float-material">
+      <div class="material-pop" id="materialPop">
+        <div class="material-head"><strong>资料</strong><span>2 条</span></div>
+        <div class="material-item">
+          <div class="material-row">
+            <div class="material-name">可降解材料研究</div>
+            <button class="view-btn" data-title="可降解材料研究" data-body="可降解材料需要在特定温度、湿度和微生物条件下才能明显加速分解。课堂中可用这条资料帮助学生区分“材料可降解”和“可以随意丢弃”两个概念。">查看</button>
+          </div>
+        </div>
+        <div class="material-item">
+          <div class="material-row">
+            <div class="material-name">塑料袋污染数据</div>
+            <button class="view-btn" data-title="塑料袋污染数据" data-body="资料展示塑料袋使用量、回收率和环境影响数据，可作为辩论或讨论中的证据。学生可据此补充观点，也可以用来反驳“完全禁止不现实”的说法。">查看</button>
+          </div>
+        </div>
+      </div>
+      <button class="float-btn" id="toggleMaterials">查看资料</button>
+    </div>
+
+    <div class="material-modal" id="materialModal">
+      <div class="modal-card">
+        <div class="modal-head">
+          <strong id="modalTitle">资料标题</strong>
+          <button class="modal-close" id="modalClose">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="doc-box">
+            <div class="doc-label">资料内容</div>
+            <div id="modalBody">资料正文</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="flow">
+    <span>1. 悬浮按钮：查看资料</span>
+    <span>2. 点击后展开资料浮层</span>
+    <span>3. 每条资料点击“查看”</span>
+    <span>4. 全屏 Modal 出现资料</span>
+    <span>5. 关闭后回到活动</span>
+  </div>
+</main>
+
+<script>
+  const toggle = document.getElementById('toggleMaterials');
+  const pop = document.getElementById('materialPop');
+  toggle.addEventListener('click', () => {
+    const show = !pop.classList.contains('show');
+    pop.classList.toggle('show', show);
+    toggle.textContent = show ? '收起资料' : '查看资料';
+  });
+
+  const modal = document.getElementById('materialModal');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalBody = document.getElementById('modalBody');
+  const modalClose = document.getElementById('modalClose');
+
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      modalTitle.textContent = btn.dataset.title;
+      modalBody.textContent = btn.dataset.body;
+      modal.classList.add('show');
+    });
+  });
+
+  modalClose.addEventListener('click', () => modal.classList.remove('show'));
+  modal.addEventListener('click', event => {
+    if (event.target === modal) modal.classList.remove('show');
+  });
+</script>
+<script src="prototype-capture.js"></script>
+</body>
+</html>

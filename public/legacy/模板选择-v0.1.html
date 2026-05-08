@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>创建智能体 — 选择模板 · Demo</title>
+<script src="prototype-tokens.js"></script>
+<style>
+  .container {
+    max-width: var(--container-grid);
+    margin: 0 auto;
+    padding: 32px 32px 80px;
+  }
+
+  /* ====== 类型 Tab ====== */
+  .type-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 32px;
+  }
+  .type-tab {
+    padding: 10px 28px;
+    border-radius: var(--radius-pill);
+    border: 1.5px solid var(--color-border);
+    background: var(--color-bg-card);
+    font-size: var(--font-base);
+    font-weight: 500;
+    color: var(--color-text-4);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .type-tab:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .type-tab.active[data-tab="dialogue"] {
+    background: var(--color-primary); border-color: var(--color-primary); color: #fff;
+  }
+  .type-tab.active[data-tab="debate"] {
+    background: var(--color-debate); border-color: var(--color-debate); color: #fff;
+  }
+  .type-tab.active[data-tab="discussion"] {
+    background: var(--color-discussion); border-color: var(--color-discussion); color: #fff;
+  }
+
+  /* ====== 页面标题区 ====== */
+  .page-header {
+    margin-bottom: 28px;
+  }
+  .page-header h1 {
+    font-size: var(--font-2xl);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .page-header p {
+    font-size: var(--font-base);
+    color: var(--color-text-4);
+  }
+
+  /* ====== 模板网格 ====== */
+  .template-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
+
+  /* ====== 模板卡片（通用）====== */
+  .tpl-card {
+    background: var(--color-bg-card);
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: 22px 18px 18px;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .tpl-card:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px var(--color-primary-shadow);
+  }
+  .tpl-card.debate:hover { border-color: var(--color-debate); box-shadow: 0 8px 20px rgba(245,59,59,0.10); }
+  .tpl-card.discussion:hover { border-color: var(--color-discussion); box-shadow: 0 8px 20px rgba(0,169,249,0.10); }
+
+  .tpl-card.blank {
+    border-style: dashed;
+    align-items: center;
+    justify-content: center;
+    min-height: 260px;
+    background: var(--color-bg-soft);
+  }
+  .tpl-card.blank:hover { transform: translateY(-3px); }
+
+  /* 头像圆形 */
+  .tpl-avatar {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--color-primary-bg);
+    color: var(--color-primary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 700;
+    margin-bottom: 14px;
+    flex-shrink: 0;
+  }
+  .tpl-avatar.debate-color { background: var(--color-debate-bg); color: var(--color-debate); }
+  .tpl-avatar.discussion-color { background: var(--color-discussion-bg); color: var(--color-discussion); }
+  .tpl-avatar.emoji { font-size: 26px; font-weight: 400; }
+
+  .tpl-name {
+    font-size: var(--font-lg);
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--color-text);
+  }
+  .tpl-meta {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .tpl-tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    background: var(--color-bg-mute);
+    border-radius: var(--radius-pill);
+    color: var(--color-text-5);
+  }
+  .tpl-style {
+    font-size: var(--font-sm);
+    color: var(--color-primary);
+    font-weight: 500;
+    margin-bottom: 10px;
+  }
+  .tpl-style.debate-style { color: var(--color-debate); }
+  .tpl-style.discussion-style { color: var(--color-discussion); }
+
+  .tpl-preview {
+    font-size: var(--font-sm);
+    color: var(--color-text-5);
+    font-style: italic;
+    line-height: 1.55;
+    flex: 1;
+    margin-bottom: 16px;
+  }
+
+  /* 辩论卡：VS 行 */
+  .tpl-vs-row {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 10px;
+    background: var(--color-bg-mute);
+    border-radius: var(--radius-md);
+  }
+  .tpl-vs-side { flex: 1; }
+  .tpl-vs-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-text-4);
+    margin-bottom: 3px;
+  }
+  .tpl-vs-name {
+    font-size: var(--font-sm);
+    font-weight: 600;
+    margin-bottom: 3px;
+  }
+  .tpl-vs-role-badge {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: var(--radius-xs);
+    font-size: 11px;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .tpl-vs-role-badge.ai { background: var(--color-primary-bg); color: var(--color-primary); }
+  .tpl-vs-role-badge.human { background: var(--color-bg-mute); color: var(--color-text-4); border: 1px solid var(--color-border); }
+  .tpl-vs-arg {
+    font-size: 11px;
+    color: var(--color-text-5);
+    line-height: 1.4;
+  }
+  .tpl-vs-divider {
+    display: flex;
+    align-items: center;
+    font-size: var(--font-base);
+    font-weight: 700;
+    color: var(--color-text-5);
+    padding: 0 2px;
+  }
+
+  /* 讨论卡：主持行 */
+  .tpl-host-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    background: var(--color-discussion-bg);
+    border-radius: var(--radius-md);
+  }
+  .tpl-host-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--color-discussion-soft);
+    color: var(--color-discussion-dark);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .tpl-host-name { font-size: var(--font-sm); font-weight: 600; color: var(--color-discussion-dark); }
+  .tpl-host-style { font-size: 11px; color: var(--color-discussion); margin-top: 1px; }
+
+  /* 使用按钮 */
+  .tpl-use-btn {
+    width: 100%;
+    padding: 9px;
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-top: auto;
+  }
+  .tpl-use-btn:hover { background: var(--color-primary-dark); }
+  .tpl-use-btn.debate-btn { background: var(--color-debate); }
+  .tpl-use-btn.debate-btn:hover { background: var(--color-debate-dark); }
+  .tpl-use-btn.discussion-btn { background: var(--color-discussion); }
+  .tpl-use-btn.discussion-btn:hover { background: var(--color-discussion-dark); }
+
+  /* 空白卡 */
+  .blank-icon { font-size: 40px; margin-bottom: 12px; color: var(--color-text-5); }
+  .blank-title { font-size: var(--font-base); font-weight: 600; color: var(--color-text-4); margin-bottom: 6px; }
+  .blank-desc { font-size: var(--font-sm); color: var(--color-text-5); text-align: center; margin-bottom: 18px; line-height: 1.5; }
+  .blank-start-btn {
+    padding: 9px 28px;
+    background: transparent;
+    color: var(--color-primary);
+    border: 1.5px solid var(--color-primary);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-sm);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .blank-start-btn:hover { background: var(--color-primary-bg); }
+  .blank-start-btn.debate-blank { color: var(--color-debate); border-color: var(--color-debate); }
+  .blank-start-btn.debate-blank:hover { background: var(--color-debate-bg); }
+  .blank-start-btn.discussion-blank { color: var(--color-discussion); border-color: var(--color-discussion); }
+  .blank-start-btn.discussion-blank:hover { background: var(--color-discussion-bg); }
+
+  /* Tab 面板切换 */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+</style>
+<link rel="stylesheet" href="prototype-capture.css">
+</head>
+<body>
+
+<div class="meta-bar">
+  <span><strong>创建智能体 — 模板选择 v0.1 Demo</strong> · 选择模板后进入 3 步创建向导</span>
+  <span>评审用 · 仅 PC Web</span>
+</div>
+
+<header class="topbar">
+  <a class="back-link" href="/">← 智能体中心</a>
+  <span class="crumb-sep">/</span>
+  <span class="page-title">创建智能体</span>
+</header>
+
+<main class="container">
+
+  <div class="page-header">
+    <h1>选择一个模板开始</h1>
+    <p>预设好辩题、角色和规则，一键进入；或从空白开始自由配置</p>
+  </div>
+
+  <!-- 类型 Tab -->
+  <div class="type-tabs">
+    <button class="type-tab active" data-tab="dialogue">对话类 · AI 学问</button>
+    <button class="type-tab" data-tab="debate">场景类 · AI 辩论</button>
+    <button class="type-tab" data-tab="discussion">场景类 · AI 讨论</button>
+  </div>
+
+  <!-- Tab: 对话类 -->
+  <div class="tab-panel active" id="tab-dialogue">
+    <div class="template-grid" id="grid-dialogue"></div>
+  </div>
+
+  <!-- Tab: 辩论 -->
+  <div class="tab-panel" id="tab-debate">
+    <div class="template-grid" id="grid-debate"></div>
+  </div>
+
+  <!-- Tab: 讨论 -->
+  <div class="tab-panel" id="tab-discussion">
+    <div class="template-grid" id="grid-discussion"></div>
+  </div>
+
+</main>
+
+<script>
+// ===== 模板数据 =====
+const TEMPLATES = {
+  dialogue: [
+    {
+      id: 'newton',
+      avatar: 'N', avatarColor: '',
+      name: '牛顿',
+      grade: '4-6年级', subject: '科学',
+      style: '苏格拉底式 · 追问',
+      preview: '「我就是牛顿，力学的奥秘，让我们一起发现…」',
+      fields: {
+        agentName: '牛顿',
+        agentBackground: '经典物理学开创者，1643-1727年。专长力学、光学、万有引力。与学生探讨"为什么苹果会落下""为什么月亮不掉下来"等运动与引力相关问题。',
+        agentGrade: 'g4-6', agentSubject: 'science',
+        avatar: 'N', voice: 'm1', promptKey: 'socratic',
+        promptContent: '你是牛顿，请用第一人称与学生对话。用苏格拉底式提问引导学生主动思考，而不是直接给出答案。当学生提问时，先反问"你觉得呢？"再逐步引导。'
+      }
+    },
+    {
+      id: 'curie',
+      avatar: 'M', avatarColor: '',
+      name: '居里夫人',
+      grade: '4-6年级', subject: '科学',
+      style: '历史人物 · 第一人称',
+      preview: '「我一生致力于探索放射性元素的秘密，镭的发现改变了世界…」',
+      fields: {
+        agentName: '居里夫人',
+        agentBackground: '玛丽·居里，1867-1934年。首位两次获诺贝尔奖的科学家，发现了镭和钋。与学生分享实验探索经历，鼓励好奇心与坚持精神。',
+        agentGrade: 'g4-6', agentSubject: 'science',
+        avatar: 'M', voice: 'f1', promptKey: 'historical',
+        promptContent: '你是居里夫人，请用第一人称与学生对话。分享你发现镭元素的经历，鼓励学生对科学保持好奇心与坚持探索的精神。'
+      }
+    },
+    {
+      id: 'darwin',
+      avatar: 'D', avatarColor: '',
+      name: '达尔文',
+      grade: '4-6年级', subject: '科学',
+      style: '引导式 · 启发思考',
+      preview: '「让我们像博物学家一样，仔细观察自然界的每一个细节…」',
+      fields: {
+        agentName: '达尔文',
+        agentBackground: '查尔斯·达尔文，1809-1882年。进化论创立者，《物种起源》作者。引导学生观察身边生物，思考生命多样性与演化规律。',
+        agentGrade: 'g4-6', agentSubject: 'science',
+        avatar: 'D', voice: 'm1', promptKey: 'guiding',
+        promptContent: '你是达尔文，请用引导式对话与学生交流。鼓励学生观察身边的生物现象，用问题引发对生命和进化的思考。'
+      }
+    },
+    {
+      id: 'ai-general',
+      avatar: 'AI', avatarColor: '',
+      name: 'AI 通识助手',
+      grade: '全年级', subject: '科学',
+      style: '通识答疑 · 直接清晰',
+      preview: '「有什么科学问题都可以来问我，我来帮你解答」',
+      fields: {
+        agentName: 'AI 通识助手',
+        agentBackground: '面向全年级学生的科学通识答疑助手。清晰解答各类科学问题，语言简洁易懂，帮助学生建立科学认知基础。',
+        agentGrade: 'all', agentSubject: 'science',
+        avatar: 'AI', voice: 'f1', promptKey: 'general',
+        promptContent: '你是一个科学通识助手，面向中小学生。用清晰、准确、易懂的语言回答科学问题，适当举例，确保答案符合学生年龄和认知水平。'
+      }
+    }
+  ],
+  debate: [
+    {
+      id: 'plastic-ban',
+      emoji: '🌊', name: '环保议题辩论',
+      topic: '塑料禁令是否应该全面推行',
+      grade: '4-6年级', subject: '科学',
+      proRole: 'ai', proName: '环保卫士 AI', proArg: '一次性塑料袋污染严重，禁令势在必行',
+      conRole: 'student', conName: '同学代表', conArg: '一刀切禁令不科学，应优先替代方案',
+      fields: {
+        debateName: '环保议题辩论：塑料禁令',
+        debateTopic: '塑料禁令是否应该全面推行',
+        debateGrade: 'g4-6', debateSubject: 'science',
+        proRole: 'ai', proRoleName: '环保卫士',
+        proArgument: '一次性塑料袋应该全面禁止使用 — 塑料污染对海洋生态破坏严重，且现有可降解材料已经成熟，禁令带来的不便相对污染代价微不足道。',
+        proAvatar: 'E',
+        conRole: 'student', conRoleName: '同学代表',
+        conArgument: '不应全面禁止 — 一次性塑料袋在医疗、食品安全等领域不可替代；应优先推广可降解替代品和回收体系。',
+        conAvatar: '生'
+      }
+    },
+    {
+      id: 'ai-ethics',
+      emoji: '🤖', name: '科技伦理辩论',
+      topic: 'AI 是否应该限制在课堂使用',
+      grade: '4-6年级', subject: '科学',
+      proRole: 'ai', proName: 'AI 卫士', proArg: '过度依赖 AI 会削弱独立思考',
+      conRole: 'student', conName: '同学代表', conArg: '工具无罪，合理使用可提升学习',
+      fields: {
+        debateName: '科技伦理：AI 课堂使用争议',
+        debateTopic: 'AI 是否应该限制在课堂使用',
+        debateGrade: 'g4-6', debateSubject: 'science',
+        proRole: 'ai', proRoleName: 'AI 卫士',
+        proArgument: 'AI 在课堂中应当受到严格规范 — 过度依赖 AI 会削弱学生独立思考能力，影响基础知识的真实掌握。',
+        proAvatar: 'AI',
+        conRole: 'student', conRoleName: '同学代表',
+        conArgument: 'AI 工具本身无罪 — 关键在于如何使用；合理引入 AI 可以帮助学生更高效地学习，提升课堂质量。',
+        conAvatar: '生'
+      }
+    },
+    {
+      id: 'phone-school',
+      emoji: '📱', name: '生活习惯辩论',
+      topic: '手机是否应该禁止带入课堂',
+      grade: '全年级', subject: '科学',
+      proRole: 'student', proName: '甲方同学', proArg: '手机干扰专注度，应禁入课堂',
+      conRole: 'student', conName: '乙方同学', conArg: '培养自律比强制禁止更有效',
+      fields: {
+        debateName: '生活习惯：手机禁令辩论',
+        debateTopic: '手机是否应该禁止带入课堂',
+        debateGrade: 'all', debateSubject: 'science',
+        proRole: 'student', proRoleName: '甲方同学',
+        proArgument: '手机应当禁止带入课堂 — 手机干扰学习专注度，影响课堂效果，集中管理更有利于学习秩序。',
+        proAvatar: '甲',
+        conRole: 'student', conRoleName: '乙方同学',
+        conArgument: '禁止不如培养自律 — 完全禁止会剥夺学生使用工具的机会，应引导合理使用而非一刀切禁止。',
+        conAvatar: '乙'
+      }
+    }
+  ],
+  discussion: [
+    {
+      id: 'experiment-conclusion',
+      emoji: '🔬', name: '实验结论讨论',
+      grade: '4-6年级', subject: '科学',
+      hostName: '科探助手', hostAvatar: '探', hostStyle: '中性引导',
+      preview: '「让我们分享实验的发现，每个观察都很重要…」',
+      fields: {
+        discussionName: '实验结论讨论', discussionGrade: 'g4-6', discussionSubject: 'science',
+        hostName: '科探助手', hostAvatar: '探', hostStyle: 'neutral',
+        hostBio: '我来帮助大家整理实验发现，引导同学分享各自的观察和结论'
+      }
+    },
+    {
+      id: 'open-question',
+      emoji: '💡', name: '开放问题探讨',
+      grade: '全年级', subject: '科学',
+      hostName: '苏格拉底', hostAvatar: 'S', hostStyle: '苏格拉底追问',
+      preview: '「关于这个问题你怎么看？让我来帮你深入思考…」',
+      fields: {
+        discussionName: '开放问题探讨', discussionGrade: 'all', discussionSubject: 'science',
+        hostName: '苏格拉底', hostAvatar: 'S', hostStyle: 'socratic',
+        hostBio: '通过连续追问引导学生深入思考，帮助同学发现思维盲区和更深层的问题'
+      }
+    },
+    {
+      id: 'round-table',
+      emoji: '🌍', name: '观点分享圆桌',
+      grade: '全年级', subject: '科学',
+      hostName: '圆桌主持', hostAvatar: '圆', hostStyle: '鼓励型',
+      preview: '「每个人都有独特的视角，我们一起来分享…」',
+      fields: {
+        discussionName: '观点分享圆桌', discussionGrade: 'all', discussionSubject: 'science',
+        hostName: '圆桌主持', hostAvatar: '圆', hostStyle: 'encouraging',
+        hostBio: '每个人都有独特的视角，鼓励大家大胆发言，我来帮助整合大家的观点'
+      }
+    }
+  ]
+};
+
+// ===== 渲染模板卡片 =====
+function renderDialogueCard(tpl) {
+  return `
+    <div class="tpl-card" data-type="dialogue" data-id="${tpl.id}">
+      <div class="tpl-avatar">${tpl.avatar}</div>
+      <div class="tpl-name">${tpl.name}</div>
+      <div class="tpl-meta">
+        <span class="tpl-tag">${tpl.grade}</span>
+        <span class="tpl-tag">${tpl.subject}</span>
+      </div>
+      <div class="tpl-style">${tpl.style}</div>
+      <div class="tpl-preview">${tpl.preview}</div>
+      <button class="tpl-use-btn">用此模板创建</button>
+    </div>`;
+}
+
+function renderDebateCard(tpl) {
+  const proRoleBadge = tpl.proRole === 'ai'
+    ? '<span class="tpl-vs-role-badge ai">AI</span>'
+    : '<span class="tpl-vs-role-badge human">真人</span>';
+  const conRoleBadge = tpl.conRole === 'ai'
+    ? '<span class="tpl-vs-role-badge ai">AI</span>'
+    : '<span class="tpl-vs-role-badge human">真人</span>';
+  return `
+    <div class="tpl-card debate" data-type="debate" data-id="${tpl.id}">
+      <div class="tpl-avatar debate-color emoji">${tpl.emoji}</div>
+      <div class="tpl-name">${tpl.name}</div>
+      <div class="tpl-meta">
+        <span class="tpl-tag">${tpl.grade}</span>
+        <span class="tpl-tag">${tpl.subject}</span>
+      </div>
+      <div class="tpl-preview" style="font-style:normal;font-size:12px;color:var(--color-text-4);margin-bottom:10px;">${tpl.topic}</div>
+      <div class="tpl-vs-row">
+        <div class="tpl-vs-side">
+          <div class="tpl-vs-label">正方</div>
+          ${proRoleBadge}
+          <div class="tpl-vs-name">${tpl.proName}</div>
+          <div class="tpl-vs-arg">${tpl.proArg}</div>
+        </div>
+        <div class="tpl-vs-divider">VS</div>
+        <div class="tpl-vs-side">
+          <div class="tpl-vs-label">反方</div>
+          ${conRoleBadge}
+          <div class="tpl-vs-name">${tpl.conName}</div>
+          <div class="tpl-vs-arg">${tpl.conArg}</div>
+        </div>
+      </div>
+      <button class="tpl-use-btn debate-btn">用此模板创建</button>
+    </div>`;
+}
+
+function renderDiscussionCard(tpl) {
+  return `
+    <div class="tpl-card discussion" data-type="discussion" data-id="${tpl.id}">
+      <div class="tpl-avatar discussion-color emoji">${tpl.emoji}</div>
+      <div class="tpl-name">${tpl.name}</div>
+      <div class="tpl-meta">
+        <span class="tpl-tag">${tpl.grade}</span>
+        <span class="tpl-tag">${tpl.subject}</span>
+      </div>
+      <div class="tpl-host-row">
+        <div class="tpl-host-avatar">${tpl.hostAvatar}</div>
+        <div>
+          <div class="tpl-host-name">主持：${tpl.hostName}</div>
+          <div class="tpl-host-style">${tpl.hostStyle}</div>
+        </div>
+      </div>
+      <div class="tpl-preview">${tpl.preview}</div>
+      <button class="tpl-use-btn discussion-btn">用此模板创建</button>
+    </div>`;
+}
+
+function renderBlankCard(type) {
+  const btnClass = type === 'debate' ? 'debate-blank' : type === 'discussion' ? 'discussion-blank' : '';
+  return `
+    <div class="tpl-card blank" data-type="${type}" data-id="blank">
+      <div class="blank-icon">＋</div>
+      <div class="blank-title">从空白开始</div>
+      <div class="blank-desc">完全自定义，<br>不使用任何预设</div>
+      <button class="blank-start-btn ${btnClass}">开始创建</button>
+    </div>`;
+}
+
+// 填充网格
+document.getElementById('grid-dialogue').innerHTML =
+  TEMPLATES.dialogue.map(renderDialogueCard).join('') + renderBlankCard('dialogue');
+document.getElementById('grid-debate').innerHTML =
+  TEMPLATES.debate.map(renderDebateCard).join('') + renderBlankCard('debate');
+document.getElementById('grid-discussion').innerHTML =
+  TEMPLATES.discussion.map(renderDiscussionCard).join('') + renderBlankCard('discussion');
+
+// ===== Tab 切换 =====
+document.querySelectorAll('.type-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ===== 路由：点击模板卡片 =====
+const TARGET_PAGES = {
+  dialogue:   'AI学问创建-v0.1.html',
+  debate:     'AI思辨创建-辩论-v0.1.html',
+  discussion: 'AI思辨创建-讨论-v0.1.html'
+};
+
+document.querySelectorAll('.tpl-card').forEach(card => {
+  card.addEventListener('click', () => {
+    const type = card.dataset.type;
+    const id   = card.dataset.id;
+    const page = TARGET_PAGES[type];
+    if (id === 'blank') {
+      window.location.href = page;
+    } else {
+      window.location.href = `${page}?template=${encodeURIComponent(id)}`;
+    }
+  });
+});
+</script>
+
+<script src="prototype-capture.js"></script>
+<script src="prototype-review-panel.js"></script>
+<script>
+window.PRD_REVIEW_DATA = {
+  pageName: '模板选择页',
+  groups: [
+    {
+      title: '类型 Tab',
+      items: [
+        { target: '.type-tabs', title: '三类型 Tab', how: '点击切换', what: '网格切换至对应类型模板列表', from: '对话类/辩论/讨论 = 三种智能体创建入口' }
+      ]
+    },
+    {
+      title: '对话类模板',
+      items: [
+        { target: '#grid-dialogue', title: '4 张对话类模板卡 + 空白', how: '点击任意卡片', what: '跳至 AI学问创建 ?template=ID，表单预填对应角色内容', from: '模板数据内嵌于页面 TEMPLATES.dialogue 对象' },
+        { target: '.tpl-style', title: '提示词风格标签', how: '展示用', what: '标明 AI 回答风格（苏格拉底/历史人物/引导式/通识）', from: 'fields.promptKey 映射' }
+      ]
+    },
+    {
+      title: '辩论模板',
+      items: [
+        { target: '#grid-debate', title: '3 张辩论模板卡 + 空白', how: '点击卡片', what: '跳至辩论创建页 ?template=ID，正反方角色+论点+辩题全部预填', from: 'TEMPLATES.debate[].fields' },
+        { target: '.tpl-vs-row', title: '正反方预览行', how: '展示用', what: '卡片内直接显示谁是 AI/真人、论点摘要，帮助老师快速判断模板是否合适', from: 'proRole/conRole/proArg/conArg' }
+      ]
+    },
+    {
+      title: '讨论模板',
+      items: [
+        { target: '#grid-discussion', title: '3 张讨论模板卡 + 空白', how: '点击卡片', what: '跳至讨论创建页 ?template=ID，主持形象+风格全部预填', from: 'TEMPLATES.discussion[].fields' },
+        { target: '.tpl-host-row', title: '主持人预览行', how: '展示用', what: '显示主持 AI 头像、名称、风格', from: 'hostName/hostAvatar/hostStyle' }
+      ]
+    }
+  ]
+};
+</script>
+
+</body>
+</html>

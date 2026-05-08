@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 思辨 · 辩论使用 v0.1</title>
+<script src="prototype-tokens.js"></script>
+<style>
+  /* ============ 页面专属（共享部分见 prototype-tokens.css）============ */
+  .container {
+    max-width: var(--container-wide);
+    margin: 0 auto;
+    padding: 24px 32px 100px;
+  }
+  .timer {
+    font-family: var(--font-mono);
+    font-size: var(--font-md);
+    font-weight: 600;
+    color: var(--color-text);
+    padding: 4px 10px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    min-width: 60px;
+    text-align: center;
+  }
+  .progress-text { font-size: var(--font-sm); color: var(--color-text-3); }
+
+  /* ============ 辩题条 ============ */
+  .topic-bar {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 14px 22px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .topic-text { font-size: var(--font-xl); font-weight: 600; }
+  .topic-text strong { color: var(--color-debate); }
+  .topic-meta {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: var(--font-sm);
+    color: var(--color-text-4);
+  }
+  .topic-pill {
+    padding: 3px 10px;
+    background: var(--color-border-soft);
+    border-radius: var(--radius-pill);
+  }
+  .round-dots { display: inline-flex; gap: 5px; align-items: center; }
+  .round-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--color-border);
+  }
+  .round-dot.done { background: var(--color-debate); }
+  .round-dot.now { background: var(--color-debate); box-shadow: 0 0 0 3px rgba(196,68,68,0.2); }
+
+  /* ============ 擂台 ============ */
+  .arena {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 28px 28px 24px;
+    margin-bottom: 18px;
+    position: relative;
+  }
+  .arena-grid {
+    display: grid;
+    grid-template-columns: 1fr 80px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  .vs-circle {
+    align-self: center;
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: var(--color-bg-card);
+    border: 2px dashed var(--color-debate);
+    color: var(--color-debate);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: var(--font-xl);
+    margin: 0 auto;
+  }
+  .fighter { text-align: center; }
+  .fighter-side {
+    display: inline-block;
+    font-size: var(--font-xs);
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    margin-bottom: 10px;
+  }
+  .fighter.pro .fighter-side { background: var(--color-primary-bg); color: var(--color-primary); }
+  .fighter.con .fighter-side { background: var(--color-debate-bg); color: var(--color-debate); }
+  .portrait {
+    width: 96px; height: 96px;
+    border-radius: 50%;
+    background: var(--color-bg);
+    border: 2px solid var(--color-border);
+    color: var(--color-text-4);
+    margin: 0 auto 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .fighter.pro .portrait {
+    background: var(--color-primary-bg);
+    color: var(--color-primary);
+    border-color: var(--color-primary-border);
+  }
+  .fighter.con .portrait {
+    background: var(--color-debate-bg);
+    color: var(--color-debate);
+    border-color: var(--color-debate-soft);
+  }
+  .fighter.speaking .portrait {
+    border-width: 3px;
+    box-shadow: 0 0 0 4px rgba(196,68,68,0.12);
+    animation: portraitPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes portraitPulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(196,68,68,0.08); }
+    50% { box-shadow: 0 0 0 8px rgba(196,68,68,0.16); }
+  }
+  .fighter-name {
+    font-size: var(--font-md);
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .fighter-actor {
+    font-size: var(--font-xs);
+    color: var(--color-text-5);
+    margin-bottom: 12px;
+  }
+  .actor-tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 7px;
+    background: var(--color-text);
+    color: #fff;
+    border-radius: var(--radius-xs);
+    margin-left: 4px;
+  }
+  .fighter.con .actor-tag { background: var(--color-text-3); }
+
+  .speech-bubble {
+    background: var(--color-bg-mute);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 12px 14px;
+    text-align: left;
+    font-size: var(--font-base);
+    line-height: 1.6;
+    color: var(--color-text);
+    min-height: 76px;
+  }
+  .speech-bubble.empty {
+    color: var(--color-text-6);
+    font-style: italic;
+    text-align: center;
+    border-style: dashed;
+    padding: 26px 14px;
+  }
+
+  .input-zone {
+    margin-top: 12px;
+    padding: 10px;
+    background: var(--color-warn-bg);
+    border: 1px dashed var(--color-warn-border);
+    border-radius: var(--radius-md);
+  }
+  .input-zone-row { display: flex; gap: 6px; align-items: center; }
+  .input-zone-input {
+    flex: 1;
+    padding: 7px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-base);
+    outline: none;
+    background: var(--color-bg-card);
+  }
+  .input-zone-input:focus { border-color: var(--color-debate); }
+  .input-zone-btn {
+    padding: 7px 14px;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-sm);
+  }
+  .input-zone-btn.primary {
+    background: var(--color-debate);
+    color: #fff;
+  }
+  .input-zone-btn.primary:hover { background: var(--color-debate-dark); }
+  .input-zone-btn.ghost {
+    background: var(--color-bg-card);
+    color: var(--color-text-3);
+    border: 1px solid var(--color-border);
+  }
+
+  /* ============ 评委 ============ */
+  .judge-bar {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 14px 20px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .judge-icon {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--color-prep-bg);
+    color: var(--color-prep);
+    display: flex; align-items: center; justify-content: center;
+    font-size: var(--font-base);
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .judge-text {
+    flex: 1;
+    font-size: var(--font-base);
+    color: var(--color-text-2);
+    line-height: 1.5;
+  }
+  .judge-text strong { color: var(--color-prep); }
+  .judge-action {
+    padding: 6px 14px;
+    border: 1px solid var(--color-prep-soft);
+    background: var(--color-bg-card);
+    color: var(--color-prep);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-sm);
+  }
+  .judge-action:hover { background: var(--color-warn-bg); }
+
+  /* ============ 历史 ============ */
+  .history-section {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    margin-bottom: 18px;
+  }
+  .history-line {
+    display: flex;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--color-border-soft);
+    font-size: var(--font-sm);
+  }
+  .history-line:last-child { border-bottom: 0; }
+  .history-time {
+    color: var(--color-text-5);
+    font-size: var(--font-xs);
+    width: 50px;
+    flex-shrink: 0;
+  }
+  .history-side {
+    width: 56px;
+    flex-shrink: 0;
+    font-weight: 500;
+  }
+  .history-side.pro { color: var(--color-primary); }
+  .history-side.con { color: var(--color-debate); }
+  .history-content {
+    color: var(--color-text-2);
+    line-height: 1.5;
+  }
+  .history-more {
+    text-align: center;
+    color: var(--color-text-6);
+    font-size: var(--font-xs);
+    padding: 4px 0;
+  }
+
+  /* ============ 控制条（底部固定）============ */
+  .control-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--color-bg-card);
+    border-top: 1px solid var(--color-border);
+    padding: 12px 32px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 50;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.04);
+  }
+  .control-bar-inner {
+    max-width: var(--container-wide);
+    margin: 0 auto;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ctrl-btn {
+    padding: 8px 16px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-card);
+    color: var(--color-text-2);
+    font-size: var(--font-base);
+    transition: all 0.15s;
+  }
+  .ctrl-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .ctrl-btn.primary {
+    background: var(--color-debate);
+    color: #fff;
+    border-color: var(--color-debate);
+    font-weight: 500;
+  }
+  .ctrl-btn.primary:hover {
+    background: var(--color-debate-dark);
+    border-color: var(--color-debate-dark);
+    color: #fff;
+  }
+  .ctrl-btn.success {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+    font-weight: 500;
+  }
+  .ctrl-btn.success:hover { background: var(--color-primary-dark); color: #fff; }
+  .ctrl-spacer { flex: 1; }
+
+  /* ============ 浮动资料按钮 ============ */
+  .float-material {
+    position: fixed;
+    right: 32px;
+    bottom: 80px;
+    z-index: 60;
+  }
+  .float-btn {
+    min-width: 116px;
+    padding: 11px 18px;
+    border-radius: 22px;
+    background: var(--color-primary);
+    color: #fff;
+    font-weight: 600;
+    font-size: var(--font-base);
+    box-shadow: var(--shadow-fab);
+    transition: all 0.15s;
+  }
+  .float-btn:hover {
+    background: var(--color-primary-dark);
+    transform: translateY(-1px);
+  }
+  .material-pop {
+    display: none;
+    position: absolute;
+    right: 0;
+    bottom: 56px;
+    width: 320px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-card);
+    box-shadow: 0 14px 36px rgba(20,35,55,0.16);
+    overflow: hidden;
+  }
+  .material-pop.show { display: block; }
+  .material-head {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--color-border-soft);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--color-bg-soft);
+  }
+  .material-head strong { font-size: var(--font-base); }
+  .material-head span { font-size: var(--font-xs); color: var(--color-text-4); }
+  .material-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--color-border-soft);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .material-item:last-child { border-bottom: 0; }
+  .material-type-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: var(--radius-xs);
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .material-type-badge.pdf { background: var(--color-prep); }
+  .material-type-badge.video { background: var(--color-debate); }
+  .material-type-badge.image { background: var(--color-primary); }
+  .material-name {
+    flex: 1;
+    font-size: var(--font-base);
+    font-weight: 500;
+    color: var(--color-text);
+  }
+  .view-btn {
+    padding: 5px 11px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-card);
+    color: var(--color-primary);
+    font-size: var(--font-sm);
+  }
+  .view-btn:hover {
+    background: var(--color-primary-bg);
+    border-color: var(--color-primary);
+  }
+
+  /* ============ 资料全屏 Modal ============ */
+  .material-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(20,35,55,0.55);
+  }
+  .material-modal.show { display: flex; }
+  .modal-card {
+    width: 920px;
+    max-width: 92vw;
+    height: 600px;
+    max-height: 84vh;
+    background: var(--color-bg-card);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-modal);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .modal-head {
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--color-border-soft);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--color-bg-soft);
+  }
+  .modal-title { font-size: var(--font-lg); font-weight: 600; }
+  .modal-close {
+    margin-left: auto;
+    width: 32px; height: 32px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-card);
+    color: var(--color-text-3);
+    font-size: 18px;
+    line-height: 1;
+  }
+  .modal-close:hover { border-color: var(--color-debate); color: var(--color-debate); }
+  .modal-body {
+    flex: 1;
+    padding: 24px 28px;
+    overflow-y: auto;
+  }
+  .doc-box {
+    height: 100%;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-bg-soft);
+    padding: 22px 24px;
+  }
+  .doc-label {
+    font-size: var(--font-xs);
+    font-weight: 600;
+    color: var(--color-primary);
+    margin-bottom: 12px;
+  }
+
+  /* ============ 主图模式：用线上界面图作为页面主体 ============ */
+  .online-canvas {
+    text-align: center;
+    padding: 8px 0 32px;
+  }
+  .online-canvas img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.10);
+  }
+  /* 隐藏原 demo 的复用部分（保留 DOM 让 JS 不报错）*/
+  .topic-bar, .arena, .judge-bar, .history-section { display: none !important; }
+</style>
+<link rel="stylesheet" href="prototype-capture.css">
+</head>
+<body>
+
+<div class="meta-bar">
+  <span><strong>AI 思辨 · 辩论使用 v0.1 Demo</strong> · 拉齐到与首页/创建一致的近高保真风格 · 资料入口为右下浮按钮</span>
+  <span>评审用 · 仅 PC Web</span>
+</div>
+
+<header class="topbar">
+  <a class="back-link" href="/">← 智能体中心</a>
+  <span class="crumb-sep">/</span>
+  <span class="page-title" id="topbarName">塑料禁令辩论</span>
+  <span class="type-badge debate">场景类 · 辩论</span>
+  <div class="topbar-right">
+    <span class="progress-text">第 <strong id="curRound">2</strong>/<span id="totalRound">3</span> 轮</span>
+    <span class="timer" id="timer">12:34</span>
+  </div>
+</header>
+
+<main class="container">
+
+  <div class="online-canvas">
+    <img src="assets/ai-sibian.png" alt="AI 思辨·辩论界面" />
+  </div>
+
+  <section class="topic-bar">
+    <div class="topic-text">
+      辩题：<strong id="topicText">一次性塑料袋是否应该禁止使用</strong>
+    </div>
+    <div class="topic-meta">
+      <span class="topic-pill">4-6 年级 · 科学</span>
+      <span class="round-dots">
+        <span class="round-dot done"></span>
+        <span class="round-dot now"></span>
+        <span class="round-dot"></span>
+      </span>
+    </div>
+  </section>
+
+  <section class="arena">
+    <div class="arena-grid">
+
+      <div class="fighter pro" id="proFighter">
+        <span class="fighter-side">正方</span>
+        <div class="portrait">AI</div>
+        <div class="fighter-name">AI 激进派<span class="actor-tag">AI</span></div>
+        <div class="fighter-actor">已发言 · 引用《塑料污染白皮书》</div>
+        <div class="speech-bubble">
+          但是塑料袋带来的环境污染成本远远超过替代品的经济成本。根据《塑料污染白皮书》的数据，每年全球生产 5 兆个塑料袋，其中只有不到 9% 被回收处理。
+        </div>
+      </div>
+
+      <div class="vs-circle">VS</div>
+
+      <div class="fighter con speaking" id="conFighter">
+        <span class="fighter-side">反方</span>
+        <div class="portrait">生</div>
+        <div class="fighter-name">学生<span class="actor-tag">学生</span></div>
+        <div class="fighter-actor">正在发言 · 倒计时 38s</div>
+        <div class="speech-bubble empty">请继续发言...</div>
+        <div class="input-zone">
+          <div class="input-zone-row">
+            <input class="input-zone-input" placeholder="输入你的论点 / 反驳..." />
+            <button class="input-zone-btn ghost">🎤</button>
+            <button class="input-zone-btn primary">发送</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="judge-bar">
+    <div class="judge-icon">评</div>
+    <div class="judge-text">
+      <strong>AI 评委 · 中立观察</strong> 正方引用证据较为充分；反方目前以情绪表达为主，需要补充更具体的数据来支撑"成本太高"的判断。
+    </div>
+    <button class="judge-action" id="judgeAction">呼出评委点评</button>
+  </section>
+
+  <section class="history-section">
+    <div class="section-title debate">发言历史</div>
+    <div class="history-line">
+      <span class="history-time">10:01</span>
+      <span class="history-side con">反方</span>
+      <span class="history-content">完全禁止不太现实，替代品成本太高，会加重普通家庭的生活负担。</span>
+    </div>
+    <div class="history-line">
+      <span class="history-time">10:03</span>
+      <span class="history-side pro">正方</span>
+      <span class="history-content">环境污染成本远超替代品的经济成本，应该分阶段限塑。</span>
+    </div>
+    <div class="history-line">
+      <span class="history-time">10:06</span>
+      <span class="history-side pro">正方</span>
+      <span class="history-content">日本和欧盟已经实施了部分塑料禁令，国民生活并未受到明显影响。</span>
+    </div>
+    <div class="history-more">显示更多 · 共 8 条</div>
+  </section>
+
+</main>
+
+<div class="float-material">
+  <div class="material-pop" id="materialPop">
+    <div class="material-head"><strong>本次辩论资料</strong><span>3 条</span></div>
+    <div class="material-item">
+      <span class="material-type-badge pdf">PDF</span>
+      <span class="material-name">塑料污染白皮书</span>
+      <button class="view-btn" data-title="塑料污染白皮书" data-body="关键内容：展示塑料袋使用量、回收率和环境影响数据。可用于支持「环境成本高于替代品成本」的论点。">查看</button>
+    </div>
+    <div class="material-item">
+      <span class="material-type-badge video">视频</span>
+      <span class="material-name">海洋污染纪录片</span>
+      <button class="view-btn" data-title="海洋污染纪录片" data-body="关键内容：展示海洋垃圾对生物和生态系统的影响。可用来帮助理解塑料污染的长期影响。">查看</button>
+    </div>
+    <div class="material-item">
+      <span class="material-type-badge pdf">PDF</span>
+      <span class="material-name">可降解材料研究</span>
+      <button class="view-btn" data-title="可降解材料研究" data-body="关键内容：可降解材料需要特定温度、湿度和微生物条件。可用于讨论替代材料是否真的能解决污染。">查看</button>
+    </div>
+  </div>
+  <button class="float-btn" id="toggleMaterials">📚 查看资料</button>
+</div>
+
+<div class="material-modal" id="materialModal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <span class="modal-title" id="modalTitle">资料标题</span>
+      <button class="modal-close" id="modalClose">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="doc-box">
+        <div class="doc-label">资料内容</div>
+        <div id="modalBody">资料正文</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="control-bar">
+  <div class="control-bar-inner">
+    <button class="ctrl-btn primary">开始辩论</button>
+    <button class="ctrl-btn">暂停</button>
+    <span class="ctrl-spacer"></span>
+    <button class="ctrl-btn success" id="finishBtn">结束辩论 · 生成报告</button>
+    <button class="ctrl-btn" id="exitBtn" style="border-color:#c44444; color:#c44444; margin-left: 8px;">退出</button>
+  </div>
+</div>
+
+<script>
+  const toggle = document.getElementById('toggleMaterials');
+  const pop = document.getElementById('materialPop');
+  toggle.addEventListener('click', () => {
+    const show = !pop.classList.contains('show');
+    pop.classList.toggle('show', show);
+    toggle.textContent = show ? '📚 收起资料' : '📚 查看资料';
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.float-material')) {
+      pop.classList.remove('show');
+      toggle.textContent = '📚 查看资料';
+    }
+  });
+
+  const modal = document.getElementById('materialModal');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalBody = document.getElementById('modalBody');
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      modalTitle.textContent = btn.dataset.title;
+      modalBody.textContent = btn.dataset.body;
+      modal.classList.add('show');
+    });
+  });
+  document.getElementById('modalClose').addEventListener('click', () => modal.classList.remove('show'));
+  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
+
+  const params = new URLSearchParams(window.location.search);
+  const requestedName = (params.get('agent') || params.get('name') || '塑料禁令辩论').replace(/^我的-/, '');
+  const requestedTopic = params.get('topic');
+  document.getElementById('topbarName').textContent = requestedName;
+  if (requestedTopic) document.getElementById('topicText').textContent = requestedTopic;
+
+  document.getElementById('exitBtn').addEventListener('click', () => {
+    if (confirm('退出后未结束的辩论将丢失，确认退出？')) {
+      window.location.href = '首页-v0.5.html';
+    }
+  });
+  document.getElementById('finishBtn').addEventListener('click', () => {
+    window.location.href = `思辨记录详情-v0.1.html?mode=debate&title=${encodeURIComponent(requestedTopic || '一次性塑料袋是否应该禁止使用')}`;
+  });
+  document.getElementById('judgeAction').addEventListener('click', () => {
+    alert('AI 评委即时点评（demo 不展开）：\n\n双方发言节奏良好。建议反方在下一轮补充"国际禁塑后的负面案例"以支撑论点。');
+  });
+
+  // === 倒计时 / 轮数 / 到点提示 ===
+  (function() {
+    const ROUND_DUR = 120, MAX_ROUNDS = 3;
+    let curRound = 2, curSide = 'con', remain = 38, running = false, tick = null, speed = 1;
+
+    // 到点提示条
+    const arena = document.querySelector('.arena');
+    const notice = document.createElement('div');
+    notice.className = 'time-up-notice';
+    notice.style.cssText = 'display:none;margin-top:18px;padding:10px 16px;background:var(--color-debate-bg);border:1px dashed var(--color-debate);border-radius:var(--radius-md);font-size:var(--font-sm);color:var(--color-debate);text-align:center;';
+    notice.innerHTML = '⏱ 本轮 <strong id="upSide">反方</strong> 发言时间到 — 老师可继续点评，或点 <em style="font-style:normal;padding:1px 6px;background:var(--color-debate);color:#fff;border-radius:3px;">结束辩论·生成报告</em>';
+    arena.appendChild(notice);
+
+    // 高亮按钮的 keyframe
+    const styleEl = document.createElement('style');
+    styleEl.textContent = '.ctrl-btn.attention { animation: btnAtt 1.4s ease-in-out infinite; } @keyframes btnAtt { 0%,100% { transform: translateY(0); box-shadow: 0 0 0 2px rgba(196,68,68,0.25); } 50% { transform: translateY(-2px); box-shadow: 0 0 0 5px rgba(196,68,68,0.18); } }';
+    document.head.appendChild(styleEl);
+
+    // meta-bar 演示加速
+    const metaSpan = document.querySelector('.meta-bar span:last-child');
+    if (metaSpan) {
+      const tg = document.createElement('button');
+      tg.style.cssText = 'margin-left:12px;padding:1px 8px;border:1px solid currentColor;border-radius:3px;font-size:11px;background:transparent;color:inherit;cursor:pointer;opacity:0.65;';
+      tg.textContent = '▶▶ 演示加速 10×';
+      tg.onclick = () => {
+        speed = speed === 1 ? 10 : 1;
+        tg.style.opacity = speed > 1 ? '1' : '0.65';
+        tg.textContent = speed > 1 ? '⏸ 关闭加速' : '▶▶ 演示加速 10×';
+      };
+      metaSpan.appendChild(tg);
+    }
+
+    const $$ = s => document.querySelector(s);
+    const timer = $$('#timer'), round = $$('#curRound');
+    const dots = document.querySelectorAll('.round-dot');
+    const proF = $$('#proFighter'), conF = $$('#conFighter');
+    const proAct = proF.querySelector('.fighter-actor'), conAct = conF.querySelector('.fighter-actor');
+    const ctrl = Array.from(document.querySelectorAll('.control-bar .ctrl-btn'));
+    const startB = ctrl.find(b => b.textContent.includes('开始'));
+    const pauseB = ctrl.find(b => b.textContent.includes('暂停'));
+    const switchB = ctrl.find(b => b.textContent.includes('切换'));
+    const nextB = ctrl.find(b => b.textContent.includes('下一轮'));
+    const finishB = $$('#finishBtn');
+
+    function fmt(s) { s = Math.max(0, Math.floor(s)); return Math.floor(s/60) + ':' + (s%60).toString().padStart(2,'0'); }
+    function clearAttn() { [switchB, nextB, finishB].forEach(b => b && b.classList.remove('attention')); notice.style.display = 'none'; }
+    function refresh() {
+      timer.textContent = fmt(remain);
+      proF.classList.toggle('speaking', curSide === 'pro');
+      conF.classList.toggle('speaking', curSide === 'con');
+      round.textContent = curRound;
+      dots.forEach((d, i) => {
+        d.classList.toggle('done', i < curRound - 1);
+        d.classList.toggle('now', i === curRound - 1);
+      });
+      const active = curSide === 'pro' ? proAct : conAct;
+      const other = curSide === 'pro' ? conAct : proAct;
+      if (running && remain > 0) active.textContent = '正在发言 · 倒计时 ' + Math.max(0, Math.floor(remain)) + 's';
+      else if (remain <= 0) active.textContent = '时间到';
+      else active.textContent = '等待发言';
+      other.textContent = '已发言';
+    }
+    function start() {
+      if (running || remain <= 0) return;
+      clearAttn();
+      running = true;
+      tick = setInterval(() => {
+        remain -= speed;
+        if (remain <= 0) { remain = 0; clearInterval(tick); running = false; onTimeUp(); }
+        refresh();
+      }, 1000);
+    }
+    function pause() { running = false; clearInterval(tick); refresh(); }
+    function onTimeUp() {
+      document.getElementById('upSide').textContent = curSide === 'pro' ? '正方' : '反方';
+      notice.style.display = 'block';
+      if (curRound >= MAX_ROUNDS && curSide === 'con') {
+        finishB && finishB.classList.add('attention');
+      } else {
+        switchB && switchB.classList.add('attention');
+        nextB && nextB.classList.add('attention');
+      }
+      refresh();
+    }
+    function switchSide() {
+      curSide = curSide === 'pro' ? 'con' : 'pro';
+      remain = ROUND_DUR;
+      clearAttn();
+      refresh();
+      start();
+    }
+    function nextRound() {
+      if (curRound >= MAX_ROUNDS) { finishB && finishB.click(); return; }
+      curRound++;
+      curSide = 'pro';
+      remain = ROUND_DUR;
+      clearAttn();
+      refresh();
+      start();
+    }
+
+    startB && startB.addEventListener('click', start);
+    pauseB && pauseB.addEventListener('click', pause);
+    switchB && switchB.addEventListener('click', switchSide);
+    nextB && nextB.addEventListener('click', nextRound);
+    refresh();
+  })();
+</script>
+
+<script src="prototype-capture.js"></script>
+
+<!-- ========== 评审用 PRD 侧边栏数据 ========== -->
+<script src="prototype-review-panel.js"></script>
+<script>
+  window.PRD_REVIEW_DATA = {
+    pageName: 'AI 思辨·辩论 使用',
+    groups: [
+      {
+        title: '⚠️ 页面本质',
+        items: [
+          {
+            target: '.container',
+            title: '复用已有界面 + 新增控制栏',
+            how:  '从智能体广场点辩论类卡片进入',
+            what: '进入产品线上已有的 AI 思辨·辩论界面，本期仅在其上新增控制栏 + 倒计时/轮数指示',
+            from: '复用：擂台 / 评委条 / 发言历史 / 浮动资料 ｜ 新增：顶栏轮数+倒计时 / 底部 control-bar 含操作 + 【退出】（与学问页统一底部）/ 时间到红色提示 + 按钮 attention 闪烁 / 入口链路 / "是否保存"步骤'
+          }
+        ]
+      },
+      {
+        title: '顶部进度',
+        items: [
+          {
+            target: '.topbar',
+            title: '顶栏（轮数 + 倒计时）',
+            how:  '看（不点）',
+            what: '左：当前轮数/总轮数；中：实时倒计时 MM:SS（【退出】已下移到底部 control-bar 末尾）',
+            from: '轮数和倒计时由创建页配置'
+          }
+        ]
+      },
+      {
+        title: '辩题条与轮数指示',
+        items: [
+          {
+            target: '.topic-bar',
+            title: '辩题条',
+            how:  '看（不点）',
+            what: '左：辩题文本；中：年级/学科标签；右：圆点轮数指示器',
+            from: '辩题来自 ?topic 参数；轮数总数来自创建页配置'
+          },
+          {
+            target: '.round-dot',
+            title: '圆点轮数指示器',
+            how:  '看（不点）',
+            what: '已完成轮实色；当前轮脉冲发光；未来轮灰底',
+            from: '反映正在进行的轮数进度，一眼看出"还剩几轮"'
+          }
+        ]
+      },
+      {
+        title: '擂台主区',
+        items: [
+          {
+            target: '.arena-grid',
+            title: '擂台三列：正方 | VS | 反方',
+            how:  '看为主；倒计时归零后由系统自动切换发言方',
+            what: '每方含头像 + 名字 + 标签 + 发言状态 + 发言内容气泡',
+            from: '正反方的"AI 角色 + 发言内容"在使用过程中实时更新；当前发言方头像脉冲'
+          },
+          {
+            target: '.fighter.con',
+            title: '反方（demo 默认正在发言）',
+            how:  '由倒计时归零自动切换',
+            what: '头像脉冲；状态文案"正在发言·倒计时 Xs"',
+            from: '当前发言方由倒计时驱动；发言状态有 3 种：发言中 / 已发言 / 时间到'
+          }
+        ]
+      },
+      {
+        title: '评委条',
+        items: [
+          {
+            target: '.judge-bar',
+            title: '评委点评',
+            how:  '看；可点【呼出评委点评】手动触发',
+            what: '左：评委头像 + 实时点评短句；右：手动触发按钮',
+            from: '评委话术由创建页"评委提示词"模板决定；下期会接入真实大模型回应'
+          }
+        ]
+      },
+      {
+        title: '发言历史',
+        items: [
+          {
+            target: '.history-section',
+            title: '发言历史',
+            how:  '滚动浏览；【显示更多】展开',
+            what: '每条：时间 + 方向（正/反）+ 内容；老师可回看任一回合',
+            from: '初始显示 N 条，点【显示更多】展开全部'
+          }
+        ]
+      },
+      {
+        title: '浮动资料',
+        items: [
+          {
+            target: '.float-material',
+            title: '浮动资料按钮（右下固定）',
+            how:  '点击展开 popup → 点【查看】弹 modal',
+            what: 'popup 显示 3 条资料卡（PDF / 视频 / PDF）；modal 全屏展示资料内容',
+            from: '资料来自创建页"已添加"清单；本期 mock 内容，下期接入真实文件预览'
+          }
+        ]
+      },
+      {
+        title: '底部控制条（核心）',
+        items: [
+          {
+            target: '.control-bar',
+            title: '控制条（精简后）',
+            how:  '老师按节奏点：开始 → (自动跑) → 结束',
+            what: '4 个按钮：开始辩论 / 暂停 / 结束辩论·生成报告 / 退出。【切换发言方】和【下一轮】已去掉——倒计时归零后系统自动切换 / 自动进入下一轮',
+            from: '简化设计：减少老师手动操作，发言节奏由倒计时驱动；老师只管开始 / 暂停 / 结束 / 退出 4 个动作'
+          },
+          {
+            target: '.ctrl-btn.primary',
+            title: '【开始辩论】',
+            how:  '点击开始倒计时',
+            what: 'state: idle → running；按钮文案变【暂停】；当前发言方头像开始脉冲；归零自动切换发言方',
+            from: '初始状态默认 idle；轮数和倒计时来自创建页配置'
+          }
+        ]
+      },
+      {
+        title: '时间到提示（核心机制）',
+        items: [
+          {
+            target: '.time-up-notice',
+            title: '红色"时间到"提示',
+            how:  '倒计时归零自动浮出',
+            what: '提示文案"⏱ 本轮 [发言方] 时间到 — 老师可继续点评，或点【结束辩论·生成报告】"；自动切换发言方 / 进入下一轮',
+            from: '设计原则：到点不打断、不强制结束。系统自动推进发言节奏，老师可继续点评或主动结束生成报告'
+          },
+          {
+            target: '#finishBtn',
+            title: '【结束辩论·生成报告】闪烁（最后一轮反方）',
+            how:  '最后一轮反方时间到自动 attention',
+            what: '只有 finishBtn 闪烁（不是 switch/next），引导老师"该结束了"',
+            from: '区分常态时间到（switch/next 闪）和最后一轮时间到（finish 闪），减少老师误判'
+          }
+        ]
+      },
+      {
+        title: '演示加速（评审专用）',
+        items: [
+          {
+            target: '.meta-bar',
+            title: '演示加速 10×',
+            how:  '点击 meta-bar 右下"▶▶ 演示加速 10×"',
+            what: '倒计时跑得更快（10 倍），便于评审现场演示完整流程',
+            from: '仅 demo 阶段有；正式上线会移除'
+          }
+        ]
+      }
+    ]
+  };
+</script>
+</body>
+</html>

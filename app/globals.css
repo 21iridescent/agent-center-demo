@@ -1,26 +1,127 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@source "../app/**/*.{ts,tsx}";
+@source "../components/**/*.{ts,tsx}";
+@source "../lib/**/*.{ts,tsx}";
+
+/* =========================================================
+   Design Tokens · 智能体中心
+   单一 @theme 块：让 Tailwind 把它们注册为 utility 类来源
+   并保持作为 CSS 变量可被 inline style 直接引用
+   ========================================================= */
+
+@theme {
+  /* ── Brand / Primary（学问蓝）── */
+  --color-primary:        #368FFF;
+  --color-primary-dark:   #1F82FF;
+  --color-primary-bg:     #EDF4FF;
+  --color-primary-border: #7EAFF1;
+
+  /* ── Debate（辩论红）── */
+  --color-debate:         #F53B3B;
+  --color-debate-dark:    #D42929;
+  --color-debate-bg:      rgba(245, 59, 59, 0.08);
+  --color-debate-soft:    rgba(245, 59, 59, 0.3);
+
+  /* ── Discussion（讨论青）── */
+  --color-discussion:     #00A9F9;
+  --color-discussion-dark:#0088D0;
+  --color-discussion-bg:  rgba(0, 169, 249, 0.1);
+  --color-discussion-soft:rgba(0, 169, 249, 0.3);
+
+  /* ── Success（启动绿）── */
+  --color-success:        #24C366;
+  --color-success-dark:   #18a84a;
+  --color-success-bg:     rgba(37, 195, 102, 0.11);
+
+  /* ── Prep（产出琥珀）── */
+  --color-prep:           #b86b00;
+  --color-prep-bg:        #fff5e8;
+
+  /* ── Mine（个人紫）── */
+  --color-mine:           #7c5fc8;
+  --color-mine-bg:        #efe8fb;
+
+  /* ── Meta bar ── */
+  --color-warn:           #6d5200;
+  --color-warn-bg:        #fffbe8;
+  --color-warn-border:    #f0d878;
+
+  /* ── Text scale ── */
+  --color-text:           #262626;
+  --color-text-2:         #556377;
+  --color-text-3:         #747884;
+  --color-text-4:         #8C8C8C;
+  --color-text-5:         #BFBFBF;
+  --color-text-6:         #aaaaaa;
+  --color-text-7:         #cccccc;
+
+  /* ── Backgrounds ── */
+  --color-bg:             #F7F8FA;
+  --color-bg-card:        #FFFFFF;
+  --color-bg-soft:        #FAFAFA;
+  --color-bg-gray:        #F0F1F4;
+
+  /* ── Borders ── */
+  --color-border:         #E5E6EB;
+  --color-border-soft:    #F0F1F4;
+  --color-border-input:   #DCDFE6;
+
+  /* ── Radii ── */
+  --radius-xs:   4px;
+  --radius-sm:   6px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   14px;
+  --radius-pill: 30px;
+
+  /* ── Shadows ── */
+  --shadow-sm:    0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md:    0 2px 8px 0 rgba(73, 77, 82, 0.1);
+  --shadow-card:  0 0 10px 0 rgba(69, 78, 97, 0.1);
+  --shadow-modal: 0 20px 50px 0 rgba(0, 0, 0, 0.1);
+
+  /* ── Misc ── */
+  --mask-primary: rgba(0, 0, 0, 0.5);
+
+  /* ── Layout ── */
+  --topbar-height:  60px;
+  --container-wide: 1180px;
+  --container-list: 960px;
+  --container-form: 820px;
+
+  /* ── Font ── */
+  --font-sans:
+    'Source Han Sans SC', 'Source Han Sans', -apple-system,
+    BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei',
+    'Helvetica Neue', sans-serif;
+  --font-number: 'D-DIN', 'Inter', 'Helvetica Neue', sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* =========================================================
+   Base / Reset
+   ========================================================= */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; padding: 0; }
 
+html, body { height: 100%; }
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
 }
+
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+input, textarea, select { font-family: inherit; }
+
+/* 禁暗黑模式默认 */
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: light; }
+}
+
+.tnum { font-feature-settings: 'tnum'; }
