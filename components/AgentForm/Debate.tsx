@@ -1,6 +1,11 @@
 'use client';
 
 import { Field, INPUT_CX, TEXTAREA_CX, INPUT_STYLE, SUBJECTS, GRADES } from './Field';
+import {
+  BackgroundPicker,
+  TopicThumbPicker,
+  DebateActorPicker,
+} from '../AssetPicker';
 import type { DebateAgentConfig } from '@/lib/agent-schemas';
 
 interface Props {
@@ -29,10 +34,22 @@ export function DebateForm({ value, onChange }: Props) {
   }
 
   return (
-    <div
-      className="flex flex-col gap-4 rounded-xl border bg-white p-5"
-      style={{ borderColor: 'var(--color-border)' }}
-    >
+    <div className="flex flex-col gap-5">
+      <Field label="擂台背景" hint="决定辩论使用页的画布感觉">
+        <BackgroundPicker
+          kind="debate"
+          value={value.bgAsset}
+          onChange={v => set('bgAsset', v as DebateAgentConfig['bgAsset'])}
+        />
+      </Field>
+
+      <Field label="辩题封面" hint="可选 · 显示在辩题条旁；按辩题关键词推荐">
+        <TopicThumbPicker
+          value={value.thumbAsset}
+          onChange={v => set('thumbAsset', v as DebateAgentConfig['thumbAsset'])}
+        />
+      </Field>
+
       <Field label="名称" required>
         <input
           className={INPUT_CX} style={INPUT_STYLE}
@@ -57,6 +74,16 @@ export function DebateForm({ value, onChange }: Props) {
           value={value.background ?? ''}
           onChange={e => set('background', e.target.value)}
           rows={3}
+        />
+      </Field>
+
+      <Field label="赛前提示词" hint="主持人开场 · 使用页辩题条下方显示；AI 已按辩题风格预填">
+        <textarea
+          className={TEXTAREA_CX} style={INPUT_STYLE}
+          value={value.coldStart ?? ''}
+          onChange={e => set('coldStart', e.target.value)}
+          rows={3}
+          placeholder="例：今天我们辩论『一次性塑料袋是否应禁用』。正方主张为保护海洋必须禁用，反方主张直接禁用会带来不便、应分阶段。请双方做好准备！"
         />
       </Field>
 
@@ -91,6 +118,14 @@ export function DebateForm({ value, onChange }: Props) {
         <div className="text-[12px] font-semibold" style={{ color: 'var(--color-text-2)' }}>
           正方
         </div>
+        <Field label="正方辩手" hint="2 个候选 · 与「参与者类型」联动">
+          <DebateActorPicker
+            side="pro"
+            value={value.proSide?.actorId}
+            onChange={id => setSide('proSide', { actorId: id as DebateAgentConfig['proSide']['actorId'] })}
+            preferKind={value.proSide?.type ?? 'ai'}
+          />
+        </Field>
         <Field label="参与者类型" required>
           <select
             className={INPUT_CX} style={INPUT_STYLE}
@@ -120,6 +155,14 @@ export function DebateForm({ value, onChange }: Props) {
         <div className="text-[12px] font-semibold" style={{ color: 'var(--color-text-2)' }}>
           反方
         </div>
+        <Field label="反方辩手" hint="2 个候选 · 与「参与者类型」联动">
+          <DebateActorPicker
+            side="con"
+            value={value.conSide?.actorId}
+            onChange={id => setSide('conSide', { actorId: id as DebateAgentConfig['conSide']['actorId'] })}
+            preferKind={value.conSide?.type ?? 'human'}
+          />
+        </Field>
         <Field label="参与者类型" required>
           <select
             className={INPUT_CX} style={INPUT_STYLE}

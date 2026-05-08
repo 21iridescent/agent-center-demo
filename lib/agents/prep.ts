@@ -15,25 +15,25 @@ import type { PrepKind } from '@/lib/types';
  */
 
 export const outlineAgent = new ToolLoopAgent({
-  model: deepseek(DEEPSEEK_MODEL),
+  model: deepseek.chat(DEEPSEEK_MODEL),
   instructions: OUTLINE_PROMPT,
   temperature: 0.7,
 });
 
 export const lessonAgent = new ToolLoopAgent({
-  model: deepseek(DEEPSEEK_MODEL),
+  model: deepseek.chat(DEEPSEEK_MODEL),
   instructions: LESSON_PROMPT,
   temperature: 0.7,
 });
 
 export const exerciseAgent = new ToolLoopAgent({
-  model: deepseek(DEEPSEEK_MODEL),
+  model: deepseek.chat(DEEPSEEK_MODEL),
   instructions: EXERCISE_PROMPT,
   temperature: 0.7,
 });
 
 export const activityAgent = new ToolLoopAgent({
-  model: deepseek(DEEPSEEK_MODEL),
+  model: deepseek.chat(DEEPSEEK_MODEL),
   instructions: ACTIVITY_PROMPT,
   temperature: 0.7,
 });

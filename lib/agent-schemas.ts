@@ -1,10 +1,21 @@
 import { z } from 'zod';
+import {
+  XUEWEN_PERSONA_IDS,
+  XUEWEN_BG_IDS,
+  DEBATE_BG_IDS,
+  DEBATE_ACTOR_IDS,
+  TOPIC_THUMB_IDS,
+  DISCUSSION_BG_IDS,
+} from './asset-catalog';
 
 /**
  * 三类智能体的配置 schema
  * - 服务端：作为 ToolLoopAgent 的 tool inputSchema
  * - 客户端：作为可编辑表单的字段定义
  * 单一真源，避免 schema 漂移
+ *
+ * 资源字段（personaId / bgAsset / actorId / thumbAsset）的 enum 候选
+ * 由 lib/asset-catalog.ts 派生，物理素材在 public/assets/generated/
  */
 
 const SUBJECT = z.enum(['科学', '人工智能']);
@@ -37,6 +48,37 @@ export const XuewenAgentSchema = z.object({
     .array(z.string())
     .default([])
     .describe('知识库标签数组，如 ["教科版六年级科学"]'),
+  personaId: z
+    .enum(XUEWEN_PERSONA_IDS)
+    .optional()
+    .describe(
+      '虚拟人物原型 id；6 个候选：newton/curie/darwin/socrates/galileo/tong-dizhou —— 决定使用页头像和全身像（来自素材目录）',
+    ),
+  bgAsset: z
+    .enum(XUEWEN_BG_IDS)
+    .optional()
+    .describe(
+      '背景场景 id；3 个候选：classical-academy（古典书院·适合人文/历史）/ science-lab（科学实验室·默认）/ natural-history（自然博物·适合生物/进化）',
+    ),
+  personaCustom: z
+    .object({
+      avatarUrl: z.string().describe('512×512 头像 URL（可为 data: URL）'),
+      roleUrl: z.string().describe('1024×1536 全身像 URL（可为 data: URL）'),
+      sourcePrompt: z
+        .string()
+        .optional()
+        .describe('生成时所用 prompt，便于复现；前端会回填'),
+    })
+    .optional()
+    .describe(
+      '当 personaId 不在 6 人 catalog 时，AI 现画的人物形象；与 personaId 互斥。LLM 不要直接填 URL（留空），由前端 [✨ AI 生成] 触发并回填。',
+    ),
+  coldStart: z
+    .string()
+    .optional()
+    .describe(
+      '使用页 assistant 第一句开场白；80-120 字，第一人称介绍角色 + 邀请提问；与 background 风格一致',
+    ),
 });
 export type XuewenAgentConfig = z.infer<typeof XuewenAgentSchema>;
 
@@ -52,6 +94,12 @@ const DebateSide = z.object({
     .string()
     .min(10)
     .describe('一两句话写明立场和主要论据，AI 类型时按此自动发言'),
+  actorId: z
+    .enum(DEBATE_ACTOR_IDS)
+    .optional()
+    .describe(
+      '辩手全身像 id；4 个候选：pro-ai/con-ai/pro-student/con-student（与 type 联动：type=ai 倾向 *-ai，type=human 倾向 *-student）',
+    ),
 });
 
 export const DebateAgentSchema = z.object({
@@ -74,6 +122,22 @@ export const DebateAgentSchema = z.object({
     .enum(['default', 'strict', 'encouraging', 'neutral'])
     .default('default')
     .describe('AI 评委语气模板：default=默认 / strict=严格 / encouraging=鼓励 / neutral=中性'),
+  bgAsset: z
+    .enum(DEBATE_BG_IDS)
+    .optional()
+    .describe('辩论场景背景 id；当前候选：stage-balanced（平衡擂台）'),
+  thumbAsset: z
+    .enum(TOPIC_THUMB_IDS)
+    .optional()
+    .describe(
+      '辩题封面 id；可选，按辩题关键词推荐：塑料→plastic-ocean / 降解→biodegradable / 数据→ocean-data-board / 政策→policy-brief / 论点→argument-cards 等',
+    ),
+  coldStart: z
+    .string()
+    .optional()
+    .describe(
+      '辩论使用页"赛前提示词"开场，80-120 字，主持人口吻宣布辩题、双方简介，最后一句鼓励发言',
+    ),
 });
 export type DebateAgentConfig = z.infer<typeof DebateAgentSchema>;
 
@@ -105,6 +169,16 @@ export const DiscussionAgentSchema = z.object({
     .array(Scaffold)
     .length(6)
     .describe('恰好 6 个观点支架（标签 + 模板句）'),
+  bgAsset: z
+    .enum(DISCUSSION_BG_IDS)
+    .optional()
+    .describe('讨论场景背景 id；当前候选：classroom-roundtable（圆桌教室）'),
+  coldStart: z
+    .string()
+    .optional()
+    .describe(
+      '讨论使用页主持人开场，80-120 字，抛出主题 + 鼓励发言 + 提示用观点支架',
+    ),
 });
 export type DiscussionAgentConfig = z.infer<typeof DiscussionAgentSchema>;
 

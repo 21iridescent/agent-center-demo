@@ -26,7 +26,12 @@ const INSTRUCTIONS = `你是「AI 学问 智能体配置」助手，服务对象
 - grade 只能取「一年级 ~ 六年级」，不要扩到中学
 - background 要符合小学生认知，不要太学术化
 - 名称限简洁（≤ 8 字），不要加"老师"等通用后缀
-- 优先沿用用户提及的具体人物（牛顿/居里/达尔文/苏格拉底/伽利略/童第周等）`;
+- 优先沿用用户提及的具体人物（牛顿/居里/达尔文/苏格拉底/伽利略/童第周等）
+
+新增字段：
+- coldStart 必填一句：80-120 字，第一人称介绍角色 + 邀请提问，与 background 风格一致
+  · 范例："你好同学们！我是牛顿，三百年前在英国研究力学。今天想和你们聊聊苹果落地背后的小秘密——准备好了吗？"
+- personaCustom：人物**不在**这 6 人 catalog（newton/curie/darwin/socrates/galileo/tong-dizhou）时，personaId **不要填**，改填 personaCustom: { avatarUrl: '', roleUrl: '', sourcePrompt: '<形象描述>' }；avatarUrl/roleUrl **留空字符串**，前端按钮接管生成并回填`;
 
 export const createXuewenAgent = new ToolLoopAgent({
   model: deepseek(DEEPSEEK_MODEL),

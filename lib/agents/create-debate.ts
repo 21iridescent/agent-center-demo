@@ -23,7 +23,11 @@ const INSTRUCTIONS = `你是「AI 思辨·辩论 智能体配置」助手，服�
 - subject 只能取「科学」或「人工智能」
 - grade 只能取「一年级 ~ 六年级」
 - 正反方默认配置：proSide.type=ai, conSide.type=human（最常见的"AI vs 学生"组合）；用户明确要求时再切其他
-- argument 要写清"立场 + 主要论据"，让 AI 类型方有据可发`;
+- argument 要写清"立场 + 主要论据"，让 AI 类型方有据可发
+
+新增字段：
+- coldStart 必填一句：80-120 字，主持人口吻宣布辩题、双方简介，最后一句鼓励发言
+  · 范例："今天我们辩论『一次性塑料袋是否应禁用』。正方主张为保护海洋必须禁用，反方主张直接禁用会带来不便、应分阶段。请双方做好准备，一起来一场公平的较量！"`;
 
 export const createDebateAgent = new ToolLoopAgent({
   model: deepseek(DEEPSEEK_MODEL),

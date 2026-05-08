@@ -11,12 +11,12 @@ interface Props {
 const DURATION_MINUTES = [20, 30, 45, 60] as const;
 
 const DEFAULT_SCAFFOLDS = [
-  { label: '① 提出新观点',  template: '我的观点是<空>，依据是<空>' },
-  { label: '② 反驳，新观点', template: '我不赞同<空>。我的观点是<空>' },
-  { label: '③ 同意，补证据', template: '我赞同<空>，证据是<空>' },
-  { label: '④ 同意，修证据', template: '我同意<空>，但证据应是<空>' },
-  { label: '⑤ 同意，修自己', template: '我同意<空>，修订我之前<空>的观点' },
-  { label: '⑥ 坚持，补证据', template: '补充证据<空>，所以我的观点成立' },
+  { label: '① 提出新观点', template: '我的观点是<空>，依据是<空>' },
+  { label: '② 补充观点',   template: '我赞同<同学名>，并补充：<空>' },
+  { label: '③ 反驳观点',   template: '我不同意<同学名>，因为：<空>' },
+  { label: '④ 提问澄清',   template: '我想问<同学名>：<空>' },
+  { label: '⑤ 总结归纳',   template: '目前我们达成的共识是：<空>；分歧是：<空>' },
+  { label: '⑥ 联系实际',   template: '在我自己的生活中，<空>' },
 ];
 
 export function DiscussionForm({ value, onChange }: Props) {
@@ -34,10 +34,7 @@ export function DiscussionForm({ value, onChange }: Props) {
   }
 
   return (
-    <div
-      className="flex flex-col gap-4 rounded-xl border bg-white p-5"
-      style={{ borderColor: 'var(--color-border)' }}
-    >
+    <div className="flex flex-col gap-5">
       <Field label="名称" required>
         <input
           className={INPUT_CX} style={INPUT_STYLE}
@@ -94,6 +91,16 @@ export function DiscussionForm({ value, onChange }: Props) {
           value={value.hostStyle ?? ''}
           onChange={e => set('hostStyle', e.target.value)}
           rows={2}
+        />
+      </Field>
+
+      <Field label="开场白" hint="主持人开场 · 抛主题 + 鼓励 + 提示用支架；AI 已按主题预填">
+        <textarea
+          className={TEXTAREA_CX} style={INPUT_STYLE}
+          value={value.coldStart ?? ''}
+          onChange={e => set('coldStart', e.target.value)}
+          rows={3}
+          placeholder="例：欢迎大家！今天我们聊聊『班级是否应禁带零食』，请用上方的观点支架，先听别人，再说自己。"
         />
       </Field>
 

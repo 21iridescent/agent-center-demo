@@ -1,6 +1,8 @@
 'use client';
 
 import { Field, INPUT_CX, TEXTAREA_CX, INPUT_STYLE, SUBJECTS, GRADES } from './Field';
+import { BackgroundPicker, PersonaPicker } from '../AssetPicker';
+import { AiPersonaGen } from './AiPersonaGen';
 import type { XuewenAgentConfig } from '@/lib/agent-schemas';
 
 interface Props {
@@ -13,11 +15,56 @@ export function XuewenForm({ value, onChange }: Props) {
     onChange({ ...value, [k]: v });
   }
 
+  const customSelected = !value.personaId && !!value.personaCustom;
+
   return (
-    <div
-      className="flex flex-col gap-4 rounded-xl border bg-white p-5"
-      style={{ borderColor: 'var(--color-border)' }}
-    >
+    <div className="flex flex-col gap-5">
+      <Field label="人物形象" hint="6 个候选；不在的话按 [✨ AI 生成]">
+        <div className="flex flex-col gap-2.5">
+          <PersonaPicker
+            value={value.personaId}
+            onChange={v => {
+              onChange({
+                ...value,
+                personaId: v as XuewenAgentConfig['personaId'],
+                personaCustom: undefined,
+              });
+            }}
+            customPreview={
+              value.personaCustom
+                ? { avatarUrl: value.personaCustom.avatarUrl, label: value.name }
+                : undefined
+            }
+            customSelected={customSelected}
+            onPickCustom={() => {
+              if (value.personaCustom) {
+                onChange({ ...value, personaId: undefined });
+              }
+            }}
+          />
+          <AiPersonaGen
+            name={value.name ?? ''}
+            traits={(value.background ?? '').slice(0, 100)}
+            value={value.personaCustom}
+            onChange={pc => {
+              onChange({
+                ...value,
+                personaCustom: pc,
+                personaId: pc ? undefined : value.personaId,
+              });
+            }}
+          />
+        </div>
+      </Field>
+
+      <Field label="背景场景" hint="3 个候选 · 决定使用页画布感觉">
+        <BackgroundPicker
+          kind="xuewen"
+          value={value.bgAsset}
+          onChange={v => set('bgAsset', v as XuewenAgentConfig['bgAsset'])}
+        />
+      </Field>
+
       <Field label="名称" required hint="≤ 8 字，如「牛顿」">
         <input
           className={INPUT_CX}
@@ -36,6 +83,17 @@ export function XuewenForm({ value, onChange }: Props) {
           onChange={e => set('background', e.target.value)}
           placeholder="例：英国物理学家与数学家，发现万有引力。说话沉稳，善用比喻给小学生讲解力学..."
           rows={4}
+        />
+      </Field>
+
+      <Field label="开场白" hint="使用页第一句 · AI 已按角色风格预填，可改">
+        <textarea
+          className={TEXTAREA_CX}
+          style={INPUT_STYLE}
+          value={value.coldStart ?? ''}
+          onChange={e => set('coldStart', e.target.value)}
+          placeholder="例：你好同学们！我是牛顿，三百年前在英国研究力学。今天想和你们聊聊苹果落地背后的小秘密——准备好了吗？"
+          rows={3}
         />
       </Field>
 
