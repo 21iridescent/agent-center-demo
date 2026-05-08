@@ -21,8 +21,8 @@ export async function POST(req: Request) {
   }
   const { messages, kind } = body;
 
-  if (!process.env.DEEPSEEK_API_KEY) {
-    return new Response('DEEPSEEK_API_KEY missing', { status: 500 });
+  if (!process.env.OPENROUTER_API_KEY) {
+    return new Response('OPENROUTER_API_KEY missing', { status: 500 });
   }
   if (!Array.isArray(messages) || messages.length === 0) {
     return new Response('messages required', { status: 400 });

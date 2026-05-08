@@ -1,13 +1,17 @@
 import { createOpenAI } from '@ai-sdk/openai';
 
 /**
- * DeepSeek 走 OpenAI 兼容协议
- * base_url: https://api.deepseek.com
- * model:    deepseek-v4-flash
+ * LLM provider — 走 OpenRouter（OpenAI 兼容协议，多模型聚合网关）
+ *   baseURL: https://openrouter.ai/api/v1
+ *   env:     OPENROUTER_API_KEY
+ *   model:   OpenRouter 上的任意模型 id（"provider/model-name"）
+ *
+ * 历史名 `deepseek` / `DEEPSEEK_MODEL` 保留以最小化改动面（agents/route.ts 都引用这两个名字）；
+ * 实际后端是 OpenRouter，模型也可以非 DeepSeek
  */
 export const deepseek = createOpenAI({
-  baseURL: 'https://api.deepseek.com',
-  apiKey: process.env.DEEPSEEK_API_KEY!,
+  baseURL: 'https://openrouter.ai/api/v1',
+  apiKey: process.env.OPENROUTER_API_KEY!,
 });
 
-export const DEEPSEEK_MODEL = 'deepseek-v4-flash';
+export const DEEPSEEK_MODEL = 'deepseek/deepseek-v4-flash';

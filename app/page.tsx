@@ -117,6 +117,20 @@ const TYPE_TO_LAUNCH: Record<AgentType, string> = {
   debate:   '/legacy/AI思辨使用-辩论-v0.1.html',
   discuss:  '/legacy/AI思辨使用-讨论-v0.1.html',
 };
+
+// 模板式快建：已知 kind，直达 /create/[kind] 50/50 模板页
+const KIND_TO_CREATE: Record<string, string> = {
+  xuewen: '/create/xuewen',
+  debate: '/create/debate',
+  discussion: '/create/discussion',
+};
+
+const QUICK_NEW = [
+  { type: 'dialogue' as const, label: '学问', href: '/create/xuewen' },
+  { type: 'debate'   as const, label: '辩论', href: '/create/debate' },
+  { type: 'discuss'  as const, label: '讨论', href: '/create/discussion' },
+];
+
 function savedToSeed(a: SavedAgent): AgentSeed {
   const cfg = a.config as Record<string, string | undefined>;
   const type = KIND_TO_TYPE[a.kind] ?? 'dialogue';
@@ -130,8 +144,7 @@ function savedToSeed(a: SavedAgent): AgentSeed {
     grade: cfg.grade ?? '一年级',
     lastUsed: '刚刚',
     launchHref: TYPE_TO_LAUNCH[type],
-    // 编辑流程暂未支持（统一 /create 流不再按 kind 预选），保存的 agent 编辑按钮 fallback 到首页
-    editHref: '/',
+    editHref: KIND_TO_CREATE[a.kind] ?? '/',
   };
 }
 
@@ -238,7 +251,7 @@ export default function Home() {
           }
         >
           {!manageMode && (
-            <div className="mb-4">
+            <div className="mb-4 flex flex-wrap items-center gap-3">
               <Link
                 href="/create"
                 className="inline-flex h-9 items-center gap-1.5 rounded-full px-5 text-[13px] font-semibold text-white transition-colors hover:opacity-90"
@@ -247,6 +260,26 @@ export default function Home() {
                 <span className="text-[15px] leading-none">＋</span>
                 AI 创建
               </Link>
+              <span className="text-[12px]" style={{ color: 'var(--color-text-5)' }}>
+                或选模板
+              </span>
+              {QUICK_NEW.map(q => (
+                <Link
+                  key={q.type}
+                  href={q.href}
+                  className="flex h-7 items-center gap-1.5 rounded-full border bg-white px-4 text-[12px] font-medium transition-colors hover:[border-color:var(--color-primary)]"
+                  style={{
+                    color: 'var(--color-text-3)',
+                    borderColor: 'var(--color-border)',
+                  }}
+                >
+                  <span
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{ background: TYPE_DOT_COLOR[q.type] }}
+                  />
+                  {q.label}
+                </Link>
+              ))}
             </div>
           )}
 

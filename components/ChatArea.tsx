@@ -23,7 +23,56 @@ interface Props {
   isStreaming?: boolean;
 }
 
+function ThinkingBubble() {
+  return (
+    <div className="flex max-w-[86%] gap-2.5 self-start">
+      <div
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
+        style={{ background: 'var(--color-bg-gray)', color: 'var(--color-text-3)' }}
+      >
+        AI
+      </div>
+      <div
+        className="flex items-center gap-2 rounded-md px-4 py-3 text-[13px]"
+        style={{
+          background: '#fff',
+          border: '1px solid var(--color-border)',
+          color: 'var(--color-text-3)',
+        }}
+      >
+        <span className="flex items-end gap-[3px]">
+          <span
+            className="h-1.5 w-1.5 rounded-full animate-bounce [animation-delay:-0.3s]"
+            style={{ background: 'var(--color-text-5)' }}
+          />
+          <span
+            className="h-1.5 w-1.5 rounded-full animate-bounce [animation-delay:-0.15s]"
+            style={{ background: 'var(--color-text-5)' }}
+          />
+          <span
+            className="h-1.5 w-1.5 rounded-full animate-bounce"
+            style={{ background: 'var(--color-text-5)' }}
+          />
+        </span>
+        <span>AI 正在思考…</span>
+      </div>
+    </div>
+  );
+}
+
 export function ChatArea({ messages, isStreaming }: Props) {
+  // Loading 触发条件：① 等首 token 中（status='submitted'，messages 末尾还是 user）
+  // ② 已 streaming 但 assistant 还没出文字也没出 tool part（极短瞬间）
+  const last = messages[messages.length - 1];
+  const lastHasContent = last
+    ? (last.parts ?? []).some(p => {
+        if (p.type === 'text' && (p as { text: string }).text.length > 0) return true;
+        if (p.type.startsWith('tool-')) return true;
+        return false;
+      })
+    : false;
+  const showThinking = !!isStreaming && (!last || last.role === 'user' || !lastHasContent);
+
   return (
     <div className="flex flex-col gap-[18px] py-2">
       {messages.map((m, mi) => {
@@ -35,8 +84,8 @@ export function ChatArea({ messages, isStreaming }: Props) {
         const toolParts = (m.parts ?? []).filter(p =>
           p.type.startsWith('tool-'),
         ) as ToolPart[];
-        const isLast = mi === messages.length - 1;
-        const showBubble = text.length > 0 || (isLast && isStreaming && !isUser);
+        // 文字非空才展示文本气泡（空 + 流中"…"占位的情况由底部独立 ThinkingBubble 接管）
+        const showBubble = text.length > 0;
 
         return (
           <div key={m.id} className="flex flex-col gap-3">
@@ -66,7 +115,7 @@ export function ChatArea({ messages, isStreaming }: Props) {
                         }
                   }
                 >
-                  {text || '…'}
+                  {text}
                 </div>
               </div>
             )}
@@ -107,6 +156,7 @@ export function ChatArea({ messages, isStreaming }: Props) {
           </div>
         );
       })}
+      {showThinking && <ThinkingBubble />}
     </div>
   );
 }
