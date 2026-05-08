@@ -1,3 +1,4 @@
+import type { UIMessage } from 'ai';
 import type { AppRecord } from './types';
 
 /**
@@ -61,7 +62,59 @@ export const FALLBACK_RECORDS: AppRecord[] = [
     time: '2026-04-29 14:30 · 今天',
     createdAt: '2026-04-29T14:30:00Z',
     avatar: 'N',
-    turns: 12,
+    avatarUrl: '/assets/generated/xuewen-avatar-newton.png',
+    turns: 3,
+    meta: {
+      personaId: 'newton',
+      subject: '科学',
+      grade: '四年级',
+      background: '英国物理学家、数学家，发现万有引力与运动三定律。说话沉稳、爱用生活中的小例子（苹果、月亮、马车）解释物理。',
+    },
+    transcript: {
+      messages: [
+        {
+          id: 'r1-m1',
+          role: 'assistant',
+          parts: [{ type: 'text', text: '你好！我是牛顿。你想跟我聊点什么？' }],
+        },
+        {
+          id: 'r1-m2',
+          role: 'user',
+          parts: [{ type: 'text', text: '苹果为什么会从树上落下？' }],
+        },
+        {
+          id: 'r1-m3',
+          role: 'assistant',
+          parts: [
+            {
+              type: 'text',
+              text:
+                '这是个让我琢磨了好一阵子的问题——其实，地球上每一样东西都被一种看不见的"拉力"往下拽，' +
+                '我们叫它"重力"。苹果的茎不再撑得住的时候，这股拉力就把它带回地面。' +
+                '更妙的是，让月亮绕着我们转的也是同一种力，只是月亮跑得够快，才没掉下来。',
+            },
+          ],
+        },
+        {
+          id: 'r1-m4',
+          role: 'user',
+          parts: [{ type: 'text', text: '那为什么月亮没有掉下来？' }],
+        },
+        {
+          id: 'r1-m5',
+          role: 'assistant',
+          parts: [
+            {
+              type: 'text',
+              text:
+                '想象你拿一根绳子甩石头转圈：石头一直在被绳子往里拉，可它跑得够快，就一直绕着你转，掉不下来。' +
+                '月亮跟我们也是这样——重力是那根"看不见的绳子"，月亮的速度让它一边被拉、一边一直往前跑，' +
+                '于是就成了我们头顶的圆环。',
+            },
+          ],
+        },
+      ] as UIMessage[],
+    },
   },
   {
     id: 'r2',
@@ -77,12 +130,67 @@ export const FALLBACK_RECORDS: AppRecord[] = [
     id: 'r3',
     type: 'debate',
     title: '一次性塑料袋是否应禁用',
-    summary: '正方 5 轮 · 反方 4 轮 · AI 评委综合评分 7.2',
+    summary: '正方 2 段 · 反方 2 段 · AI 评委综合评分 7.2',
     time: '2026-04-26 10:15 · 3 天前',
     createdAt: '2026-04-26T10:15:00Z',
     avatar: '辩',
-    pro: 5, con: 4, score: 7.2,
+    avatarUrl: '/assets/generated/debate-avatar-judge.png',
+    pro: 2, con: 2, score: 7.2,
     agentName: '塑料禁令辩论',
+    meta: {
+      proActorId: 'pro-ai',
+      conActorId: 'con-student',
+      thumbAsset: 'plastic-ocean',
+      bgAsset: 'stage-balanced',
+      subject: '科学',
+      grade: '六年级',
+      totalRounds: '2',
+    },
+    transcript: {
+      history: [
+        {
+          round: 1,
+          side: 'pro',
+          text:
+            '一次性塑料袋应当禁用。它在自然中需要数百年才能降解，海洋里漂浮的塑料碎片已经进入了鱼虾的肚子，' +
+            '最终又回到我们的餐桌。与其等污染失控再补救，不如从源头限用。',
+        },
+        {
+          round: 1,
+          side: 'con',
+          text:
+            '完全禁用过于一刀切。许多家庭依赖一次性袋子保鲜剩菜、装垃圾；老人和小摊贩短期内换不了昂贵替代品。' +
+            '更合理的是推广可降解材料、收回收押金，而不是粗暴禁止。',
+        },
+        {
+          round: 2,
+          side: 'pro',
+          text:
+            '可降解材料目前普及率不到一成，多数所谓"环保袋"工业堆肥才能降解，普通垃圾桶里照样几十年不化。' +
+            '没有禁令，市场没有动力去推动真替代品。',
+        },
+        {
+          round: 2,
+          side: 'con',
+          text:
+            '禁令推得太快，反而让大家偷偷用、用得更凶。配套的回收点、押金返还、可降解袋补贴一步步铺开，' +
+            '让家长和小店主自己愿意换，比一禁了之走得远。',
+        },
+      ],
+      judgeText:
+        '【双方论点小结】\n' +
+        '正方强调一次性塑料袋污染严重、自然降解慢、可降解替代品普及不足，主张通过禁令倒逼市场转型。\n' +
+        '反方认为一刀切忽视普通家庭与小摊贩的现实需求，应通过回收体系与替代品补贴循序渐进。\n\n' +
+        '【亮点】\n' +
+        '正方：用"鱼虾肚子里的塑料"把抽象污染具象化；指出"无禁令则无市场动力"，逻辑闭环清晰。\n' +
+        '反方：从"老人与小摊贩"切入弱势群体处境；提出回收押金这一可执行替代方案。\n\n' +
+        '【可改进】\n' +
+        '正方：缺少对"如何过渡"的具体方案，容易显得理想化。\n' +
+        '反方：未正面回应"塑料降解需要数百年"的核心数据。\n\n' +
+        '【综合点评】\n' +
+        '双方都从生活实际出发，证据扎实、措辞克制。如果再多一些彼此追问的细节，会更精彩。',
+      score: 7.2,
+    },
   },
   {
     id: 'r4',

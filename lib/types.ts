@@ -1,6 +1,31 @@
+import type { UIMessage } from 'ai';
+
 export type PrepKind = 'outline' | 'lesson' | 'exercise' | 'activity';
 
 export type RecordType = 'dialogue' | 'debate' | 'discussion' | 'prep';
+
+/* ───────────────────────────────────────────────────────────────
+   Transcript payloads — 评价回看的原文存档
+   - DialogueTranscript：学问对话，沿用 useChat 的 UIMessage[]
+   - DebateTranscript：辩论实录 + 评委文字 + 评分
+   字段全部 optional，保护旧记录不挂
+   ─────────────────────────────────────────────────────────────── */
+
+export interface DebateTurnEntry {
+  round: number;
+  side: 'pro' | 'con';
+  text: string;
+}
+
+export interface DialogueTranscript {
+  messages: UIMessage[];
+}
+
+export interface DebateTranscript {
+  history: DebateTurnEntry[];
+  judgeText: string;
+  score?: number;
+}
 
 export interface BaseRecord {
   id: string;
@@ -11,7 +36,8 @@ export interface BaseRecord {
   time?: string;     // optional human-readable like "2026-05-08 16:00 · 今天"
   agentName?: string;
   meta?: Record<string, string | undefined>;
-  avatar?: string;
+  avatar?: string;       // 单字符 fallback（如 'N' / '水'），向后兼容旧数据
+  avatarUrl?: string;    // 优先 URL（如 /assets/generated/xuewen-avatar-newton.png），RecordCard 优先用这个
 }
 
 export interface PrepRecord extends BaseRecord {
@@ -23,6 +49,7 @@ export interface PrepRecord extends BaseRecord {
 export interface DialogueRecord extends BaseRecord {
   type: 'dialogue';
   turns?: number;
+  transcript?: DialogueTranscript;
 }
 
 export interface DebateRecord extends BaseRecord {
@@ -30,6 +57,7 @@ export interface DebateRecord extends BaseRecord {
   pro?: number;
   con?: number;
   score?: number;
+  transcript?: DebateTranscript;
 }
 
 export interface DiscussionRecord extends BaseRecord {
