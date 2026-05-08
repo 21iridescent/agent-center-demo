@@ -76,6 +76,14 @@ export function DebateUsePage({ agent }: Props) {
   const [saving, setSaving] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [judgeOpen, setJudgeOpen] = useState(false);
+  const speechPopupRef = useRef<HTMLDivElement>(null);
+
+  // 流式发言时弹窗内容自动贴底，新文字总在视口
+  useEffect(() => {
+    if (phase === 'ai-thinking' && speechPopupRef.current) {
+      speechPopupRef.current.scrollTop = speechPopupRef.current.scrollHeight;
+    }
+  }, [aiPartial, phase]);
   const [materialsOpen, setMaterialsOpen] = useState(false);
   const [materialsZoomId, setMaterialsZoomId] = useState<string | null>(null);
 
@@ -341,6 +349,35 @@ export function DebateUsePage({ agent }: Props) {
             opacity: 0;
           }
         }
+        @keyframes speechPopIn {
+          0% {
+            transform: translate(-50%, -16px) scale(0.92);
+            opacity: 0;
+          }
+          60% {
+            transform: translate(-50%, 4px) scale(1.02);
+            opacity: 1;
+          }
+          100% {
+            transform: translate(-50%, 0) scale(1);
+            opacity: 1;
+          }
+        }
+        @keyframes speakingDots {
+          0%, 20% { opacity: 0.3; }
+          50% { opacity: 1; }
+          80%, 100% { opacity: 0.3; }
+        }
+        :global(.speech-popup) {
+          animation: speechPopIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+          will-change: transform, opacity;
+        }
+        :global(.speech-popup .dot) {
+          display: inline-block;
+          animation: speakingDots 1.2s ease-in-out infinite;
+        }
+        :global(.speech-popup .dot:nth-child(2)) { animation-delay: 0.18s; }
+        :global(.speech-popup .dot:nth-child(3)) { animation-delay: 0.36s; }
         :global(.pulse-ring-pro) {
           animation: debatePulsePrimary 0.8s ease-in-out infinite;
         }
@@ -545,10 +582,8 @@ export function DebateUsePage({ agent }: Props) {
             speaking={proSpeaking}
             bubbleSide="pro"
             bubble={
-              proSpeaking
-                ? phase === 'ai-thinking'
-                  ? { text: aiPartial, kind: 'live-ai' }
-                  : { text: '正在等你输入…', kind: 'live-input' }
+              proSpeaking && phase === 'human-input'
+                ? { text: '正在等你输入…', kind: 'live-input' }
                 : lastProTurn
                 ? { text: lastProTurn.text, kind: 'history' }
                 : null
@@ -583,10 +618,8 @@ export function DebateUsePage({ agent }: Props) {
             speaking={conSpeaking}
             bubbleSide="con"
             bubble={
-              conSpeaking
-                ? phase === 'ai-thinking'
-                  ? { text: aiPartial, kind: 'live-ai' }
-                  : { text: '正在等你输入…', kind: 'live-input' }
+              conSpeaking && phase === 'human-input'
+                ? { text: '正在等你输入…', kind: 'live-input' }
                 : lastConTurn
                 ? { text: lastConTurn.text, kind: 'history' }
                 : null
