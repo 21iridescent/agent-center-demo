@@ -1,0 +1,354 @@
+[
+  {
+    "file": "xuewen-bg-classical-academy.png",
+    "width": 1600,
+    "height": 900,
+    "kind": "bg",
+    "label": "AI Xuewen / Classical Academy",
+    "placeholder": false
+  },
+  {
+    "file": "xuewen-bg-science-lab.png",
+    "width": 1600,
+    "height": 900,
+    "kind": "bg",
+    "label": "AI Xuewen / Science Lab",
+    "placeholder": false
+  },
+  {
+    "file": "xuewen-bg-natural-history.png",
+    "width": 1600,
+    "height": 900,
+    "kind": "bg",
+    "label": "AI Xuewen / Natural History",
+    "placeholder": true
+  },
+  {
+    "file": "xuewen-role-newton.png",
+    "width": 1024,
+    "height": 1536,
+    "kind": "role",
+    "label": "Newton",
+    "placeholder": false
+  },
+  {
+    "file": "xuewen-avatar-newton.png",
+    "width": 512,
+    "height": 512,
+    "kind": "avatar",
+    "label": "Newton",
+    "placeholder": true
+  },
+  {
+    "file": "xuewen-role-curie.png",
+    "width": 1024,
+    "height": 1536,
+    "kind": "role",
+    "label": "Curie",
+    "placeholder": true
+  },
+  {
+    "file": "xuewen-avatar-curie.png",
+    "width": 512,
+    "height": 512,
+    "kind": "avatar",
+    "label": "Curie",
+    "placeholder": false
+  },
+  {
+    "file": "xuewen-role-darwin.png",
+    "width": 1024,
+    "height": 1536,
+    "kind": "role",
+    "label": "Darwin",
+    "placeholder": true
+  },
+  {
+    "file": "xuewen-avatar-darwin.png",
+    "width": 512,
+    "height": 512,
+    "kind": "avatar",
+    "label": "Darwin",
+    "placeholder": true
+  },
+  {
+    "file": "xuewen-role-socrates.png",
+    "width": 1024,
+    "height": 1536,
+    "kind": "role",
+    "label": "Socrates",
+    "placeholder": true
+  },
+  {
+    "file": "xuewen-avatar-socrates.png",
+    "width": 512,
+    "height": 512,
+    "kind": "avatar",
+    "label": "Socrates",
+    "placeholder": true
+  },
+  {
+    "file": "xuewen-role-galileo.png",
+    "width": 1024,
+    "height": 1536,
+    "kind": "role",
+    "label": "Galileo",
+    "placeholder": true
+  },
+  {
+    "file": "xuewen-avatar-galileo.png",
+    "width": 512,
+    "height": 512,
+    "kind": "avatar",
+    "label": "Galileo",
+    "placeholder": true
+  },
+  {
+    "file": "xuewen-role-tong-dizhou.png",
+    "width": 1024,
+    "height": 1536,
+    "kind": "role",
+    "label": "Tong Dizhou",
+    "placeholder": true
+  },
+  {
+    "file": "xuewen-avatar-tong-dizhou.png",
+    "width": 512,
+    "height": 512,
+    "kind": "avatar",
+    "label": "Tong Dizhou",
+    "placeholder": true
+  },
+  {
+    "file": "debate-bg-stage-balanced.png",
+    "width": 1600,
+    "height": 900,
+    "kind": "bg",
+    "label": "Debate / Balanced Stage",
+    "placeholder": false
+  },
+  {
+    "file": "debate-role-pro-ai.png",
+    "width": 1024,
+    "height": 1536,
+    "kind": "role",
+    "label": "Pro AI",
+    "placeholder": true
+  },
+  {
+    "file": "debate-role-con-ai.png",
+    "width": 1024,
+    "height": 1536,
+    "kind": "role",
+    "label": "Con AI",
+    "placeholder": true
+  },
+  {
+    "file": "debate-role-pro-student.png",
+    "width": 1024,
+    "height": 1536,
+    "kind": "role",
+    "label": "Pro Student",
+    "placeholder": true
+  },
+  {
+    "file": "debate-role-con-student.png",
+    "width": 1024,
+    "height": 1536,
+    "kind": "role",
+    "label": "Con Student",
+    "placeholder": true
+  },
+  {
+    "file": "debate-avatar-judge.png",
+    "width": 512,
+    "height": 512,
+    "kind": "avatar",
+    "label": "Judge",
+    "placeholder": true
+  },
+  {
+    "file": "debate-thumb-plastic-ocean.png",
+    "width": 640,
+    "height": 360,
+    "kind": "thumb",
+    "label": "Plastic Ocean",
+    "placeholder": true
+  },
+  {
+    "file": "debate-thumb-biodegradable.png",
+    "width": 640,
+    "height": 360,
+    "kind": "thumb",
+    "label": "Biodegradable",
+    "placeholder": true
+  },
+  {
+    "file": "debate-thumb-policy-doc.png",
+    "width": 640,
+    "height": 360,
+    "kind": "thumb",
+    "label": "Policy Doc",
+    "placeholder": true
+  },
+  {
+    "file": "debate-material-plastic-lifecycle.png",
+    "width": 640,
+    "height": 360,
+    "kind": "thumb",
+    "label": "Plastic Lifecycle",
+    "placeholder": false
+  },
+  {
+    "file": "debate-material-ocean-data-board.png",
+    "width": 640,
+    "height": 360,
+    "kind": "thumb",
+    "label": "Ocean Data Board",
+    "placeholder": false
+  },
+  {
+    "file": "debate-material-biodegradation-experiment.png",
+    "width": 640,
+    "height": 360,
+    "kind": "thumb",
+    "label": "Biodegradation Experiment",
+    "placeholder": false
+  },
+  {
+    "file": "debate-material-policy-brief.png",
+    "width": 640,
+    "height": 360,
+    "kind": "thumb",
+    "label": "Policy Brief",
+    "placeholder": false
+  },
+  {
+    "file": "debate-material-school-recycling-case.png",
+    "width": 640,
+    "height": 360,
+    "kind": "thumb",
+    "label": "School Recycling Case",
+    "placeholder": false
+  },
+  {
+    "file": "debate-material-stakeholder-map.png",
+    "width": 640,
+    "height": 360,
+    "kind": "thumb",
+    "label": "Stakeholder Map",
+    "placeholder": false
+  },
+  {
+    "file": "debate-material-argument-cards.png",
+    "width": 640,
+    "height": 360,
+    "kind": "thumb",
+    "label": "Argument Cards",
+    "placeholder": false
+  },
+  {
+    "file": "debate-material-news-report.png",
+    "width": 640,
+    "height": 360,
+    "kind": "thumb",
+    "label": "News Report",
+    "placeholder": false
+  },
+  {
+    "file": "discussion-bg-classroom-roundtable.png",
+    "width": 1600,
+    "height": 900,
+    "kind": "bg",
+    "label": "Discussion / Roundtable Classroom",
+    "placeholder": false
+  },
+  {
+    "file": "discussion-role-host.png",
+    "width": 1024,
+    "height": 1536,
+    "kind": "role",
+    "label": "Discussion Host",
+    "placeholder": true
+  },
+  {
+    "file": "discussion-avatar-host.png",
+    "width": 512,
+    "height": 512,
+    "kind": "avatar",
+    "label": "Host",
+    "placeholder": true
+  },
+  {
+    "file": "discussion-avatar-student-a.png",
+    "width": 512,
+    "height": 512,
+    "kind": "avatar",
+    "label": "Student A",
+    "placeholder": true
+  },
+  {
+    "file": "discussion-avatar-student-b.png",
+    "width": 512,
+    "height": 512,
+    "kind": "avatar",
+    "label": "Student B",
+    "placeholder": true
+  },
+  {
+    "file": "discussion-avatar-student-c.png",
+    "width": 512,
+    "height": 512,
+    "kind": "avatar",
+    "label": "Student C",
+    "placeholder": true
+  },
+  {
+    "file": "discussion-avatar-student-d.png",
+    "width": 512,
+    "height": 512,
+    "kind": "avatar",
+    "label": "Student D",
+    "placeholder": true
+  },
+  {
+    "file": "discussion-avatar-student-e.png",
+    "width": 512,
+    "height": 512,
+    "kind": "avatar",
+    "label": "Student E",
+    "placeholder": true
+  },
+  {
+    "file": "discussion-avatar-student-f.png",
+    "width": 512,
+    "height": 512,
+    "kind": "avatar",
+    "label": "Student F",
+    "placeholder": true
+  },
+  {
+    "file": "discussion-thumb-classroom-climate.png",
+    "width": 640,
+    "height": 360,
+    "kind": "thumb",
+    "label": "Classroom Climate",
+    "placeholder": true
+  },
+  {
+    "file": "discussion-thumb-collaboration.png",
+    "width": 640,
+    "height": 360,
+    "kind": "thumb",
+    "label": "Collaboration",
+    "placeholder": true
+  },
+  {
+    "file": "discussion-thumb-interview-audio.png",
+    "width": 640,
+    "height": 360,
+    "kind": "thumb",
+    "label": "Interview Audio",
+    "placeholder": true
+  }
+]
