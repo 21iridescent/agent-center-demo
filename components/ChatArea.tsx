@@ -1,7 +1,6 @@
 'use client';
 
 import type { UIMessage } from 'ai';
-import { AgentInlineFormCard } from './AgentInlineFormCard';
 import { CREATE_KIND_LABEL, type CreateKind } from '@/lib/agent-schemas';
 
 interface ToolPart {
@@ -138,16 +137,19 @@ export function ChatArea({ messages, isStreaming }: Props) {
                 );
               }
               if (part.state === 'input-available' && part.input && part.toolCallId) {
+                // 表单本体在右栏（AgentCreatePage / AgentTemplateCreatePage）渲染；
+                // chat 里只留个小标签做"已生成"提示，避免左右双重表单
                 return (
                   <div
                     key={part.toolCallId}
-                    className="self-start ml-[38px] w-full max-w-[640px]"
+                    className="self-start ml-[38px] inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] font-medium"
+                    style={{
+                      background: 'var(--color-primary-bg)',
+                      color: 'var(--color-primary)',
+                    }}
                   >
-                    <AgentInlineFormCard
-                      toolCallId={part.toolCallId}
-                      kind={kind}
-                      initial={part.input}
-                    />
+                    <span>✓</span>
+                    <span>{CREATE_KIND_LABEL[kind]} 草稿已生成 — 请在右侧表单查看 / 修改 / 保存</span>
                   </div>
                 );
               }
