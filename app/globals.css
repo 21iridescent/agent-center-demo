@@ -6,11 +6,10 @@
 
 /* =========================================================
    Design Tokens · 智能体中心
-   单一 @theme 块：让 Tailwind 把它们注册为 utility 类来源
-   并保持作为 CSS 变量可被 inline style 直接引用
+   业务变量放在 :root，避免覆盖 Tailwind v4 默认 spacing/font/radius token
    ========================================================= */
 
-@theme {
+:root {
   /* ── Brand / Primary（学问蓝）── */
   --color-primary:        #368FFF;
   --color-primary-dark:   #1F82FF;
@@ -98,30 +97,67 @@
   --font-number: 'D-DIN', 'Inter', 'Helvetica Neue', sans-serif;
 }
 
+/* 只把业务 token 暴露给 Tailwind utility，不接管默认 theme */
+@theme inline {
+  --color-primary:        var(--color-primary);
+  --color-primary-dark:   var(--color-primary-dark);
+  --color-primary-bg:     var(--color-primary-bg);
+  --color-primary-border: var(--color-primary-border);
+  --color-debate:         var(--color-debate);
+  --color-debate-bg:      var(--color-debate-bg);
+  --color-discussion:     var(--color-discussion);
+  --color-discussion-bg:  var(--color-discussion-bg);
+  --color-success:        var(--color-success);
+  --color-prep:           var(--color-prep);
+  --color-prep-bg:        var(--color-prep-bg);
+  --color-mine:           var(--color-mine);
+  --color-mine-bg:        var(--color-mine-bg);
+  --color-text:           var(--color-text);
+  --color-text-3:         var(--color-text-3);
+  --color-text-4:         var(--color-text-4);
+  --color-text-5:         var(--color-text-5);
+  --color-bg:             var(--color-bg);
+  --color-bg-card:        var(--color-bg-card);
+  --color-border:         var(--color-border);
+  --color-border-soft:    var(--color-border-soft);
+
+  --radius-md:    var(--radius-md);
+  --radius-lg:    var(--radius-lg);
+  --radius-pill:  var(--radius-pill);
+
+  --shadow-md:    var(--shadow-md);
+
+  --font-sans:    var(--font-sans);
+}
+
 /* =========================================================
    Base / Reset
    ========================================================= */
 
-*, *::before, *::after { box-sizing: border-box; }
-* { margin: 0; padding: 0; }
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  * { margin: 0; padding: 0; }
 
-html, body { height: 100%; }
-body {
-  font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--color-text);
-  background: var(--color-bg);
-  -webkit-font-smoothing: antialiased;
+  html, body { height: 100%; }
+  body {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--color-text);
+    background: var(--color-bg);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; }
+  input, textarea, select { font-family: inherit; }
+
+  /* 禁暗黑模式默认 */
+  @media (prefers-color-scheme: dark) {
+    :root { color-scheme: light; }
+  }
 }
 
-a { color: inherit; text-decoration: none; }
-button { font-family: inherit; cursor: pointer; border: none; background: none; }
-input, textarea, select { font-family: inherit; }
-
-/* 禁暗黑模式默认 */
-@media (prefers-color-scheme: dark) {
-  :root { color-scheme: light; }
+@layer utilities {
+  .tnum { font-feature-settings: 'tnum'; }
 }
-
-.tnum { font-feature-settings: 'tnum'; }

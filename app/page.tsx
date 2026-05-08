@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Topbar } from '@/components/Topbar';
 import { HomePhase } from '@/components/HomePhase';
@@ -8,6 +8,7 @@ import { ToolCard } from '@/components/ToolCard';
 import { AgentCard, type AgentType } from '@/components/AgentCard';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { useToast } from '@/components/Toast';
+import type { SavedAgent } from '@/lib/agent-storage';
 
 interface AgentSeed {
   id: string;
@@ -99,10 +100,11 @@ const INITIAL_AGENTS: AgentSeed[] = [
   },
 ];
 
+// 类型快建 pill：跳到对话式创建页（Phase 2 真路由）
 const QUICK_NEW = [
-  { type: 'dialogue' as const, label: '学问', href: '/legacy/AI学问创建-v0.1.html' },
-  { type: 'debate'   as const, label: '辩论', href: '/legacy/AI思辨创建-辩论-v0.1.html' },
-  { type: 'discuss'  as const, label: '讨论', href: '/legacy/AI思辨创建-讨论-v0.1.html' },
+  { type: 'dialogue' as const, label: '学问', href: '/create/xuewen' },
+  { type: 'debate'   as const, label: '辩论', href: '/create/debate' },
+  { type: 'discuss'  as const, label: '讨论', href: '/create/discussion' },
 ];
 
 const TYPE_DOT_COLOR: Record<AgentType, string> = {
@@ -111,15 +113,70 @@ const TYPE_DOT_COLOR: Record<AgentType, string> = {
   discuss:  'var(--color-discussion)',
 };
 
+// SavedAgent.kind → UI AgentType
+const KIND_TO_TYPE: Record<string, AgentType> = {
+  xuewen: 'dialogue',
+  debate: 'debate',
+  discussion: 'discuss',
+};
+const TYPE_TO_LAUNCH: Record<AgentType, string> = {
+  dialogue: '/legacy/AI学问使用-v0.1.html',
+  debate:   '/legacy/AI思辨使用-辩论-v0.1.html',
+  discuss:  '/legacy/AI思辨使用-讨论-v0.1.html',
+};
+const KIND_TO_CREATE: Record<string, string> = {
+  xuewen: '/create/xuewen',
+  debate: '/create/debate',
+  discussion: '/create/discussion',
+};
+
+function savedToSeed(a: SavedAgent): AgentSeed {
+  const cfg = a.config as Record<string, string | undefined>;
+  const type = KIND_TO_TYPE[a.kind] ?? 'dialogue';
+  const name = cfg.name ?? '未命名';
+  return {
+    id: a.id,
+    type,
+    avatar: name.charAt(0),
+    name,
+    subject: cfg.subject ?? '科学',
+    grade: cfg.grade ?? '一年级',
+    lastUsed: '刚刚',
+    launchHref: TYPE_TO_LAUNCH[type],
+    editHref: KIND_TO_CREATE[a.kind] ?? '/',
+  };
+}
+
 export default function Home() {
   const toast = useToast();
-  const [agents, setAgents] = useState<AgentSeed[]>(INITIAL_AGENTS);
+  const [savedAgents, setSavedAgents] = useState<AgentSeed[]>([]);
+  const [seedAgents, setSeedAgents] = useState<AgentSeed[]>(INITIAL_AGENTS);
   const [manageMode, setManageMode] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<AgentSeed | null>(null);
 
+  // 拉真实保存的智能体，拼到 seed 之前
+  useEffect(() => {
+    fetch('/api/agents')
+      .then(r => r.json())
+      .then(d => {
+        if (Array.isArray(d.agents)) {
+          setSavedAgents(d.agents.map(savedToSeed));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const agents = [...savedAgents, ...seedAgents];
+
   function confirmDelete() {
     if (!pendingDelete) return;
-    setAgents(prev => prev.filter(a => a.id !== pendingDelete.id));
+    const isSaved = savedAgents.some(a => a.id === pendingDelete.id);
+    if (isSaved) {
+      setSavedAgents(prev => prev.filter(a => a.id !== pendingDelete.id));
+      // TODO: real DELETE /api/agents/[id]，本期 demo 只前端隐藏
+    } else {
+      setSeedAgents(prev => prev.filter(a => a.id !== pendingDelete.id));
+    }
     toast(`已删除：${pendingDelete.name}`);
     setPendingDelete(null);
   }
@@ -155,7 +212,7 @@ export default function Home() {
           num="②"
           title="授课"
           sub={manageMode ? '管理模式 · 可编辑或删除你的智能体' : '我配置好的，随时启动'}
-          meta={!manageMode && `共 ${agents.length} 个`}
+          meta={!manageMode && `共 ${agents.length} 个${savedAgents.length > 0 ? `（${savedAgents.length} 个已保存）` : ''}`}
           actions={
             manageMode ? (
               <button
@@ -172,7 +229,7 @@ export default function Home() {
             ) : (
               <>
                 <Link
-                  href="/legacy/模板选择-v0.1.html"
+                  href="/create/xuewen"
                   className="text-[13px] transition-colors hover:underline"
                   style={{ color: 'var(--color-primary)' }}
                 >
@@ -192,11 +249,10 @@ export default function Home() {
             )
           }
         >
-          {/* 类型快建 pill 行（管理态隐藏） */}
           {!manageMode && (
             <div className="mb-4 flex items-center gap-2.5">
               <span className="mr-1 text-[12px]" style={{ color: 'var(--color-text-5)' }}>
-                快速新建
+                AI 对话式新建
               </span>
               {QUICK_NEW.map(q => (
                 <Link
@@ -218,7 +274,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* 智能体网格 */}
           <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
             {agents.map(a => (
               <AgentCard
@@ -230,7 +285,7 @@ export default function Home() {
             ))}
             {!manageMode && (
               <Link
-                href="/legacy/模板选择-v0.1.html"
+                href="/create/xuewen"
                 className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed bg-transparent transition-colors hover:bg-[var(--color-primary-bg)] hover:[border-color:var(--color-primary)]"
                 style={{
                   borderColor: 'var(--color-border)',
@@ -239,7 +294,7 @@ export default function Home() {
                 }}
               >
                 <span className="text-[22px] leading-none">＋</span>
-                <span className="text-[13px]">从模板创建</span>
+                <span className="text-[13px]">AI 对话新建</span>
               </Link>
             )}
           </div>
