@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { listAgents, createAgent } from '@/lib/agent-storage';
+import { listAgents, createAgent, listHiddenSeedAgentIds } from '@/lib/agent-storage';
 import type { CreateKind } from '@/lib/agent-schemas';
 
 export const runtime = 'nodejs';
@@ -8,11 +8,17 @@ const VALID_KINDS: CreateKind[] = ['xuewen', 'debate', 'discussion'];
 
 export async function GET() {
   try {
-    const agents = await listAgents(50);
-    return NextResponse.json({ agents });
+    const [agents, hiddenSeedIds] = await Promise.all([
+      listAgents(50),
+      listHiddenSeedAgentIds(),
+    ]);
+    return NextResponse.json({ agents, hiddenSeedIds });
   } catch (e) {
     console.error('list agents failed', e);
-    return NextResponse.json({ agents: [], error: 'kv_unavailable' }, { status: 200 });
+    return NextResponse.json(
+      { agents: [], hiddenSeedIds: [], error: 'kv_unavailable' },
+      { status: 200 },
+    );
   }
 }
 

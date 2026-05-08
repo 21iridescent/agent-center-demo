@@ -7,6 +7,7 @@ import type { CreateKind } from './agent-schemas';
  */
 
 const AGENTS_LIST_KEY = 'agents:list';
+const AGENTS_HIDDEN_SEEDS_KEY = 'agents:hidden-seeds';
 const AGENT_TTL_SEC = 60 * 60 * 24 * 90; // 90 days
 
 const HAS_KV = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
@@ -27,13 +28,18 @@ export interface SavedAgent {
  * SSR getAgent 读实例 B 永远为空 → /use/{kind}/{id} 必 404。
  * 钉到 globalThis 是 Next.js 推荐的 dev singleton 模式（Prisma client 同款）。
  */
-type Mem = { store: Map<string, SavedAgent>; list: string[] };
+type Mem = {
+  store: Map<string, SavedAgent>;
+  list: string[];
+  hiddenSeeds: Set<string>;
+};
 const _G = globalThis as unknown as { __agentMem?: Mem };
 const _mem: Mem =
   _G.__agentMem ??
   (_G.__agentMem = {
     store: new Map<string, SavedAgent>(),
     list: [],
+    hiddenSeeds: new Set<string>(),
   });
 
 export async function listAgents(limit = 50): Promise<SavedAgent[]> {
@@ -237,3 +243,61 @@ export async function deleteAgent(id: string): Promise<void> {
   await kv.del(`agent:${id}`);
   await kv.lrem(AGENTS_LIST_KEY, 0, id);
 }
+
+/**
+ * 覆盖式更新已保存（KV 真记录）智能体的 kind + config
+ * - 不存在 → 返 null
+ * - id 命中 SEED_AGENTS → 返 null（seed 是模块常量，不可写；调用方需走 copy-on-write）
+ */
+export async function updateAgent(
+  id: string,
+  input: { kind: CreateKind; config: Record<string, unknown> },
+): Promise<SavedAgent | null> {
+  if (SEED_AGENTS[id]) return null;
+  const now = new Date().toISOString();
+  if (!HAS_KV) {
+    const existing = _mem.store.get(id);
+    if (!existing) return null;
+    const next: SavedAgent = {
+      ...existing,
+      kind: input.kind,
+      config: input.config,
+      updatedAt: now,
+    };
+    _mem.store.set(id, next);
+    return next;
+  }
+  const existing = await kv.get<SavedAgent>(`agent:${id}`);
+  if (!existing) return null;
+  const next: SavedAgent = {
+    ...existing,
+    kind: input.kind,
+    config: input.config,
+    updatedAt: now,
+  };
+  await kv.set(`agent:${id}`, next, { ex: AGENT_TTL_SEC });
+  return next;
+}
+
+/**
+ * Seed 智能体被 copy-on-write 编辑后，把原 seed id 加进隐藏集合
+ * 首页据此过滤掉原 seed，避免新副本和 seed 同时显示
+ * 镜像 lib/kv.ts 里 records:hidden-fallback 的模式
+ */
+export async function addHiddenSeedAgentId(id: string): Promise<void> {
+  if (!SEED_AGENTS[id]) return; // 不是 seed 不存（防呆）
+  if (!HAS_KV) {
+    _mem.hiddenSeeds.add(id);
+    return;
+  }
+  await kv.sadd(AGENTS_HIDDEN_SEEDS_KEY, id);
+}
+
+export async function listHiddenSeedAgentIds(): Promise<string[]> {
+  if (!HAS_KV) return [..._mem.hiddenSeeds];
+  const ids = await kv.smembers(AGENTS_HIDDEN_SEEDS_KEY);
+  return ids ?? [];
+}
+
+/** 一次性导出 seed id 集合给外部判定（client 也用） */
+export const SEED_AGENT_IDS: ReadonlySet<string> = new Set(Object.keys(SEED_AGENTS));

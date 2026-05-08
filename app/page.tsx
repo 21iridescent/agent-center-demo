@@ -24,7 +24,7 @@ interface AgentSeed {
   grade: string;
   lastUsed: string;
   launchHref: string;
-  editHref: string;
+  // editHref is computed at render time as `/edit/${id}` — see AgentCard render site
 }
 
 const TOOLS = [
@@ -70,7 +70,6 @@ const INITIAL_AGENTS: AgentSeed[] = [
     grade: '三年级',
     lastUsed: '昨天',
     launchHref: '/legacy/AI思辨使用-讨论-v0.1.html',
-    editHref: '/create',
   },
   {
     id: 'seed-curie',
@@ -81,7 +80,6 @@ const INITIAL_AGENTS: AgentSeed[] = [
     grade: '五年级',
     lastUsed: '昨天',
     launchHref: '/use/xuewen/seed-curie',
-    editHref: '/create',
   },
   {
     id: 'seed-darwin',
@@ -92,7 +90,6 @@ const INITIAL_AGENTS: AgentSeed[] = [
     grade: '六年级',
     lastUsed: '上周',
     launchHref: '/use/xuewen/seed-darwin',
-    editHref: '/create',
   },
   {
     id: 'seed-machine-vision',
@@ -103,7 +100,6 @@ const INITIAL_AGENTS: AgentSeed[] = [
     grade: '五年级',
     lastUsed: '3 天前',
     launchHref: '/use/xuewen/seed-machine-vision',
-    editHref: '/create',
   },
   {
     id: 'seed-ai-judgement',
@@ -114,7 +110,6 @@ const INITIAL_AGENTS: AgentSeed[] = [
     grade: '六年级',
     lastUsed: '上周',
     launchHref: '/use/debate/seed-ai-judgement',
-    editHref: '/create',
   },
   {
     id: 'seed-plastic-ban',
@@ -125,7 +120,6 @@ const INITIAL_AGENTS: AgentSeed[] = [
     grade: '六年级',
     lastUsed: '4 天前',
     launchHref: '/use/debate/seed-plastic-ban',
-    editHref: '/create',
   },
   {
     id: 'seed-ai-homework',
@@ -136,7 +130,6 @@ const INITIAL_AGENTS: AgentSeed[] = [
     grade: '五年级',
     lastUsed: '2 天前',
     launchHref: '/use/debate/seed-ai-homework',
-    editHref: '/create',
   },
   {
     id: 'a4',
@@ -147,7 +140,6 @@ const INITIAL_AGENTS: AgentSeed[] = [
     grade: '二年级',
     lastUsed: '2 周前',
     launchHref: '/legacy/AI思辨使用-讨论-v0.1.html',
-    editHref: '/create',
   },
 ];
 
@@ -208,7 +200,6 @@ function savedToSeed(a: SavedAgent): AgentSeed {
     grade: cfg.grade ?? '一年级',
     lastUsed: '刚刚',
     launchHref: launchFn(a.id),
-    editHref: '/create',
   };
 }
 
@@ -241,6 +232,9 @@ export default function Home() {
   const toast = useToast();
   const [savedAgents, setSavedAgents] = useState<AgentSeed[]>([]);
   const [hiddenSeeds, setHiddenSeeds] = useState<Set<string>>(new Set());
+  // 服务端持久化的隐藏 seed id（KV 'agents:hidden-seeds'），
+  // 用于编辑 seed 后 copy-on-write 的隐藏 —— 跨设备一致
+  const [hiddenSeedIds, setHiddenSeedIds] = useState<Set<string>>(new Set());
   const [manageMode, setManageMode] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<AgentSeed | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -250,13 +244,16 @@ export default function Home() {
     setHiddenSeeds(loadHiddenSeeds());
   }, []);
 
-  // 拉真实保存的智能体，拼到 seed 之前
+  // 拉真实保存的智能体 + 服务端隐藏 seed 集合
   useEffect(() => {
     fetch('/api/agents')
       .then(r => r.json())
       .then(d => {
         if (Array.isArray(d.agents)) {
           setSavedAgents(d.agents.map(savedToSeed));
+        }
+        if (Array.isArray(d.hiddenSeedIds)) {
+          setHiddenSeedIds(new Set(d.hiddenSeedIds));
         }
       })
       .catch(() => {});
@@ -287,9 +284,10 @@ export default function Home() {
       .catch(() => { /* 留 FALLBACK 兜底 */ });
   }, []);
 
+  // 隐藏来源有两路：localStorage 兜底（旧的"删 seed"流）+ KV agents:hidden-seeds（新的"编辑 seed copy-on-write"流）
   const seedAgents = useMemo(
-    () => INITIAL_AGENTS.filter(a => !hiddenSeeds.has(a.id)),
-    [hiddenSeeds],
+    () => INITIAL_AGENTS.filter(a => !hiddenSeeds.has(a.id) && !hiddenSeedIds.has(a.id)),
+    [hiddenSeeds, hiddenSeedIds],
   );
   const agents = [...savedAgents, ...seedAgents];
 
@@ -422,6 +420,7 @@ export default function Home() {
               <AgentCard
                 key={a.id}
                 {...a}
+                editHref={`/edit/${a.id}`}
                 manageMode={manageMode}
                 onDelete={() => setPendingDelete(a)}
               />

@@ -8,6 +8,7 @@ import { ContextStrip } from './ContextStrip';
 import { ChatArea } from './ChatArea';
 import { ChatInput } from './ChatInput';
 import { SaveButton } from './SaveButton';
+import { CoursePicker } from './CoursePicker';
 import { useToast } from './Toast';
 import type { PrepKind } from '@/lib/types';
 import { PREP_KIND_TITLE_SUFFIX } from '@/lib/types';
@@ -59,6 +60,7 @@ export function PrepToolPage({
   const toast = useToast();
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [linkedCourseId, setLinkedCourseId] = useState<string | null>(null);
 
   const { messages, sendMessage, status } = useChat({
     transport: new DefaultChatTransport({
@@ -102,6 +104,7 @@ export function PrepToolPage({
           avatar: title.charAt(0),
           meta,
           content,
+          linkedCourseId: linkedCourseId ?? undefined,
         }),
       });
       if (!res.ok) {
@@ -123,7 +126,12 @@ export function PrepToolPage({
       <Topbar
         crumb={toolName}
         showRecordsNav={false}
-        right={<SaveButton saved={saved} saving={saving} onSave={handleSave} />}
+        right={
+          <div className="flex items-center gap-3">
+            <CoursePicker value={linkedCourseId} onChange={setLinkedCourseId} />
+            <SaveButton saved={saved} saving={saving} onSave={handleSave} />
+          </div>
+        }
       />
       <main
         className="mx-auto flex w-full flex-col px-10 pt-8 pb-8"

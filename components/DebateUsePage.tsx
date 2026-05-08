@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Topbar } from './Topbar';
+import { CoursePicker } from './CoursePicker';
 import { useToast } from './Toast';
 import type { SavedAgent } from '@/lib/agent-storage';
 import {
@@ -159,6 +160,9 @@ export function DebateUsePage({ agent }: Props) {
   const [saving, setSaving] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [judgeOpen, setJudgeOpen] = useState(false);
+  const [linkedCourseId, setLinkedCourseId] = useState<string | null>(
+    baseCfg.linkedCourseId ?? null,
+  );
   // 最近失败的 turn 序号；命中时禁用自动推进，转为手动重试
   const [lastFailedTurn, setLastFailedTurn] = useState<number | null>(null);
   const speechPopupRef = useRef<HTMLDivElement>(null);
@@ -361,6 +365,7 @@ export function DebateUsePage({ agent }: Props) {
             totalRounds: String(totalRounds),
             judgeTemplate,
           },
+          linkedCourseId: linkedCourseId ?? undefined,
         }),
       });
       if (!res.ok) {
@@ -553,6 +558,7 @@ export function DebateUsePage({ agent }: Props) {
         showRecordsNav={false}
         right={
           <div className="flex items-center gap-2">
+            <CoursePicker value={linkedCourseId} onChange={setLinkedCourseId} />
             <button
               onClick={() => setMaterialsOpen(true)}
               className="h-8 rounded-md border px-3 text-[13px] transition-colors hover:border-[var(--color-debate)] hover:text-[var(--color-debate)]"

@@ -2,6 +2,7 @@
 
 import { Field, INPUT_CX, TEXTAREA_CX, INPUT_STYLE, SUBJECTS, GRADES } from './Field';
 import type { DiscussionAgentConfig } from '@/lib/agent-schemas';
+import { COURSE_SEEDS } from '@/lib/courses';
 
 interface Props {
   value: Partial<DiscussionAgentConfig>;
@@ -75,6 +76,22 @@ export function DiscussionForm({ value, onChange }: Props) {
           </select>
         </Field>
       </div>
+
+      <Field label="是否关联课程" hint="可选 · 选择后此智能体会出现在该门课程的工具中">
+        <select
+          className={INPUT_CX}
+          style={INPUT_STYLE}
+          value={value.linkedCourseId ?? ''}
+          onChange={e => set('linkedCourseId', e.target.value || undefined)}
+        >
+          <option value="">不关联（默认）</option>
+          {COURSE_SEEDS.map(c => (
+            <option key={c.id} value={c.id}>
+              {c.subject} · {c.grade} · {c.title}
+            </option>
+          ))}
+        </select>
+      </Field>
 
       <Field label="主持人名称" required>
         <input

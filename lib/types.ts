@@ -38,6 +38,7 @@ export interface BaseRecord {
   meta?: Record<string, string | undefined>;
   avatar?: string;       // 单字符 fallback（如 'N' / '水'），向后兼容旧数据
   avatarUrl?: string;    // 优先 URL（如 /assets/generated/xuewen-avatar-newton.png），RecordCard 优先用这个
+  linkedCourseId?: string; // 关联课程 id（来自 lib/courses.ts COURSE_SEEDS）；undefined 表示未关联。createRecord 据此写 records:byCourse:{id} 反向索引
 }
 
 export interface PrepRecord extends BaseRecord {

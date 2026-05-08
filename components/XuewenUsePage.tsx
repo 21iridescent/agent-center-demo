@@ -8,6 +8,7 @@ import { Topbar } from './Topbar';
 import { ChatArea } from './ChatArea';
 import { ChatInput } from './ChatInput';
 import { RoleCard } from './RoleCard';
+import { CoursePicker } from './CoursePicker';
 import { useToast } from './Toast';
 import type { SavedAgent } from '@/lib/agent-storage';
 import {
@@ -34,6 +35,9 @@ export function XuewenUsePage({ agent }: Props) {
   const toast = useToast();
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [linkedCourseId, setLinkedCourseId] = useState<string | null>(
+    (agent.config as { linkedCourseId?: string }).linkedCourseId ?? null,
+  );
 
   const cfg = agent.config as Partial<XuewenAgentConfig>;
   const name = cfg.name ?? '智能体';
@@ -134,6 +138,7 @@ export function XuewenUsePage({ agent }: Props) {
             grade,
             background,
           },
+          linkedCourseId: linkedCourseId ?? undefined,
         }),
       });
       if (!res.ok) {
@@ -156,21 +161,24 @@ export function XuewenUsePage({ agent }: Props) {
         crumb={name}
         showRecordsNav={false}
         right={
-          <button
-            onClick={handleEndAndSave}
-            disabled={saving || isStreaming}
-            className="font-display flex h-10 items-center gap-2 px-5 text-[14px] font-medium text-white transition-all disabled:cursor-not-allowed disabled:opacity-50"
-            style={{
-              background: 'var(--color-paper-stamp)',
-              borderRadius: 'var(--radius-sm)',
-              letterSpacing: '0.3px',
-            }}
-          >
-            <span aria-hidden style={{ color: 'var(--color-paper-base)', opacity: 0.55 }}>
-              ⏏
-            </span>
-            <span>{saving ? '保存中…' : '结束并保存'}</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <CoursePicker value={linkedCourseId} onChange={setLinkedCourseId} />
+            <button
+              onClick={handleEndAndSave}
+              disabled={saving || isStreaming}
+              className="font-display flex h-10 items-center gap-2 px-5 text-[14px] font-medium text-white transition-all disabled:cursor-not-allowed disabled:opacity-50"
+              style={{
+                background: 'var(--color-paper-stamp)',
+                borderRadius: 'var(--radius-sm)',
+                letterSpacing: '0.3px',
+              }}
+            >
+              <span aria-hidden style={{ color: 'var(--color-paper-base)', opacity: 0.55 }}>
+                ⏏
+              </span>
+              <span>{saving ? '保存中…' : '结束并保存'}</span>
+            </button>
+          </div>
         }
       />
       <main

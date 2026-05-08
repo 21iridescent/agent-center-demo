@@ -79,6 +79,10 @@ export const XuewenAgentSchema = z.object({
     .describe(
       '使用页 assistant 第一句开场白；80-120 字，第一人称介绍角色 + 邀请提问；与 background 风格一致',
     ),
+  linkedCourseId: z
+    .string()
+    .optional()
+    .describe('已关联的课程 id（来自 lib/courses.ts COURSE_SEEDS）；undefined 表示未关联'),
 });
 export type XuewenAgentConfig = z.infer<typeof XuewenAgentSchema>;
 
@@ -138,6 +142,10 @@ export const DebateAgentSchema = z.object({
     .describe(
       '辩论使用页"赛前提示词"开场，80-120 字，主持人口吻宣布辩题、双方简介，最后一句鼓励发言',
     ),
+  linkedCourseId: z
+    .string()
+    .optional()
+    .describe('已关联的课程 id（来自 lib/courses.ts COURSE_SEEDS）；undefined 表示未关联'),
 });
 export type DebateAgentConfig = z.infer<typeof DebateAgentSchema>;
 
@@ -179,6 +187,10 @@ export const DiscussionAgentSchema = z.object({
     .describe(
       '讨论使用页主持人开场，80-120 字，抛出主题 + 鼓励发言 + 提示用观点支架',
     ),
+  linkedCourseId: z
+    .string()
+    .optional()
+    .describe('已关联的课程 id（来自 lib/courses.ts COURSE_SEEDS）；undefined 表示未关联'),
 });
 export type DiscussionAgentConfig = z.infer<typeof DiscussionAgentSchema>;
 

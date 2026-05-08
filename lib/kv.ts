@@ -3,6 +3,7 @@ import type { AppRecord } from './types';
 
 const LIST_KEY = 'records:list';
 const HIDDEN_FALLBACK_KEY = 'records:hidden-fallback';
+const BY_COURSE_KEY_PREFIX = 'records:byCourse:'; // Set per课程，存 record id 集合（保存关联关系；视图未实现）
 const RECORD_TTL_SEC = 60 * 60 * 24 * 30; // 30 days
 
 /**
@@ -15,6 +16,7 @@ const _mem = {
   store: new Map<string, AppRecord>(),
   list: [] as string[],
   hiddenFallback: new Set<string>(),
+  byCourse: new Map<string, Set<string>>(), // courseId → Set<recordId>，与远端 records:byCourse:{id} 平行
 };
 
 export async function listRecords(limit = 50): Promise<AppRecord[]> {
@@ -39,13 +41,22 @@ export async function getRecord(id: string): Promise<AppRecord | null> {
 export async function createRecord(input: Omit<AppRecord, 'id' | 'createdAt'>): Promise<AppRecord> {
   const id = `r_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const record = { ...input, id, createdAt: new Date().toISOString() } as AppRecord;
+  const courseId = record.linkedCourseId;
   if (!HAS_KV) {
     _mem.store.set(id, record);
     _mem.list.unshift(id);
+    if (courseId) {
+      let set = _mem.byCourse.get(courseId);
+      if (!set) { set = new Set(); _mem.byCourse.set(courseId, set); }
+      set.add(id);
+    }
     return record;
   }
   await kv.set(`record:${id}`, record, { ex: RECORD_TTL_SEC });
   await kv.lpush(LIST_KEY, id);
+  if (courseId) {
+    await kv.sadd(`${BY_COURSE_KEY_PREFIX}${courseId}`, id);
+  }
   return record;
 }
 
