@@ -2,7 +2,7 @@ import { createAgentUIStreamResponse, type UIMessage } from 'ai';
 import { PREP_AGENTS } from '@/lib/agents';
 import type { PrepKind } from '@/lib/types';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs'; // 跟其他 chat 路由对齐；edge 在 Hobby 上限只有 25s，对 reasoning 模型不够
 export const maxDuration = 60; // reasoning 模型推理较慢，给足窗口
 
 interface RequestBody {

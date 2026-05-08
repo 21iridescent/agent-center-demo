@@ -2,7 +2,7 @@ import { createAgentUIStreamResponse, type UIMessage } from 'ai';
 import { unifiedCreateAgent, CREATE_AGENTS } from '@/lib/agents';
 import type { CreateKind } from '@/lib/agent-schemas';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs'; // 跟 chat 路由对齐；edge 在 Hobby 是 25s 上限，且对 OpenRouter 的支持没 nodejs 稳
 export const maxDuration = 60; // reasoning 模型推理较慢，给足窗口
 
 interface RequestBody {
