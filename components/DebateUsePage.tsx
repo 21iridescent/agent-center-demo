@@ -28,6 +28,89 @@ const JUDGE_TEMPLATES = {
   neutral: { label: '中性评委', desc: '客观陈述' },
 } as const;
 
+type MaterialKind = 'image' | 'video' | 'doc';
+
+const MATERIAL_KIND: Record<string, MaterialKind> = {
+  'biodegradation-experiment': 'video',
+  'news-report': 'video',
+  'policy-brief': 'doc',
+  'school-recycling-case': 'doc',
+};
+
+const MATERIAL_VIDEO_META: Record<
+  string,
+  { duration: string; durationSec: number; transcript: { t: string; line: string }[] }
+> = {
+  'biodegradation-experiment': {
+    duration: '04:18',
+    durationSec: 258,
+    transcript: [
+      { t: '00:00', line: '实验目标：对比 PLA 与 PE 在堆肥环境下的降解差异。' },
+      { t: '00:45', line: '日程安排：0 / 14 / 28 / 56 / 90 天观测点。' },
+      { t: '02:12', line: '第 56 天：PLA 已碎裂、变薄；PE 几乎无可见变化。' },
+      { t: '03:50', line: '结论：工业堆肥条件无法在自然海洋环境中复现。' },
+    ],
+  },
+  'news-report': {
+    duration: '03:42',
+    durationSec: 222,
+    transcript: [
+      { t: '00:08', line: '近海塑料污染监测最新数据出炉。' },
+      { t: '01:05', line: '专家：可降解塑料并非万能解。' },
+      { t: '02:30', line: '上海一所小学的"塑料账本"实验。' },
+      { t: '03:18', line: '记者结语：小小账本，大大改变。' },
+    ],
+  },
+};
+
+const MATERIAL_DOC_BODY: Record<
+  string,
+  { pages: number; sections: { heading: string; body: string }[] }
+> = {
+  'policy-brief': {
+    pages: 4,
+    sections: [
+      {
+        heading: '一、背景',
+        body: '根据 2024 年《中国近海塑料垃圾监测报告》，我国近海塑料垃圾年均增长率为 4.7%。校园场景占城市生活塑料消耗的约 6%–9%，具有可量化、可干预、可作为科学课实验对象的特点。',
+      },
+      {
+        heading: '二、推荐措施',
+        body: '1. 校园层面：减少一次性外卖塑料餐具使用，提供可重复使用替代品。\n2. 课程层面：将"塑料污染与降解"主题纳入科学课实践模块。\n3. 数据层面：每学期采集一次班级塑料消耗量，作为辩论与项目式学习素材。',
+      },
+      {
+        heading: '三、辩论引用要点',
+        body: '· 不可降解塑料在自然环境下需 200+ 年完成分解。\n· "可降解" ≠ "在所有条件下都能降解"，标识需谨慎使用。\n· 政策禁用 ≠ 完全消失，需配合替代品供给与回收链路。',
+      },
+    ],
+  },
+  'school-recycling-case': {
+    pages: 3,
+    sections: [
+      {
+        heading: '基线测量（第 3–4 周）',
+        body: '班级日均塑料消耗 2.3 kg。来源：课间饮料瓶 45%、文具包装 22%、外卖餐盒 18%、其他 15%。',
+      },
+      {
+        heading: '干预阶段（第 5–12 周）',
+        body: '引入"班级塑料账本"，每日由值日生记录，辅以家长签字。第 7 周追加"减塑积分换图书"机制。',
+      },
+      {
+        heading: '关键发现',
+        body: '1. 仅记录数据（无激励）阶段，塑料消耗下降 18%。\n2. 加入积分机制后，下降至基线 −41%。\n3. 寒假后第 13 周回访，反弹至基线 −12%。',
+      },
+      {
+        heading: '对辩论的启示',
+        body: '短期干预有效，长期行为改变需要结构性支持（供给链、家庭参与、激励机制）。',
+      },
+    ],
+  },
+};
+
+function getMaterialKind(id: string): MaterialKind {
+  return MATERIAL_KIND[id] ?? 'image';
+}
+
 /**
  * 辩论使用页 — 真 AI 辩论引擎 + 备课预演紧张感
  *
@@ -351,12 +434,8 @@ export function DebateUsePage({ agent }: Props) {
         }
         @keyframes speechPopIn {
           0% {
-            transform: translate(-50%, -16px) scale(0.92);
+            transform: translate(-50%, -10px) scale(0.97);
             opacity: 0;
-          }
-          60% {
-            transform: translate(-50%, 4px) scale(1.02);
-            opacity: 1;
           }
           100% {
             transform: translate(-50%, 0) scale(1);
@@ -369,7 +448,7 @@ export function DebateUsePage({ agent }: Props) {
           80%, 100% { opacity: 0.3; }
         }
         :global(.speech-popup) {
-          animation: speechPopIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+          animation: speechPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
           will-change: transform, opacity;
         }
         :global(.speech-popup .dot) {
@@ -764,6 +843,83 @@ export function DebateUsePage({ agent }: Props) {
         )}
       </main>
 
+      {/* ═══ AI 发言弹窗（流式播放）═══ */}
+      {phase === 'ai-thinking' && (
+        <div
+          className="speech-popup pointer-events-none fixed left-1/2 top-[96px] z-[80] w-full max-w-[680px] px-6"
+          style={{
+            transform: 'translateX(-50%)',
+          }}
+        >
+          <div
+            className="pointer-events-auto rounded-2xl border-2 bg-white p-5"
+            style={{
+              borderColor: currentSide === 'pro' ? 'var(--color-primary)' : 'var(--color-debate)',
+              boxShadow:
+                currentSide === 'pro'
+                  ? '0 24px 60px -16px oklch(0.620 0.180 250 / 0.32), 0 4px 14px -4px oklch(0.620 0.180 250 / 0.18)'
+                  : '0 24px 60px -16px oklch(0.575 0.200 25 / 0.32), 0 4px 14px -4px oklch(0.575 0.200 25 / 0.18)',
+            }}
+          >
+            <header className="mb-3 flex items-center gap-2.5">
+              <div
+                className={`h-9 w-9 overflow-hidden rounded-full border-2 ${
+                  currentSide === 'pro' ? 'pulse-ring-pro' : 'pulse-ring-con'
+                }`}
+                style={{
+                  borderColor: currentSide === 'pro' ? 'var(--color-primary)' : 'var(--color-debate)',
+                  background: currentSide === 'pro' ? 'var(--color-primary-bg)' : 'var(--color-debate-bg)',
+                }}
+              >
+                {(currentSide === 'pro' ? proActor?.role : conActor?.role) && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={(currentSide === 'pro' ? proActor : conActor)?.role}
+                    alt=""
+                    width={1024}
+                    height={1536}
+                    className="h-full w-full object-cover object-top"
+                  />
+                )}
+              </div>
+              <span
+                className="rounded-full px-3 py-0.5 text-[12px] font-semibold"
+                style={{
+                  background: currentSide === 'pro' ? 'var(--color-primary-bg)' : 'var(--color-debate-bg)',
+                  color: currentSide === 'pro' ? 'var(--color-primary)' : 'var(--color-debate)',
+                }}
+              >
+                {currentSide === 'pro' ? '正方' : '反方'} · 第 {currentRound} 轮
+              </span>
+              <span className="text-[12px]" style={{ color: 'var(--color-text-3)' }}>
+                AI 发言中
+                <span aria-hidden>
+                  <span className="dot">·</span>
+                  <span className="dot">·</span>
+                  <span className="dot">·</span>
+                </span>
+              </span>
+            </header>
+            <div
+              ref={speechPopupRef}
+              className="max-h-[44vh] min-h-[40px] overflow-y-auto whitespace-pre-wrap text-[15px] leading-[1.7]"
+              style={{ color: 'var(--color-text)' }}
+            >
+              {aiPartial ? (
+                <>
+                  {aiPartial}
+                  <span className="typing-caret" />
+                </>
+              ) : (
+                <span style={{ color: 'var(--color-text-4)', fontStyle: 'italic' }}>
+                  正在组织语言<span className="typing-caret" />
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ═══ AI 评委弹窗 ═══ */}
       {judgeOpen && (
         <div
@@ -1104,9 +1260,15 @@ export function DebateUsePage({ agent }: Props) {
                           ? '0 0 0 2px var(--color-debate-soft)'
                           : 'none',
                       }}
-                      title={`点击放大 · ${t.label}`}
+                      title={`${
+                        getMaterialKind(t.id) === 'video'
+                          ? '点击播放'
+                          : getMaterialKind(t.id) === 'doc'
+                            ? '点击阅读'
+                            : '点击放大'
+                      } · ${t.label}`}
                     >
-                      <div className="aspect-[4/3] w-full overflow-hidden bg-[var(--color-bg-page)]">
+                      <div className="relative aspect-[4/3] w-full overflow-hidden bg-[var(--color-bg-page)]">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={t.src}
@@ -1114,6 +1276,45 @@ export function DebateUsePage({ agent }: Props) {
                           className="h-full w-full object-cover transition-transform group-hover:scale-[1.03]"
                           loading="lazy"
                         />
+                        {getMaterialKind(t.id) === 'video' && (
+                          <>
+                            <div
+                              className="pointer-events-none absolute inset-0"
+                              style={{
+                                background:
+                                  'linear-gradient(180deg, oklch(0.20 0 0 / 0.15) 0%, oklch(0.20 0 0 / 0.55) 100%)',
+                              }}
+                            />
+                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                              <span
+                                className="flex h-11 w-11 items-center justify-center rounded-full text-white shadow-lg transition-transform group-hover:scale-110"
+                                style={{ background: 'var(--color-debate)' }}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden>
+                                  <path d="M3 1.5v11l9-5.5z" />
+                                </svg>
+                              </span>
+                            </div>
+                            <span
+                              className="tnum absolute bottom-1.5 right-1.5 rounded px-1.5 py-0.5 text-[10px] text-white"
+                              style={{ background: 'oklch(0.20 0 0 / 0.75)' }}
+                            >
+                              {MATERIAL_VIDEO_META[t.id]?.duration ?? '--:--'}
+                            </span>
+                          </>
+                        )}
+                        {getMaterialKind(t.id) === 'doc' && (
+                          <span
+                            className="absolute top-1.5 left-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium"
+                            style={{
+                              background: 'oklch(0.99 0 0 / 0.94)',
+                              color: 'var(--color-text)',
+                              border: '1px solid var(--color-border)',
+                            }}
+                          >
+                            📄 {MATERIAL_DOC_BODY[t.id]?.pages ?? 1} 页
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center justify-between gap-2 px-3 py-2">
                         <span
@@ -1141,48 +1342,378 @@ export function DebateUsePage({ agent }: Props) {
             </div>
           </div>
 
-          {/* 二级放大层 */}
+          {/* 二级阅读/播放层 */}
           {materialsZoomId && (() => {
             const z = TOPIC_THUMBS.find(t => t.id === materialsZoomId);
             if (!z) return null;
-            return (
-              <div
-                className="fixed inset-0 z-[120] flex items-center justify-center p-8"
-                style={{ background: 'oklch(0.20 0.01 80 / 0.75)' }}
-                onClick={() => setMaterialsZoomId(null)}
-              >
-                <figure
-                  className="flex max-h-full max-w-full flex-col overflow-hidden rounded-xl bg-white shadow-2xl"
-                  onClick={e => e.stopPropagation()}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={z.src}
-                    alt={z.label}
-                    className="max-h-[78vh] w-auto object-contain"
-                  />
-                  <figcaption
-                    className="flex items-center justify-between gap-3 border-t px-5 py-3"
-                    style={{ borderColor: 'var(--color-border)' }}
-                  >
-                    <span className="text-[13px] font-medium" style={{ color: 'var(--color-text)' }}>
-                      {z.label}
-                    </span>
-                    <button
-                      onClick={() => setMaterialsZoomId(null)}
-                      className="h-8 rounded-md border px-3 text-[12px] transition-colors hover:border-[var(--color-debate)] hover:text-[var(--color-debate)]"
-                      style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-2)' }}
-                    >
-                      返回资料列表
-                    </button>
-                  </figcaption>
-                </figure>
-              </div>
-            );
+            return <MaterialReader asset={z} onClose={() => setMaterialsZoomId(null)} />;
           })()}
         </div>
       )}
     </>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// 资料阅读器 · 三种 kind 分支(image/video/doc)
+// ─────────────────────────────────────────────────────────────
+
+type MaterialAsset = { id: string; label: string; src: string };
+
+function MaterialReader({ asset, onClose }: { asset: MaterialAsset; onClose: () => void }) {
+  const kind = getMaterialKind(asset.id);
+  if (kind === 'video') return <VideoMaterialReader asset={asset} onClose={onClose} />;
+  if (kind === 'doc') return <DocMaterialReader asset={asset} onClose={onClose} />;
+  return <ImageMaterialReader asset={asset} onClose={onClose} />;
+}
+
+function ImageMaterialReader({ asset, onClose }: { asset: MaterialAsset; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-center justify-center p-8"
+      style={{ background: 'oklch(0.20 0.01 80 / 0.75)' }}
+      onClick={onClose}
+    >
+      <figure
+        className="flex max-h-full max-w-full flex-col overflow-hidden rounded-xl bg-white shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={asset.src} alt={asset.label} className="max-h-[78vh] w-auto object-contain" />
+        <figcaption
+          className="flex items-center justify-between gap-3 border-t px-5 py-3"
+          style={{ borderColor: 'var(--color-border)' }}
+        >
+          <span className="text-[13px] font-medium" style={{ color: 'var(--color-text)' }}>
+            {asset.label}
+          </span>
+          <button
+            onClick={onClose}
+            className="h-8 rounded-md border px-3 text-[12px] transition-colors hover:border-[var(--color-debate)] hover:text-[var(--color-debate)]"
+            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-2)' }}
+          >
+            返回资料列表
+          </button>
+        </figcaption>
+      </figure>
+    </div>
+  );
+}
+
+function VideoMaterialReader({ asset, onClose }: { asset: MaterialAsset; onClose: () => void }) {
+  const meta = MATERIAL_VIDEO_META[asset.id];
+  const durationSec = meta?.durationSec ?? 180;
+  const [playing, setPlaying] = useState(false);
+  const [progressMs, setProgressMs] = useState(0);
+  const startedAtRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!playing) return;
+    startedAtRef.current = Date.now() - progressMs;
+    const id = setInterval(() => {
+      const ms = Date.now() - startedAtRef.current;
+      if (ms >= durationSec * 1000) {
+        setProgressMs(durationSec * 1000);
+        setPlaying(false);
+      } else {
+        setProgressMs(ms);
+      }
+    }, 100);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing]);
+
+  const elapsedSec = Math.min(durationSec, Math.floor(progressMs / 1000));
+  const fmt = (s: number) =>
+    `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  const progressPct = (elapsedSec / durationSec) * 100;
+  const ended = elapsedSec >= durationSec;
+
+  const activeIdx =
+    meta?.transcript.reduce<number>((acc, tr, i) => {
+      const [m, s] = tr.t.split(':').map(Number);
+      const sec = m * 60 + s;
+      return elapsedSec >= sec ? i : acc;
+    }, -1) ?? -1;
+
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-center justify-center p-6"
+      style={{ background: 'oklch(0.10 0 0 / 0.85)' }}
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-full w-full max-w-[1080px] flex-col overflow-hidden rounded-xl shadow-2xl md:flex-row"
+        style={{ background: 'oklch(0.18 0.005 80)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="relative flex flex-1 flex-col">
+          <div
+            className="relative flex aspect-video items-center justify-center overflow-hidden"
+            onClick={() => (ended ? (setProgressMs(0), setPlaying(true)) : setPlaying(p => !p))}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={asset.src}
+              alt={asset.label}
+              className="h-full w-full object-cover transition-[filter] duration-200"
+              style={{ filter: playing ? 'none' : 'brightness(0.65)' }}
+            />
+            {!playing && !ended && (
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  setPlaying(true);
+                }}
+                className="absolute flex h-20 w-20 items-center justify-center rounded-full text-white shadow-2xl transition-transform hover:scale-110"
+                style={{ background: 'var(--color-debate)' }}
+                aria-label="播放"
+              >
+                <svg width="28" height="28" viewBox="0 0 28 28" fill="currentColor" aria-hidden>
+                  <path d="M6 3v22l18-11z" />
+                </svg>
+              </button>
+            )}
+            {ended && (
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  setProgressMs(0);
+                  setPlaying(true);
+                }}
+                className="absolute rounded-full px-4 py-2 text-[13px] text-white transition-colors hover:opacity-90"
+                style={{ background: 'oklch(0.20 0 0 / 0.7)' }}
+              >
+                ↻ 重新播放
+              </button>
+            )}
+            <span
+              className="absolute top-3 left-3 flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium text-white"
+              style={{ background: 'oklch(0.55 0.20 25 / 0.85)' }}
+            >
+              <span
+                className="inline-block h-1.5 w-1.5 rounded-full"
+                style={{
+                  background: 'white',
+                  animation: playing ? 'mat-rec-blink 1.2s infinite' : 'none',
+                }}
+              />
+              视频
+            </span>
+            <style jsx>{`
+              @keyframes mat-rec-blink {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.3; }
+              }
+            `}</style>
+          </div>
+
+          <div className="flex items-center gap-3 px-5 py-3" style={{ background: 'oklch(0.16 0.005 80)' }}>
+            <button
+              onClick={() => {
+                if (ended) {
+                  setProgressMs(0);
+                  setPlaying(true);
+                } else {
+                  setPlaying(p => !p);
+                }
+              }}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition-colors hover:opacity-90"
+              style={{ background: 'var(--color-debate)' }}
+              aria-label={playing ? '暂停' : '播放'}
+            >
+              {playing ? (
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden>
+                  <rect x="2" y="1.5" width="3" height="9" />
+                  <rect x="7" y="1.5" width="3" height="9" />
+                </svg>
+              ) : (
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden>
+                  <path d="M3 1.5v9l7-4.5z" />
+                </svg>
+              )}
+            </button>
+            <div
+              className="relative h-1 flex-1 overflow-hidden rounded-full"
+              style={{ background: 'oklch(0.32 0 0)' }}
+            >
+              <div
+                className="absolute inset-y-0 left-0 rounded-full"
+                style={{
+                  width: `${progressPct}%`,
+                  background: 'var(--color-debate)',
+                  transition: playing ? 'width 0.1s linear' : 'none',
+                }}
+              />
+            </div>
+            <span className="tnum text-[11px] text-white/80">
+              {fmt(elapsedSec)} / {meta?.duration ?? fmt(durationSec)}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between border-t border-white/10 px-5 py-3">
+            <div className="min-w-0">
+              <div className="truncate text-[14px] font-semibold text-white">{asset.label}</div>
+              <div className="text-[11px] text-white/55">辩论资料 · 视频(演示)</div>
+            </div>
+            <button
+              onClick={onClose}
+              className="ml-3 h-8 shrink-0 rounded-md border border-white/20 px-3 text-[12px] text-white transition-colors hover:border-white/60"
+            >
+              返回资料列表
+            </button>
+          </div>
+        </div>
+
+        <aside
+          className="hidden w-[260px] shrink-0 overflow-y-auto border-l border-white/10 px-4 py-4 md:block"
+          style={{ background: 'oklch(0.20 0.005 80)' }}
+        >
+          <div className="mb-3 text-[10px] font-medium tracking-[0.12em] text-white/45">
+            字幕 · TRANSCRIPT
+          </div>
+          <ul className="flex flex-col gap-1.5">
+            {meta?.transcript.map((tr, i) => (
+              <li
+                key={i}
+                className="rounded-md px-2 py-2 text-[12px] leading-relaxed transition-colors"
+                style={{
+                  background: i === activeIdx ? 'oklch(0.32 0.06 25 / 0.45)' : 'transparent',
+                  color: i === activeIdx ? 'oklch(0.96 0.02 25)' : 'oklch(0.72 0 0)',
+                }}
+              >
+                <span className="tnum mr-2 text-[10px] text-white/45">{tr.t}</span>
+                {tr.line}
+              </li>
+            ))}
+          </ul>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function DocMaterialReader({ asset, onClose }: { asset: MaterialAsset; onClose: () => void }) {
+  const doc = MATERIAL_DOC_BODY[asset.id];
+  const totalPages = doc?.pages ?? 1;
+  const [page, setPage] = useState(1);
+
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-center justify-center p-6"
+      style={{ background: 'oklch(0.20 0.01 80 / 0.75)' }}
+      onClick={onClose}
+    >
+      <article
+        className="flex max-h-full w-full max-w-[820px] flex-col overflow-hidden rounded-xl border bg-white shadow-2xl"
+        style={{ borderColor: 'var(--color-border)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <header
+          className="flex shrink-0 items-center gap-3 border-b px-5 py-3"
+          style={{ borderColor: 'var(--color-border)', background: 'var(--color-bg-page)' }}
+        >
+          <span className="text-[16px]">📄</span>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[14px] font-semibold" style={{ color: 'var(--color-text)' }}>
+              {asset.label}
+            </div>
+            <div className="text-[11px]" style={{ color: 'var(--color-text-4)' }}>
+              文档 · {totalPages} 页 · 仅供备课参考
+            </div>
+          </div>
+          <div
+            className="flex items-center rounded-md border"
+            style={{ borderColor: 'var(--color-border)' }}
+          >
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="h-7 w-8 text-[14px] transition-colors enabled:hover:text-[var(--color-debate)] disabled:opacity-25"
+              style={{ color: 'var(--color-text-2)' }}
+              aria-label="上一页"
+            >
+              ‹
+            </button>
+            <span
+              className="tnum px-2 text-[11px]"
+              style={{ color: 'var(--color-text-2)' }}
+            >
+              {page} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="h-7 w-8 text-[14px] transition-colors enabled:hover:text-[var(--color-debate)] disabled:opacity-25"
+              style={{ color: 'var(--color-text-2)' }}
+              aria-label="下一页"
+            >
+              ›
+            </button>
+          </div>
+          <button
+            onClick={onClose}
+            className="h-8 rounded-md border px-3 text-[12px] transition-colors hover:border-[var(--color-debate)] hover:text-[var(--color-debate)]"
+            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-2)' }}
+          >
+            返回资料列表
+          </button>
+        </header>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {page === 1 && (
+            <div
+              className="flex justify-center border-b py-6"
+              style={{
+                background: 'var(--color-bg-page)',
+                borderColor: 'var(--color-border)',
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={asset.src}
+                alt={asset.label}
+                className="max-h-[36vh] rounded-md object-contain shadow"
+              />
+            </div>
+          )}
+          <div className="px-10 py-8">
+            <h2 className="mb-2 text-[20px] font-bold" style={{ color: 'var(--color-text)' }}>
+              {asset.label}
+            </h2>
+            <div className="mb-6 h-px" style={{ background: 'var(--color-border)' }} />
+            <div className="flex flex-col gap-5">
+              {doc?.sections.map((sec, i) => (
+                <section key={i}>
+                  <h3
+                    className="mb-1.5 text-[14px] font-semibold"
+                    style={{ color: 'var(--color-debate)' }}
+                  >
+                    {sec.heading}
+                  </h3>
+                  <p
+                    className="whitespace-pre-line text-[13px] leading-[1.85]"
+                    style={{ color: 'var(--color-text)' }}
+                  >
+                    {sec.body}
+                  </p>
+                </section>
+              ))}
+            </div>
+            <div
+              className="mt-8 flex items-center justify-between border-t pt-4 text-[11px]"
+              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-4)' }}
+            >
+              <span>—— 仅供备课参考,非真实公开文件 ——</span>
+              <span className="tnum">
+                第 {page} / {totalPages} 页
+              </span>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
   );
 }
 

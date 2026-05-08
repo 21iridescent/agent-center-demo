@@ -6,9 +6,14 @@ import { Topbar } from '@/components/Topbar';
 import { HomePhase } from '@/components/HomePhase';
 import { ToolCard } from '@/components/ToolCard';
 import { AgentCard, type AgentType } from '@/components/AgentCard';
+import { RecordCard } from '@/components/RecordCard';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { useToast } from '@/components/Toast';
+import { FALLBACK_RECORDS } from '@/lib/fallback-records';
 import type { SavedAgent } from '@/lib/agent-storage';
+import type { AppRecord } from '@/lib/types';
+
+const HOME_RECORDS_LIMIT = 3;
 
 interface AgentSeed {
   id: string;
@@ -65,6 +70,28 @@ const INITIAL_AGENTS: AgentSeed[] = [
     grade: '三年级',
     lastUsed: '昨天',
     launchHref: '/legacy/AI思辨使用-讨论-v0.1.html',
+    editHref: '/create',
+  },
+  {
+    id: 'seed-curie',
+    type: 'dialogue',
+    avatar: '居',
+    name: '居里夫人',
+    subject: '科学',
+    grade: '五年级',
+    lastUsed: '昨天',
+    launchHref: '/use/xuewen/seed-curie',
+    editHref: '/create',
+  },
+  {
+    id: 'seed-darwin',
+    type: 'dialogue',
+    avatar: '达',
+    name: '达尔文',
+    subject: '科学',
+    grade: '六年级',
+    lastUsed: '上周',
+    launchHref: '/use/xuewen/seed-darwin',
     editHref: '/create',
   },
   {
@@ -211,6 +238,25 @@ export default function Home() {
         }
       })
       .catch(() => {});
+  }, []);
+
+  // 首页 ③ 评价：拉真实记录，前 N 条；FALLBACK 兜底避免首屏闪空
+  const [recents, setRecents] = useState<AppRecord[]>(
+    FALLBACK_RECORDS.slice(0, HOME_RECORDS_LIMIT),
+  );
+  useEffect(() => {
+    fetch('/api/records')
+      .then(r => r.json())
+      .then(d => {
+        const remote: AppRecord[] = Array.isArray(d.records) ? d.records : [];
+        const remoteIds = new Set(remote.map(r => r.id));
+        const merged = [
+          ...remote,
+          ...FALLBACK_RECORDS.filter(r => !remoteIds.has(r.id)),
+        ];
+        setRecents(merged.slice(0, HOME_RECORDS_LIMIT));
+      })
+      .catch(() => { /* 留 FALLBACK 兜底 */ });
   }, []);
 
   const seedAgents = useMemo(
@@ -403,24 +449,20 @@ export default function Home() {
             </Link>
           }
         >
-          <div className="flex flex-col gap-2">
-            <SessionRow
-              avatar="水"
-              type="discuss"
-              title="水的三态变化讨论 · 三(2)班"
-              stats={['96 条对话', '30 人参与', '平均 3 条/人']}
-              time="昨天 14:30"
-              href="/legacy/思辨记录详情-v0.1.html"
-            />
-            <SessionRow
-              avatar="判"
-              type="debate"
-              title="AI 该有自己判断吗 · 六(1)班"
-              stats={['31 条对话', '8 人参与', '3 轮完整辩论']}
-              time="3 天前 09:15"
-              href="/legacy/思辨记录详情-v0.1.html"
-            />
-          </div>
+          {recents.length === 0 ? (
+            <div
+              className="rounded-xl border bg-white p-6 text-center text-[13px]"
+              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-4)' }}
+            >
+              暂无记录
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {recents.map(r => (
+                <RecordCard key={r.id} record={r} />
+              ))}
+            </div>
+          )}
         </HomePhase>
       </main>
 
@@ -436,55 +478,3 @@ export default function Home() {
   );
 }
 
-interface SessionRowProps {
-  avatar: string;
-  type: AgentType;
-  title: string;
-  stats: string[];
-  time: string;
-  href: string;
-}
-
-function SessionRow({ avatar, type, title, stats, time, href }: SessionRowProps) {
-  const colors = {
-    dialogue: { bg: 'var(--color-primary-bg)',    fg: 'var(--color-primary)' },
-    debate:   { bg: 'var(--color-debate-bg)',     fg: 'var(--color-debate)' },
-    discuss:  { bg: 'var(--color-discussion-bg)', fg: 'var(--color-discussion)' },
-  }[type];
-
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3.5 rounded-xl border bg-white px-5 py-3.5 transition-colors hover:[border-color:var(--color-text-5)]"
-      style={{ borderColor: 'var(--color-border)', color: 'inherit' }}
-    >
-      <div
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[12px] font-bold"
-        style={{ background: colors.bg, color: colors.fg }}
-      >
-        {avatar}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="mb-1 text-[14px] font-semibold" style={{ color: 'var(--color-text)' }}>
-          {title}
-        </div>
-        <div className="flex items-center gap-1.5 text-[12px] tnum" style={{ color: 'var(--color-text-4)' }}>
-          {stats.map((s, i) => (
-            <span key={s} className="flex items-center gap-1.5">
-              {i > 0 && (
-                <span
-                  className="h-[3px] w-[3px] rounded-full"
-                  style={{ background: 'var(--color-border)' }}
-                />
-              )}
-              <span>{s}</span>
-            </span>
-          ))}
-        </div>
-      </div>
-      <span className="text-[12px] tnum shrink-0" style={{ color: 'var(--color-text-5)' }}>
-        {time}
-      </span>
-    </Link>
-  );
-}
