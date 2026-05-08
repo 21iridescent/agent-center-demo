@@ -12,19 +12,22 @@ import type { AppRecord } from '@/lib/types';
 export default function RecordsPage() {
   const toast = useToast();
   const [remote, setRemote] = useState<AppRecord[]>([]);
-  const [hidden, setHidden] = useState<Set<string>>(new Set());
+  // 硬编码 demo（FALLBACK_RECORDS）删不掉源码，KV 里存了一份"已隐藏 id"集合（records:hidden-fallback）
+  // 真实 KV 记录走 DELETE 物理删除，不会进这个集合
+  const [hiddenFallback, setHiddenFallback] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<FilterValue>('all');
   const [pendingDelete, setPendingDelete] = useState<AppRecord | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  // 拉远端记录
+  // 拉远端记录 + 已隐藏 fallback id 列表
   useEffect(() => {
     let alive = true;
     fetch('/api/records')
       .then(r => r.json())
-      .then((d: { records?: AppRecord[] }) => {
+      .then((d: { records?: AppRecord[]; hiddenFallbackIds?: string[] }) => {
         if (!alive) return;
         setRemote(d.records ?? []);
+        setHiddenFallback(new Set(d.hiddenFallbackIds ?? []));
       })
       .catch(() => { /* 静默：保留 fallback */ })
       .finally(() => { if (alive) setLoaded(true); });
@@ -35,12 +38,10 @@ export default function RecordsPage() {
     const remoteIds = new Set(remote.map(r => r.id));
     const merged: AppRecord[] = [
       ...remote,
-      ...FALLBACK_RECORDS.filter(f => !remoteIds.has(f.id)),
+      ...FALLBACK_RECORDS.filter(f => !remoteIds.has(f.id) && !hiddenFallback.has(f.id)),
     ];
-    return merged
-      .filter(r => !hidden.has(r.id))
-      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-  }, [remote, hidden]);
+    return merged.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  }, [remote, hiddenFallback]);
 
   const filtered = useMemo(() => {
     if (filter === 'all') return all;
@@ -62,21 +63,22 @@ export default function RecordsPage() {
     setPendingDelete(null);
 
     const isRemote = remote.some(x => x.id === r.id);
-    if (isRemote) {
-      try {
-        const res = await fetch(`/api/records/${encodeURIComponent(r.id)}`, { method: 'DELETE' });
-        if (!res.ok) {
-          toast('删除失败：服务暂不可用');
-          return;
-        }
-        setRemote(prev => prev.filter(x => x.id !== r.id));
-      } catch {
-        toast('删除失败：网络错误');
+    try {
+      const res = await fetch(`/api/records/${encodeURIComponent(r.id)}`, { method: 'DELETE' });
+      if (!res.ok) {
+        toast('删除失败：服务暂不可用');
         return;
       }
+    } catch {
+      toast('删除失败：网络错误');
+      return;
+    }
+
+    // 乐观更新：真 KV 记录从 remote 摘掉；FALLBACK 加进 hiddenFallback
+    if (isRemote) {
+      setRemote(prev => prev.filter(x => x.id !== r.id));
     } else {
-      // fallback 记录只是前端隐藏
-      setHidden(prev => {
+      setHiddenFallback(prev => {
         const n = new Set(prev);
         n.add(r.id);
         return n;

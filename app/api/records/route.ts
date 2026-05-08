@@ -1,16 +1,22 @@
 import { NextResponse } from 'next/server';
-import { listRecords, createRecord } from '@/lib/kv';
+import { listRecords, createRecord, listHiddenFallbackRecordIds } from '@/lib/kv';
 import type { AppRecord } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
 export async function GET() {
   try {
-    const records = await listRecords(50);
-    return NextResponse.json({ records });
+    const [records, hiddenFallbackIds] = await Promise.all([
+      listRecords(50),
+      listHiddenFallbackRecordIds(),
+    ]);
+    return NextResponse.json({ records, hiddenFallbackIds });
   } catch (e) {
     console.error('list records failed', e);
-    return NextResponse.json({ records: [], error: 'kv_unavailable' }, { status: 200 });
+    return NextResponse.json(
+      { records: [], hiddenFallbackIds: [], error: 'kv_unavailable' },
+      { status: 200 },
+    );
   }
 }
 

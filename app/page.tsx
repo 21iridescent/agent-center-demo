@@ -263,6 +263,7 @@ export default function Home() {
   }, []);
 
   // 首页 ③ 评价：拉真实记录，前 N 条；FALLBACK 兜底避免首屏闪空
+  // 已被在 /records 删掉的 FALLBACK demo 也要在这里隐藏，保持两端一致（API 返回 hiddenFallbackIds）
   const [recents, setRecents] = useState<AppRecord[]>(
     FALLBACK_RECORDS.slice(0, HOME_RECORDS_LIMIT),
   );
@@ -271,10 +272,15 @@ export default function Home() {
       .then(r => r.json())
       .then(d => {
         const remote: AppRecord[] = Array.isArray(d.records) ? d.records : [];
+        const hiddenFallback: Set<string> = new Set(
+          Array.isArray(d.hiddenFallbackIds) ? d.hiddenFallbackIds : [],
+        );
         const remoteIds = new Set(remote.map(r => r.id));
         const merged = [
           ...remote,
-          ...FALLBACK_RECORDS.filter(r => !remoteIds.has(r.id)),
+          ...FALLBACK_RECORDS.filter(
+            r => !remoteIds.has(r.id) && !hiddenFallback.has(r.id),
+          ),
         ];
         setRecents(merged.slice(0, HOME_RECORDS_LIMIT));
       })

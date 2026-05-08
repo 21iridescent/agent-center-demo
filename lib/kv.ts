@@ -2,6 +2,7 @@ import { kv } from '@vercel/kv';
 import type { AppRecord } from './types';
 
 const LIST_KEY = 'records:list';
+const HIDDEN_FALLBACK_KEY = 'records:hidden-fallback';
 const RECORD_TTL_SEC = 60 * 60 * 24 * 30; // 30 days
 
 /**
@@ -13,6 +14,7 @@ const HAS_KV = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 const _mem = {
   store: new Map<string, AppRecord>(),
   list: [] as string[],
+  hiddenFallback: new Set<string>(),
 };
 
 export async function listRecords(limit = 50): Promise<AppRecord[]> {
@@ -56,4 +58,25 @@ export async function deleteRecord(id: string): Promise<void> {
   }
   await kv.del(`record:${id}`);
   await kv.lrem(LIST_KEY, 0, id);
+}
+
+/**
+ * FALLBACK_RECORDS（lib/fallback-records.ts 硬编码 demo）的"已隐藏" id 集合
+ * 真 KV 记录走 deleteRecord 物理删除；FALLBACK 删不掉（在源码里），只能记一份"已删"列表
+ * 用 Vercel KV Set（sadd/smembers），跨设备一致
+ */
+export async function addHiddenFallbackRecordId(id: string): Promise<void> {
+  if (!HAS_KV) {
+    _mem.hiddenFallback.add(id);
+    return;
+  }
+  await kv.sadd(HIDDEN_FALLBACK_KEY, id);
+}
+
+export async function listHiddenFallbackRecordIds(): Promise<string[]> {
+  if (!HAS_KV) {
+    return [..._mem.hiddenFallback];
+  }
+  const ids = await kv.smembers(HIDDEN_FALLBACK_KEY);
+  return ids ?? [];
 }
