@@ -3,7 +3,7 @@ import { PREP_AGENTS } from '@/lib/agents';
 import type { PrepKind } from '@/lib/types';
 
 export const runtime = 'edge';
-export const maxDuration = 30;
+export const maxDuration = 60; // reasoning 模型推理较慢，给足窗口
 
 interface RequestBody {
   messages: UIMessage[];
@@ -34,5 +34,6 @@ export async function POST(req: Request) {
   return createAgentUIStreamResponse({
     agent: PREP_AGENTS[kind],
     uiMessages: messages,
+    sendReasoning: true,
   });
 }

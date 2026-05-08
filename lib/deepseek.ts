@@ -14,4 +14,4 @@ export const deepseek = createOpenAI({
   apiKey: process.env.OPENROUTER_API_KEY!,
 });
 
-export const DEEPSEEK_MODEL = 'deepseek/deepseek-v4-flash';
+export const DEEPSEEK_MODEL = 'tencent/hy3-preview:free';

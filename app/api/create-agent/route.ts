@@ -3,7 +3,7 @@ import { unifiedCreateAgent, CREATE_AGENTS } from '@/lib/agents';
 import type { CreateKind } from '@/lib/agent-schemas';
 
 export const runtime = 'edge';
-export const maxDuration = 30;
+export const maxDuration = 60; // reasoning 模型推理较慢，给足窗口
 
 interface RequestBody {
   messages: UIMessage[];
@@ -32,16 +32,19 @@ export async function POST(req: Request) {
         return createAgentUIStreamResponse({
           agent: CREATE_AGENTS.xuewen,
           uiMessages: body.messages,
+          sendReasoning: true,
         });
       case 'debate':
         return createAgentUIStreamResponse({
           agent: CREATE_AGENTS.debate,
           uiMessages: body.messages,
+          sendReasoning: true,
         });
       case 'discussion':
         return createAgentUIStreamResponse({
           agent: CREATE_AGENTS.discussion,
           uiMessages: body.messages,
+          sendReasoning: true,
         });
       default:
         return new Response(`unknown create kind: ${String(body.kind)}`, { status: 400 });
@@ -52,5 +55,6 @@ export async function POST(req: Request) {
   return createAgentUIStreamResponse({
     agent: unifiedCreateAgent,
     uiMessages: body.messages,
+    sendReasoning: true,
   });
 }

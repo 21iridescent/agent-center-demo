@@ -66,6 +66,7 @@ export function ChatArea({ messages, isStreaming }: Props) {
   const lastHasContent = last
     ? (last.parts ?? []).some(p => {
         if (p.type === 'text' && (p as { text: string }).text.length > 0) return true;
+        if (p.type === 'reasoning' && (p as { text: string }).text.length > 0) return true;
         if (p.type.startsWith('tool-')) return true;
         return false;
       })
@@ -80,6 +81,15 @@ export function ChatArea({ messages, isStreaming }: Props) {
           .filter(p => p.type === 'text')
           .map(p => (p as { type: 'text'; text: string }).text)
           .join('');
+        const reasoning = (m.parts ?? [])
+          .filter(p => p.type === 'reasoning')
+          .map(p => (p as { type: 'reasoning'; text: string }).text)
+          .join('');
+        const reasoningStreaming = (m.parts ?? []).some(
+          p =>
+            p.type === 'reasoning' &&
+            (p as { state?: 'streaming' | 'done' }).state === 'streaming',
+        );
         const toolParts = (m.parts ?? []).filter(p =>
           p.type.startsWith('tool-'),
         ) as ToolPart[];
@@ -88,6 +98,27 @@ export function ChatArea({ messages, isStreaming }: Props) {
 
         return (
           <div key={m.id} className="flex flex-col gap-3">
+            {!isUser && reasoning.length > 0 && (
+              <details
+                className="self-start ml-[38px] max-w-[640px] rounded-md border px-3 py-2"
+                style={{
+                  background: 'var(--color-bg-gray)',
+                  borderColor: 'var(--color-border)',
+                  color: 'var(--color-text-3)',
+                }}
+                open={reasoningStreaming}
+              >
+                <summary className="cursor-pointer text-[12px] font-medium select-none">
+                  💭 思考过程{reasoningStreaming ? '（推理中…）' : ''}
+                </summary>
+                <pre
+                  className="mt-2 whitespace-pre-wrap break-words text-[12px] leading-[1.6]"
+                  style={{ fontFamily: 'inherit', color: 'var(--color-text-4)' }}
+                >
+                  {reasoning}
+                </pre>
+              </details>
+            )}
             {showBubble && (
               <div
                 className={`flex max-w-[86%] gap-2.5 ${isUser ? 'self-end flex-row-reverse' : 'self-start'}`}
