@@ -4,933 +4,873 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AI 思辨 · 讨论使用 v0.1</title>
-<script src="prototype-tokens.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" rel="stylesheet">
 <style>
-  /* ============ 页面专属（共享部分见 prototype-tokens.css）============ */
-  .container {
-    max-width: var(--container-wide);
-    margin: 0 auto;
-    padding: 24px 32px 100px;
+  /* ============================================================
+     Tokens · paper editorial · 自包含, 不依赖 prototype-tokens.js
+     ============================================================ */
+  :root {
+    --font-sans:    'PingFang SC', 'Microsoft YaHei', 'Source Han Sans SC',
+                    -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    --font-display: 'LXGW WenKai', 'LXGW WenKai Screen', 'Source Han Serif SC',
+                    'Songti SC', serif;
+    --font-numeric: 'Source Serif 4', ui-serif, 'Times New Roman', serif;
+
+    /* Paper neutrals — 朝赭/米黄微偏 */
+    --paper-base:  oklch(0.985 0.008 80);
+    --paper-card:  oklch(0.998 0.004 80);
+    --paper-soft:  oklch(0.972 0.010 80);
+    --paper-edge:  oklch(0.930 0.012 80);
+    --paper-rule:  oklch(0.880 0.014 80);
+    --paper-stamp: oklch(0.180 0.012 80);
+
+    /* Ink */
+    --ink-1: oklch(0.220 0.012 80);
+    --ink-2: oklch(0.420 0.012 80);
+    --ink-3: oklch(0.580 0.012 80);
+    --ink-mute: oklch(0.720 0.010 80);
+    --ink-faint: oklch(0.835 0.008 80);
+
+    /* Type — 讨论 (本页主类型) */
+    --type-discussion:      oklch(0.680 0.140 220);
+    --type-discussion-deep: oklch(0.560 0.150 220);
+    --type-discussion-bg:   oklch(0.965 0.022 220);
+    --type-discussion-edge: oklch(0.835 0.075 220);
+
+    /* 跨类型语义色（主要用在资料 / 强调） */
+    --type-debate:          oklch(0.575 0.200 25);
+    --type-debate-bg:       oklch(0.965 0.025 25);
+    --accent-warn:          oklch(0.620 0.140 70);
+    --accent-warn-bg:       oklch(0.962 0.030 70);
+
+    /* Type scale */
+    --t-fine:    11px;
+    --t-meta:    12px;
+    --t-base:    14px;
+    --t-md:      15px;
+    --t-lg:      18px;
+    --t-h2:      22px;
+    --t-h1:      28px;
+
+    --container: 1180px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  * { margin: 0; padding: 0; }
+
+  html, body { height: 100%; }
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--t-base);
+    line-height: 1.55;
+    color: var(--ink-1);
+    background: var(--paper-base);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'kern' on, 'liga' on;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; cursor: pointer; border: 0; background: transparent; color: inherit; }
+  @media (prefers-color-scheme: dark) { :root { color-scheme: light; } }
+
+  /* 装饰: 纸张本底纹理 — 极淡, 投影也不脏 */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 1200px 600px at 50% -200px, oklch(0.95 0.014 80) 0%, transparent 60%),
+      radial-gradient(ellipse 800px 400px at 100% 100%, oklch(0.94 0.018 60) 0%, transparent 55%);
+    opacity: 0.6;
+  }
+
+  .tnum { font-family: var(--font-numeric); font-feature-settings: 'tnum' on, 'lnum' on; font-variant-numeric: tabular-nums; }
+
+  /* ============================================================
+     Topbar — 版印 brand
+     ============================================================ */
+  .topbar {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 48px 14px;
+    border-bottom: 1px solid var(--paper-rule);
+    background: transparent;
+  }
+  .brand-stamp {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px 6px 8px;
+    background: var(--paper-stamp);
+    color: var(--paper-base);
+    font-family: var(--font-numeric);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    border-radius: 2px;
+  }
+  .brand-stamp .glyph {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 500;
+  }
+  .crumb-arrow {
+    color: var(--ink-mute);
+    font-family: var(--font-numeric);
+    font-size: 14px;
+  }
+  .crumb-back {
+    color: var(--ink-3);
+    font-size: 13px;
+    transition: color 0.15s;
+  }
+  .crumb-back:hover { color: var(--type-discussion-deep); }
+  .page-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--ink-1);
+    letter-spacing: 0.01em;
+  }
+  .type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    background: var(--type-discussion-bg);
+    color: var(--type-discussion-deep);
+    border: 1px solid var(--type-discussion-edge);
+    border-radius: 999px;
+    font-size: var(--t-fine);
+    font-weight: 500;
+    letter-spacing: 0.05em;
+  }
+  .type-badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--type-discussion);
+  }
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .progress-meta {
+    font-family: var(--font-numeric);
+    font-size: 12px;
+    color: var(--ink-3);
+    font-feature-settings: 'tnum' on, 'lnum' on;
+  }
+  .progress-meta strong {
+    color: var(--type-discussion-deep);
+    font-weight: 600;
   }
   .timer {
-    font-family: var(--font-mono);
-    font-size: var(--font-md);
+    font-family: var(--font-numeric);
+    font-size: 16px;
     font-weight: 600;
-    color: var(--color-text);
-    padding: 4px 10px;
-    background: var(--color-bg);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    min-width: 60px;
-    text-align: center;
+    color: var(--ink-1);
+    padding: 4px 12px;
+    border: 1px solid var(--paper-rule);
+    border-radius: 3px;
+    letter-spacing: 0.04em;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+    background: var(--paper-card);
   }
-  .progress-text { font-size: var(--font-sm); color: var(--color-text-3); }
 
-  /* ============ 主题条 ============ */
-  .topic-bar {
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: 14px 22px;
-    margin-bottom: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+  /* ============================================================
+     Container
+     ============================================================ */
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: var(--container);
+    margin: 0 auto;
+    padding: 36px 48px 140px;
   }
-  .topic-text { font-size: var(--font-xl); font-weight: 600; }
-  .topic-text strong { color: var(--color-discussion); }
+
+  /* 章节号 — 版印章式 */
+  .section-stamp {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .section-stamp .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px; height: 28px;
+    background: var(--paper-stamp);
+    color: var(--paper-base);
+    font-family: var(--font-numeric);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    border-radius: 2px;
+  }
+  .section-stamp .label {
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--ink-1);
+    letter-spacing: 0.01em;
+  }
+  .section-stamp .hint {
+    margin-left: auto;
+    font-size: var(--t-meta);
+    color: var(--ink-mute);
+    letter-spacing: 0.02em;
+  }
+
+  /* ============================================================
+     Topic — 主题条 (editorial blockquote)
+     ============================================================ */
+  .topic {
+    position: relative;
+    margin-bottom: 36px;
+    padding: 24px 26px 22px 30px;
+    background: var(--paper-card);
+    border: 1px solid var(--paper-edge);
+    border-left: 3px solid var(--type-discussion);
+    border-radius: 2px;
+  }
+  .topic-eyebrow {
+    display: block;
+    font-family: var(--font-numeric);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--type-discussion-deep);
+    margin-bottom: 8px;
+  }
+  .topic-text {
+    font-family: var(--font-display);
+    font-size: 28px;
+    line-height: 1.35;
+    font-weight: 500;
+    color: var(--ink-1);
+    letter-spacing: 0.005em;
+  }
+  .topic-text strong {
+    font-weight: 600;
+    background: linear-gradient(to bottom, transparent 60%, var(--type-discussion-bg) 60%);
+    padding: 0 2px;
+  }
   .topic-meta {
     display: flex;
-    gap: 10px;
+    gap: 16px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--paper-rule);
+    font-size: var(--t-meta);
+    color: var(--ink-3);
     align-items: center;
-    font-size: var(--font-sm);
-    color: var(--color-text-4);
   }
-  .topic-pill {
-    padding: 3px 10px;
-    background: var(--color-border-soft);
-    border-radius: var(--radius-pill);
+  .topic-meta .pill {
+    font-family: var(--font-numeric);
+    letter-spacing: 0.02em;
+    font-feature-settings: 'tnum' on;
+  }
+  .topic-meta .sep {
+    color: var(--ink-faint);
+    font-family: var(--font-numeric);
   }
 
-  /* ============ 6 观点支架 ============ */
-  .scaffold-section {
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: 20px 22px;
-    margin-bottom: 18px;
-  }
+  /* ============================================================
+     6 观点支架 — editorial rack
+     ============================================================ */
+  .scaffold-section { margin-bottom: 36px; }
   .scaffold-grid {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
-    gap: 10px;
+    gap: 0;
+    border-top: 1px solid var(--paper-rule);
+    border-bottom: 1px solid var(--paper-rule);
   }
   .scaffold-card {
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: 12px 10px 10px;
-    text-align: center;
-    transition: all 0.2s;
-    cursor: pointer;
-    background: var(--color-bg-card);
+    position: relative;
+    padding: 16px 14px 18px;
+    background: var(--paper-card);
+    border-right: 1px solid var(--paper-edge);
+    transition: background 0.2s;
+    cursor: default;
   }
+  .scaffold-card:last-child { border-right: 0; }
   .scaffold-card:hover {
-    border-color: var(--color-discussion);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(74,111,165,0.1);
+    background: var(--paper-soft);
   }
   .scaffold-card.active {
-    border-color: var(--color-discussion);
-    background: #f4f7ff;
-    box-shadow: 0 0 0 3px rgba(74,111,165,0.08);
+    background: var(--type-discussion-bg);
   }
-  .scaffold-icon {
-    width: 40px; height: 40px;
-    margin: 0 auto 8px;
-    background: linear-gradient(135deg, #d0d8f0, #a8b8e0);
-    transform: rotate(45deg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-xs);
+  .scaffold-card.active::before {
+    content: '';
+    position: absolute;
+    top: -1px; left: 0; right: 0;
+    height: 2px;
+    background: var(--type-discussion);
   }
-  .scaffold-icon span {
-    transform: rotate(-45deg);
-    color: #fff;
-    font-size: var(--font-md);
-    font-weight: 700;
-  }
-  .scaffold-card.c1 .scaffold-icon { background: linear-gradient(135deg, #a0e8c0, #60c890); }
-  .scaffold-card.c2 .scaffold-icon { background: linear-gradient(135deg, #d0b0ff, #a080e0); }
-  .scaffold-card.c3 .scaffold-icon { background: linear-gradient(135deg, #c0e0ff, #80b0ff); }
-  .scaffold-card.c4 .scaffold-icon { background: linear-gradient(135deg, #b0e0ea, #70c0d0); }
-  .scaffold-card.c5 .scaffold-icon { background: linear-gradient(135deg, #b0c8ff, #7080e8); }
-  .scaffold-card.c6 .scaffold-icon { background: linear-gradient(135deg, #ffc0d8, #e08090); }
-  .scaffold-tag {
-    font-size: var(--font-xs);
+  .scaffold-num {
+    font-family: var(--font-numeric);
+    font-size: 11px;
     font-weight: 600;
-    color: #fff;
-    background: var(--color-discussion);
-    padding: 2px 8px;
-    border-radius: var(--radius-xs);
-    display: inline-block;
+    letter-spacing: 0.06em;
+    color: var(--ink-mute);
     margin-bottom: 6px;
   }
+  .scaffold-card.active .scaffold-num { color: var(--type-discussion-deep); }
+  .scaffold-tag {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink-1);
+    margin-bottom: 8px;
+    letter-spacing: 0.01em;
+  }
   .scaffold-template {
-    font-size: var(--font-xs);
-    color: var(--color-text-2);
-    line-height: 1.6;
+    font-size: var(--t-meta);
+    color: var(--ink-2);
+    line-height: 1.65;
   }
   .scaffold-template .blank {
     display: inline-block;
-    min-width: 22px;
-    border-bottom: 1.5px solid var(--color-text-5);
-    margin: 0 2px;
-    vertical-align: bottom;
+    min-width: 24px;
+    border-bottom: 1px solid var(--ink-faint);
+    margin: 0 1px;
+    vertical-align: -2px;
+  }
+  .scaffold-card.active .scaffold-template .blank {
+    border-bottom-color: var(--type-discussion);
   }
 
-  /* ============ 当前发言 ============ */
-  .speaker-box {
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: 18px 22px;
-    margin-bottom: 18px;
+  /* ============================================================
+     Speaker — 当前发言 (bookmark style)
+     ============================================================ */
+  .speaker {
+    margin-bottom: 36px;
+    padding: 22px 28px 22px 26px;
+    background: var(--paper-card);
+    border: 1px solid var(--paper-edge);
+    border-left: 4px solid var(--type-discussion);
+    border-radius: 2px;
     display: grid;
     grid-template-columns: auto 1fr auto;
-    gap: 18px;
+    gap: 22px;
     align-items: center;
   }
   .speaker-avatar {
-    width: 56px; height: 56px;
+    width: 52px; height: 52px;
     border-radius: 50%;
-    background: var(--color-discussion-bg);
-    color: var(--color-discussion);
+    background: var(--type-discussion-bg);
+    color: var(--type-discussion-deep);
     display: flex; align-items: center; justify-content: center;
-    font-size: var(--font-2xl);
-    font-weight: 600;
-    border: 2px solid var(--color-discussion-soft);
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 500;
+    border: 1.5px solid var(--type-discussion-edge);
   }
-  .speaker-info { min-width: 0; }
   .speaker-meta {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     margin-bottom: 6px;
   }
-  .speaker-name { font-size: var(--font-md); font-weight: 600; }
-  .speaker-scaffold-tag {
+  .speaker-name {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink-1);
+  }
+  .speaker-tag {
+    font-family: var(--font-numeric);
     font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     padding: 2px 8px;
-    background: var(--color-discussion);
-    color: #fff;
-    border-radius: var(--radius-xs);
+    background: var(--type-discussion);
+    color: var(--paper-base);
+    border-radius: 2px;
+    font-weight: 500;
   }
   .speaker-content {
-    font-size: var(--font-base);
-    color: var(--color-text);
-    line-height: 1.6;
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--ink-1);
   }
-  .speaker-content strong {
-    border-bottom: 1.5px solid var(--color-discussion);
-    padding: 0 2px;
+  .speaker-content .mark {
+    font-weight: 500;
+    border-bottom: 1px solid var(--type-discussion);
+    padding: 0 1px 1px;
   }
   .speaker-actions {
     display: flex;
-    gap: 8px;
+    flex-direction: column;
+    gap: 6px;
     flex-shrink: 0;
   }
-  .speaker-action-btn {
-    padding: 7px 14px;
-    border-radius: var(--radius-sm);
-    font-size: var(--font-sm);
+  .speaker-action {
+    padding: 6px 14px;
+    font-size: 12px;
+    border-radius: 3px;
+    transition: all 0.15s;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
   }
-  .speaker-action-btn.primary {
-    background: var(--color-discussion);
-    color: #fff;
+  .speaker-action.primary {
+    background: var(--type-discussion);
+    color: var(--paper-base);
+    font-weight: 500;
   }
-  .speaker-action-btn.primary:hover { background: var(--color-discussion-dark); }
-  .speaker-action-btn.ghost {
-    background: var(--color-bg-card);
-    color: var(--color-text-2);
-    border: 1px solid var(--color-border);
+  .speaker-action.primary:hover { background: var(--type-discussion-deep); }
+  .speaker-action.ghost {
+    color: var(--ink-2);
+    border: 1px solid var(--paper-rule);
+    background: var(--paper-card);
   }
+  .speaker-action.ghost:hover { border-color: var(--type-discussion); color: var(--type-discussion-deep); }
 
-  /* ============ 双卡：支架统计 + 发言历史 ============ */
+  /* ============================================================
+     Below grid — 双栏：统计 + 发言历史
+     ============================================================ */
   .below-grid {
     display: grid;
-    grid-template-columns: 1fr 1.5fr;
-    gap: 16px;
-    margin-bottom: 18px;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 28px;
+    margin-bottom: 36px;
   }
   .panel {
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: 16px 20px;
+    padding-top: 4px;
   }
+  .panel-rule {
+    border-top: 1px solid var(--paper-rule);
+    margin-top: 8px;
+  }
+
+  /* 支架统计 */
   .stat-row {
     display: grid;
-    grid-template-columns: 1fr auto;
-    padding: 6px 0;
-    font-size: var(--font-sm);
-    border-bottom: 1px dashed var(--color-border-soft);
+    grid-template-columns: 24px 1fr auto;
+    gap: 12px;
+    align-items: baseline;
+    padding: 10px 0;
+    border-bottom: 1px dotted var(--paper-rule);
+    font-size: var(--t-base);
   }
   .stat-row:last-child { border-bottom: 0; }
-  .stat-row span { color: var(--color-text-2); }
-  .stat-row strong { color: var(--color-discussion); font-weight: 600; }
+  .stat-row .num {
+    font-family: var(--font-numeric);
+    font-size: 12px;
+    color: var(--ink-mute);
+    letter-spacing: 0.06em;
+  }
+  .stat-row .label {
+    color: var(--ink-2);
+  }
+  .stat-row .count {
+    font-family: var(--font-numeric);
+    font-feature-settings: 'tnum' on, 'lnum' on;
+    color: var(--type-discussion-deep);
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+  }
+  .stat-row.zero .count { color: var(--ink-faint); font-weight: 400; }
 
+  /* 发言历史 */
   .history-line {
-    display: flex;
-    gap: 10px;
-    padding: 6px 0;
-    border-bottom: 1px dashed var(--color-border-soft);
-    font-size: var(--font-sm);
+    display: grid;
+    grid-template-columns: 64px 88px 1fr;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px dotted var(--paper-rule);
+    font-size: var(--t-base);
+    align-items: baseline;
   }
   .history-line:last-child { border-bottom: 0; }
   .history-name {
+    font-family: var(--font-display);
+    font-size: 14px;
     font-weight: 500;
-    width: 56px;
-    flex-shrink: 0;
-    color: var(--color-discussion);
+    color: var(--type-discussion-deep);
   }
   .history-scaffold {
-    width: 76px;
-    flex-shrink: 0;
-    font-size: 10px;
-    padding: 1px 6px;
-    background: var(--color-discussion-bg);
-    color: var(--color-discussion);
-    border-radius: 3px;
-    text-align: center;
-    height: 16px;
-    line-height: 14px;
-    margin-top: 1px;
+    font-family: var(--font-numeric);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    color: var(--ink-3);
+  }
+  .history-scaffold .marker {
+    font-weight: 600;
+    color: var(--type-discussion);
+    margin-right: 4px;
   }
   .history-content {
-    color: var(--color-text-2);
-    line-height: 1.5;
-    flex: 1;
+    color: var(--ink-2);
+    line-height: 1.6;
   }
   .history-more {
-    text-align: center;
-    color: var(--color-text-6);
-    font-size: var(--font-xs);
-    padding: 4px 0;
+    margin-top: 12px;
+    text-align: right;
+    font-family: var(--font-numeric);
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0.04em;
   }
 
-  /* ============ 控制条（底部固定）============ */
-  .control-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: var(--color-bg-card);
-    border-top: 1px solid var(--color-border);
-    padding: 12px 32px;
+  /* ============================================================
+     Resources — inline list (替代浮动按钮 + modal)
+     ============================================================ */
+  .resources-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 12px;
+  }
+  .resource {
+    padding: 14px 16px;
+    border: 1px solid var(--paper-edge);
+    background: var(--paper-card);
+    border-radius: 2px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    z-index: 50;
-    box-shadow: 0 -2px 12px rgba(0,0,0,0.04);
+    gap: 12px;
   }
-  .control-bar-inner {
-    max-width: var(--container-wide);
-    margin: 0 auto;
-    width: 100%;
+  .resource-type {
+    font-family: var(--font-numeric);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .resource-type.pdf {
+    background: var(--accent-warn-bg);
+    color: var(--accent-warn);
+    border: 1px solid oklch(0.825 0.060 70);
+  }
+  .resource-type.video {
+    background: var(--type-debate-bg);
+    color: var(--type-debate);
+    border: 1px solid oklch(0.800 0.090 25);
+  }
+  .resource-name {
+    flex: 1;
+    font-size: var(--t-md);
+    color: var(--ink-1);
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  /* ============================================================
+     Control bar (静态 footer rule)
+     ============================================================ */
+  .control-bar {
+    margin-top: 12px;
+    padding: 18px 0 4px;
+    border-top: 2px solid var(--paper-rule);
     display: flex;
     align-items: center;
     gap: 8px;
   }
   .ctrl-btn {
     padding: 8px 16px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background: var(--color-bg-card);
-    color: var(--color-text-2);
-    font-size: var(--font-base);
+    font-size: var(--t-base);
+    border: 1px solid var(--paper-rule);
+    border-radius: 3px;
+    background: var(--paper-card);
+    color: var(--ink-2);
     transition: all 0.15s;
+    letter-spacing: 0.02em;
   }
-  .ctrl-btn:hover { border-color: var(--color-discussion); color: var(--color-discussion); }
+  .ctrl-btn:hover {
+    border-color: var(--type-discussion);
+    color: var(--type-discussion-deep);
+  }
   .ctrl-btn.primary {
-    background: var(--color-discussion);
-    color: #fff;
-    border-color: var(--color-discussion);
+    background: var(--type-discussion);
+    color: var(--paper-base);
+    border-color: var(--type-discussion);
     font-weight: 500;
   }
   .ctrl-btn.primary:hover {
-    background: var(--color-discussion-dark);
-    border-color: var(--color-discussion-dark);
-    color: #fff;
+    background: var(--type-discussion-deep);
+    border-color: var(--type-discussion-deep);
   }
   .ctrl-btn.success {
-    background: var(--color-primary);
-    color: #fff;
-    border-color: var(--color-primary);
+    background: oklch(0.640 0.160 145);
+    color: var(--paper-base);
+    border-color: oklch(0.640 0.160 145);
     font-weight: 500;
   }
-  .ctrl-btn.success:hover { background: var(--color-primary-dark); color: #fff; }
+  .ctrl-btn.success:hover {
+    background: oklch(0.530 0.160 145);
+    border-color: oklch(0.530 0.160 145);
+  }
+  .ctrl-btn.danger {
+    color: var(--type-debate);
+    border-color: oklch(0.870 0.040 25);
+  }
+  .ctrl-btn.danger:hover {
+    border-color: var(--type-debate);
+    background: var(--type-debate-bg);
+  }
   .ctrl-spacer { flex: 1; }
 
-  /* ============ 浮动资料（青绿主色，与辩论使用一致）============ */
-  .float-material {
-    position: fixed;
-    right: 32px;
-    bottom: 80px;
-    z-index: 60;
-  }
-  .float-btn {
-    min-width: 116px;
-    padding: 11px 18px;
-    border-radius: 22px;
-    background: var(--color-primary);
-    color: #fff;
-    font-weight: 600;
-    font-size: var(--font-base);
-    box-shadow: var(--shadow-fab);
-    transition: all 0.15s;
-  }
-  .float-btn:hover {
-    background: var(--color-primary-dark);
-    transform: translateY(-1px);
-  }
-  .material-pop {
-    display: none;
-    position: absolute;
-    right: 0;
-    bottom: 56px;
-    width: 320px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    background: var(--color-bg-card);
-    box-shadow: 0 14px 36px rgba(20,35,55,0.16);
-    overflow: hidden;
-  }
-  .material-pop.show { display: block; }
-  .material-head {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--color-border-soft);
+  /* 页码标记 */
+  .page-foot {
+    margin-top: 20px;
+    padding-top: 14px;
+    border-top: 1px dotted var(--paper-rule);
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    background: var(--color-bg-soft);
+    font-family: var(--font-numeric);
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0.06em;
   }
-  .material-head strong { font-size: var(--font-base); }
-  .material-head span { font-size: var(--font-xs); color: var(--color-text-4); }
-  .material-item {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--color-border-soft);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .material-item:last-child { border-bottom: 0; }
-  .material-type-badge {
-    font-size: 10px;
-    font-weight: 600;
-    padding: 2px 7px;
-    border-radius: var(--radius-xs);
-    color: #fff;
-    flex-shrink: 0;
-  }
-  .material-type-badge.pdf { background: var(--color-prep); }
-  .material-type-badge.video { background: var(--color-debate); }
-  .material-name {
-    flex: 1;
-    font-size: var(--font-base);
-    font-weight: 500;
-  }
-  .view-btn {
-    padding: 5px 11px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background: var(--color-bg-card);
-    color: var(--color-primary);
-    font-size: var(--font-sm);
-  }
-  .view-btn:hover {
-    background: var(--color-primary-bg);
-    border-color: var(--color-primary);
-  }
-
-  /* ============ 资料 Modal ============ */
-  .material-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 1000;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    background: rgba(20,35,55,0.55);
-  }
-  .material-modal.show { display: flex; }
-  .modal-card {
-    width: 920px;
-    max-width: 92vw;
-    height: 600px;
-    max-height: 84vh;
-    background: var(--color-bg-card);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-modal);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .modal-head {
-    padding: 14px 22px;
-    border-bottom: 1px solid var(--color-border-soft);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: var(--color-bg-soft);
-  }
-  .modal-title { font-size: var(--font-lg); font-weight: 600; }
-  .modal-close {
-    margin-left: auto;
-    width: 32px; height: 32px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--color-border);
-    background: var(--color-bg-card);
-    color: var(--color-text-3);
-    font-size: 18px;
-    line-height: 1;
-  }
-  .modal-close:hover { border-color: var(--color-debate); color: var(--color-debate); }
-  .modal-body {
-    flex: 1;
-    padding: 24px 28px;
-    overflow-y: auto;
-  }
-  .doc-box {
-    height: 100%;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    background: var(--color-bg-soft);
-    padding: 22px 24px;
-  }
-  .doc-label {
-    font-size: var(--font-xs);
-    font-weight: 600;
-    color: var(--color-primary);
-    margin-bottom: 12px;
-  }
+  .page-foot .right { font-feature-settings: 'tnum' on; }
 </style>
-<link rel="stylesheet" href="prototype-capture.css">
 </head>
 <body>
 
-<div class="meta-bar">
-  <span><strong>AI 思辨 · 讨论使用 v0.1 Demo</strong> · 拉齐到与首页/创建一致的近高保真风格 · 6 观点支架仍是核心差异</span>
-  <span>评审用 · 仅 PC Web</span>
-</div>
-
 <header class="topbar">
-  <a class="back-link" href="/">← 智能体中心</a>
-  <span class="crumb-sep">/</span>
-  <span class="page-title" id="topbarName">班级气候讨论</span>
-  <span class="type-badge discussion">场景类 · 讨论</span>
+  <span class="brand-stamp"><span class="glyph">智</span>智能体中心</span>
+  <span class="crumb-arrow">›</span>
+  <a class="crumb-back" href="/">返回</a>
+  <span class="crumb-arrow">/</span>
+  <span class="page-title">班级气候讨论</span>
+  <span class="type-badge">讨论</span>
   <div class="topbar-right">
-    <span class="progress-text">参与 18 人 · 已发言 <strong>6</strong> 条</span>
-    <span class="timer" id="timer">10:24</span>
+    <span class="progress-meta">参与 <strong>18</strong> 人 · 已发言 <strong>6</strong> 条</span>
+    <span class="timer">10:24</span>
   </div>
 </header>
 
 <main class="container">
 
-  <details class="reference-image" open>
-    <summary>📷 线上 AI 思辨界面现状（本页是在此基础上叠加控制条 + 总倒计时 + 3 档轻提示）</summary>
-    <img src="assets/ai-sibian.png" alt="AI 思辨线上界面参考" />
-    <div class="ref-note">图中是 AI 思辨产品线现有界面（图为辩论示例，讨论复用同一界面框架）。本页讨论场景**复用擂台 + 主题条 + 数据卡 + 6 观点支架卡（讨论专属）**，"新增"部分仅：顶栏总时长倒计时 / 底部 control-bar 含 5 操作按钮 + 【退出】/ 3 档轻提示 banner / "是否保存"步骤。复制图片时此区域自动隐藏。</div>
-  </details>
-
-  <section class="topic-bar">
-    <div class="topic-text">
-      讨论主题：<strong id="topicText">塑料袋给我们带来什么影响？</strong>
+  <!-- ① 主题 -->
+  <section>
+    <div class="section-stamp">
+      <span class="num">1</span>
+      <span class="label">讨论主题</span>
+      <span class="hint">由教师备课时设定</span>
     </div>
-    <div class="topic-meta">
-      <span class="topic-pill">4-6 年级 · 科学</span>
-      <span class="topic-pill">30 分钟</span>
+    <div class="topic">
+      <span class="topic-eyebrow">Topic · 4-6 年级 · 科学</span>
+      <div class="topic-text">塑料袋给我们带来 <strong>什么影响</strong>？</div>
+      <div class="topic-meta">
+        <span class="pill">总时长 30 分钟</span>
+        <span class="sep">·</span>
+        <span class="pill">参与人数 18</span>
+        <span class="sep">·</span>
+        <span class="pill">支架 6 项</span>
+      </div>
     </div>
   </section>
 
+  <!-- ② 6 观点支架 -->
   <section class="scaffold-section">
-    <div class="section-title discussion">观点支架（学生选择一个发言）</div>
+    <div class="section-stamp">
+      <span class="num">2</span>
+      <span class="label">观点支架</span>
+      <span class="hint">学生选择一个支架开始发言</span>
+    </div>
     <div class="scaffold-grid">
-      <div class="scaffold-card c1 active">
-        <div class="scaffold-icon"><span>◆</span></div>
-        <div class="scaffold-tag">提出新观点</div>
+      <div class="scaffold-card active">
+        <div class="scaffold-num">① 提出新观点</div>
+        <div class="scaffold-tag">提出</div>
         <div class="scaffold-template">我的观点是<span class="blank"></span>，依据是<span class="blank"></span></div>
       </div>
-      <div class="scaffold-card c2">
-        <div class="scaffold-icon"><span>◆</span></div>
-        <div class="scaffold-tag">反驳，新观点</div>
+      <div class="scaffold-card">
+        <div class="scaffold-num">② 反驳，新观点</div>
+        <div class="scaffold-tag">反驳</div>
         <div class="scaffold-template">我不赞同<span class="blank"></span>。我的观点是<span class="blank"></span></div>
       </div>
-      <div class="scaffold-card c3">
-        <div class="scaffold-icon"><span>◆</span></div>
-        <div class="scaffold-tag">同意，补证据</div>
+      <div class="scaffold-card">
+        <div class="scaffold-num">③ 同意，补证据</div>
+        <div class="scaffold-tag">补证</div>
         <div class="scaffold-template">我赞同<span class="blank"></span>，证据是<span class="blank"></span></div>
       </div>
-      <div class="scaffold-card c4">
-        <div class="scaffold-icon"><span>◆</span></div>
-        <div class="scaffold-tag">同意，修证据</div>
+      <div class="scaffold-card">
+        <div class="scaffold-num">④ 同意，修证据</div>
+        <div class="scaffold-tag">修证</div>
         <div class="scaffold-template">我同意<span class="blank"></span>，但证据应是<span class="blank"></span></div>
       </div>
-      <div class="scaffold-card c5">
-        <div class="scaffold-icon"><span>◆</span></div>
-        <div class="scaffold-tag">同意，修自己</div>
+      <div class="scaffold-card">
+        <div class="scaffold-num">⑤ 同意，修自己</div>
+        <div class="scaffold-tag">自修</div>
         <div class="scaffold-template">我同意<span class="blank"></span>，修订我之前<span class="blank"></span>的观点</div>
       </div>
-      <div class="scaffold-card c6">
-        <div class="scaffold-icon"><span>◆</span></div>
-        <div class="scaffold-tag">坚持，补证据</div>
+      <div class="scaffold-card">
+        <div class="scaffold-num">⑥ 坚持，补证据</div>
+        <div class="scaffold-tag">坚持</div>
         <div class="scaffold-template">补充证据<span class="blank"></span>，所以我的观点成立</div>
       </div>
     </div>
   </section>
 
-  <section class="speaker-box">
-    <div class="speaker-avatar">A</div>
-    <div class="speaker-info">
-      <div class="speaker-meta">
-        <span class="speaker-name">学生 A</span>
-        <span class="speaker-scaffold-tag">① 提出新观点</span>
-      </div>
-      <div class="speaker-content">
-        我的观点是 <strong>塑料袋有利有弊</strong>，依据是 <strong>日常使用便利但难降解</strong>。
-      </div>
+  <!-- ③ 当前发言 -->
+  <section>
+    <div class="section-stamp">
+      <span class="num">3</span>
+      <span class="label">当前发言</span>
+      <span class="hint">第 6 条 / 共 30 分钟</span>
     </div>
-    <div class="speaker-actions">
-      <button class="speaker-action-btn ghost">AI 引导</button>
-      <button class="speaker-action-btn primary">下一位</button>
+    <div class="speaker">
+      <div class="speaker-avatar">A</div>
+      <div>
+        <div class="speaker-meta">
+          <span class="speaker-name">学生 A</span>
+          <span class="speaker-tag">① 提出新观点</span>
+        </div>
+        <div class="speaker-content">
+          我的观点是 <span class="mark">塑料袋有利有弊</span>，依据是 <span class="mark">日常使用便利但难降解</span>。
+        </div>
+      </div>
+      <div class="speaker-actions">
+        <button class="speaker-action primary">下一位</button>
+        <button class="speaker-action ghost">AI 引导</button>
+      </div>
     </div>
   </section>
 
+  <!-- ④ 支架统计 + 发言历史 -->
   <div class="below-grid">
-    <section class="panel">
-      <div class="section-title discussion">支架使用统计</div>
-      <div class="stat-row"><span>① 提出新观点</span><strong>3 次</strong></div>
-      <div class="stat-row"><span>② 反驳，新观点</span><strong>1 次</strong></div>
-      <div class="stat-row"><span>③ 同意，补证据</span><strong>2 次</strong></div>
-      <div class="stat-row"><span>④ 同意，修证据</span><strong>0 次</strong></div>
-      <div class="stat-row"><span>⑤ 同意，修自己</span><strong>0 次</strong></div>
-      <div class="stat-row"><span>⑥ 坚持，补证据</span><strong>0 次</strong></div>
+    <section>
+      <div class="section-stamp">
+        <span class="num">4</span>
+        <span class="label">支架使用</span>
+      </div>
+      <div class="panel-rule"></div>
+      <div class="panel">
+        <div class="stat-row">
+          <span class="num">①</span>
+          <span class="label">提出新观点</span>
+          <span class="count">3</span>
+        </div>
+        <div class="stat-row">
+          <span class="num">②</span>
+          <span class="label">反驳，新观点</span>
+          <span class="count">1</span>
+        </div>
+        <div class="stat-row">
+          <span class="num">③</span>
+          <span class="label">同意，补证据</span>
+          <span class="count">2</span>
+        </div>
+        <div class="stat-row zero">
+          <span class="num">④</span>
+          <span class="label">同意，修证据</span>
+          <span class="count">0</span>
+        </div>
+        <div class="stat-row zero">
+          <span class="num">⑤</span>
+          <span class="label">同意，修自己</span>
+          <span class="count">0</span>
+        </div>
+        <div class="stat-row zero">
+          <span class="num">⑥</span>
+          <span class="label">坚持，补证据</span>
+          <span class="count">0</span>
+        </div>
+      </div>
     </section>
 
-    <section class="panel">
-      <div class="section-title discussion">发言历史</div>
-      <div class="history-line">
-        <span class="history-name">学生 A</span>
-        <span class="history-scaffold">① 新观点</span>
-        <span class="history-content">塑料袋有利有弊，便利但难降解。</span>
+    <section>
+      <div class="section-stamp">
+        <span class="num">5</span>
+        <span class="label">发言历史</span>
+        <span class="hint">共 6 条</span>
       </div>
-      <div class="history-line">
-        <span class="history-name">学生 C</span>
-        <span class="history-scaffold">③ 补证据</span>
-        <span class="history-content">赞同 A，自然降解需要 400 年。</span>
+      <div class="panel-rule"></div>
+      <div class="panel">
+        <div class="history-line">
+          <span class="history-name">学生 A</span>
+          <span class="history-scaffold"><span class="marker">①</span>新观点</span>
+          <span class="history-content">塑料袋有利有弊，便利但难降解。</span>
+        </div>
+        <div class="history-line">
+          <span class="history-name">学生 C</span>
+          <span class="history-scaffold"><span class="marker">③</span>补证据</span>
+          <span class="history-content">赞同 A，自然降解需要 400 年。</span>
+        </div>
+        <div class="history-line">
+          <span class="history-name">学生 D</span>
+          <span class="history-scaffold"><span class="marker">②</span>反驳</span>
+          <span class="history-content">便利性不可忽视，应改进回收而非禁止。</span>
+        </div>
+        <div class="history-line">
+          <span class="history-name">学生 B</span>
+          <span class="history-scaffold"><span class="marker">③</span>补证据</span>
+          <span class="history-content">补充：海洋塑料垃圾每年增加 800 万吨。</span>
+        </div>
+        <div class="history-line">
+          <span class="history-name">学生 E</span>
+          <span class="history-scaffold"><span class="marker">①</span>新观点</span>
+          <span class="history-content">应该从源头减少使用，而非依赖回收。</span>
+        </div>
+        <div class="history-line">
+          <span class="history-name">学生 F</span>
+          <span class="history-scaffold"><span class="marker">①</span>新观点</span>
+          <span class="history-content">替代品（如布袋）成本仍是阻碍。</span>
+        </div>
+        <div class="history-more">显示更多 →</div>
       </div>
-      <div class="history-line">
-        <span class="history-name">学生 D</span>
-        <span class="history-scaffold">② 反驳</span>
-        <span class="history-content">便利性不可忽视，应改进回收而非禁止。</span>
-      </div>
-      <div class="history-line">
-        <span class="history-name">学生 B</span>
-        <span class="history-scaffold">③ 补证据</span>
-        <span class="history-content">补充：海洋塑料垃圾每年增加 800 万吨。</span>
-      </div>
-      <div class="history-more">显示更多 · 共 6 条</div>
     </section>
   </div>
 
-</main>
-
-<div class="float-material">
-  <div class="material-pop" id="materialPop">
-    <div class="material-head"><strong>本次讨论资料</strong><span>3 条</span></div>
-    <div class="material-item">
-      <span class="material-type-badge pdf">PDF</span>
-      <span class="material-name">塑料污染白皮书</span>
-      <button class="view-btn" data-title="塑料污染白皮书" data-body="关键内容：展示塑料袋使用量、回收率和环境影响数据。讨论中可帮助学生补充事实依据。">查看</button>
+  <!-- ⑤ 本次资料 -->
+  <section>
+    <div class="section-stamp">
+      <span class="num">6</span>
+      <span class="label">本次讨论资料</span>
+      <span class="hint">老师备课时已添加</span>
     </div>
-    <div class="material-item">
-      <span class="material-type-badge video">视频</span>
-      <span class="material-name">海洋污染纪录片</span>
-      <button class="view-btn" data-title="海洋污染纪录片" data-body="关键内容：展示海洋垃圾对生物和生态系统的影响。讨论中可用于引导学生提出新观点或补充证据。">查看</button>
-    </div>
-    <div class="material-item">
-      <span class="material-type-badge pdf">PDF</span>
-      <span class="material-name">禁塑案例合集</span>
-      <button class="view-btn" data-title="禁塑案例合集" data-body="关键内容：不同城市禁塑政策的实施方式与争议。可用于学生比较不同做法，并修订自己的观点。">查看</button>
-    </div>
-  </div>
-  <button class="float-btn" id="toggleMaterials">📚 查看资料</button>
-</div>
-
-<div class="material-modal" id="materialModal">
-  <div class="modal-card">
-    <div class="modal-head">
-      <span class="modal-title" id="modalTitle">资料标题</span>
-      <button class="modal-close" id="modalClose">×</button>
-    </div>
-    <div class="modal-body">
-      <div class="doc-box">
-        <div class="doc-label">资料内容</div>
-        <div id="modalBody">资料正文</div>
+    <div class="resources-grid">
+      <div class="resource">
+        <span class="resource-type pdf">PDF</span>
+        <span class="resource-name">塑料污染白皮书</span>
+      </div>
+      <div class="resource">
+        <span class="resource-type video">视频</span>
+        <span class="resource-name">海洋污染纪录片</span>
+      </div>
+      <div class="resource">
+        <span class="resource-type pdf">PDF</span>
+        <span class="resource-name">禁塑案例合集</span>
       </div>
     </div>
-  </div>
-</div>
+  </section>
 
-<div class="control-bar">
-  <div class="control-bar-inner">
+  <!-- 底部控制条 -->
+  <div class="control-bar">
     <button class="ctrl-btn primary">开始讨论</button>
     <button class="ctrl-btn">暂停</button>
     <button class="ctrl-btn">随机选人</button>
     <button class="ctrl-btn">AI 引导</button>
     <span class="ctrl-spacer"></span>
-    <button class="ctrl-btn success" id="finishBtn">结束讨论 · 生成报告</button>
-    <button class="ctrl-btn" id="exitBtn" style="border-color:#c44444; color:#c44444; margin-left: 8px;">退出</button>
+    <button class="ctrl-btn success">结束讨论 · 生成报告</button>
+    <button class="ctrl-btn danger">退出</button>
   </div>
-</div>
 
-<script>
-  const toggle = document.getElementById('toggleMaterials');
-  const pop = document.getElementById('materialPop');
-  toggle.addEventListener('click', () => {
-    const show = !pop.classList.contains('show');
-    pop.classList.toggle('show', show);
-    toggle.textContent = show ? '📚 收起资料' : '📚 查看资料';
-  });
-  document.addEventListener('click', e => {
-    if (!e.target.closest('.float-material')) {
-      pop.classList.remove('show');
-      toggle.textContent = '📚 查看资料';
-    }
-  });
+  <div class="page-foot">
+    <span>AI 思辨 · 讨论使用 · v0.1</span>
+    <span class="right">PAGE 1 / 1</span>
+  </div>
 
-  const modal = document.getElementById('materialModal');
-  const modalTitle = document.getElementById('modalTitle');
-  const modalBody = document.getElementById('modalBody');
-  document.querySelectorAll('.view-btn').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      modalTitle.textContent = btn.dataset.title;
-      modalBody.textContent = btn.dataset.body;
-      modal.classList.add('show');
-    });
-  });
-  document.getElementById('modalClose').addEventListener('click', () => modal.classList.remove('show'));
-  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
+</main>
 
-  document.querySelectorAll('.scaffold-card').forEach(c => {
-    c.addEventListener('click', () => {
-      document.querySelectorAll('.scaffold-card').forEach(x => x.classList.toggle('active', x === c));
-    });
-  });
-
-  const params = new URLSearchParams(window.location.search);
-  const requestedName = (params.get('agent') || params.get('name') || '班级气候讨论').replace(/^我的-/, '');
-  const requestedTopic = params.get('topic');
-  document.getElementById('topbarName').textContent = requestedName;
-  if (requestedTopic) document.getElementById('topicText').textContent = requestedTopic;
-
-  document.getElementById('exitBtn').addEventListener('click', () => {
-    if (confirm('退出后未结束的讨论将丢失，确认退出？')) {
-      window.location.href = '首页-v0.5.html';
-    }
-  });
-  document.getElementById('finishBtn').addEventListener('click', () => {
-    window.location.href = `思辨记录详情-v0.1.html?mode=discussion&title=${encodeURIComponent(requestedTopic || '塑料袋给我们带来什么影响？')}`;
-  });
-
-  // === 总时长倒计时 + 3 档提示 ===
-  (function() {
-    const TOTAL = 30 * 60;
-    let elapsed = 624;  // 起步 10:24
-    let running = false, tick = null, speed = 1;
-    let firedHalf = false, firedLast5 = false, firedEnd = false;
-
-    // 提示 banner
-    const banner = document.createElement('div');
-    banner.style.cssText = 'display:none;position:fixed;top:76px;left:50%;transform:translateX(-50%);padding:10px 18px;background:var(--color-discussion);color:#fff;border-radius:22px;font-size:var(--font-sm);font-weight:500;box-shadow:0 8px 22px rgba(74,111,165,0.3);z-index:1000;align-items:center;gap:12px;';
-    banner.innerHTML = '<span id="thrText"></span><button id="thrClose" style="background:transparent;border:0;color:rgba(255,255,255,0.85);cursor:pointer;font-size:18px;line-height:1;padding:0 4px;">×</button>';
-    document.body.appendChild(banner);
-
-    // timer 颜色变化
-    const styleEl = document.createElement('style');
-    styleEl.textContent = '.timer.warn{color:var(--color-prep)!important;border-color:var(--color-prep-soft)!important;background:var(--color-prep-bg)!important;} .timer.danger{color:var(--color-debate)!important;border-color:var(--color-debate-soft)!important;background:var(--color-debate-bg)!important;animation:tmPulse 1.4s ease-in-out infinite;} @keyframes tmPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }';
-    document.head.appendChild(styleEl);
-
-    // 演示加速
-    const metaSpan = document.querySelector('.meta-bar span:last-child');
-    if (metaSpan) {
-      const tg = document.createElement('button');
-      tg.style.cssText = 'margin-left:12px;padding:1px 8px;border:1px solid currentColor;border-radius:3px;font-size:11px;background:transparent;color:inherit;cursor:pointer;opacity:0.65;';
-      tg.textContent = '▶▶ 演示加速 60×';
-      tg.onclick = () => {
-        speed = speed === 1 ? 60 : 1;
-        tg.style.opacity = speed > 1 ? '1' : '0.65';
-        tg.textContent = speed > 1 ? '⏸ 关闭加速' : '▶▶ 演示加速 60×';
-      };
-      metaSpan.appendChild(tg);
-    }
-
-    document.getElementById('thrClose').onclick = () => banner.style.display = 'none';
-
-    const timer = document.getElementById('timer');
-    const ctrl = Array.from(document.querySelectorAll('.control-bar .ctrl-btn'));
-    const startB = ctrl.find(b => b.textContent.includes('开始'));
-    const pauseB = ctrl.find(b => b.textContent.includes('暂停'));
-
-    function fmt(s) { s = Math.max(0, Math.floor(s)); return Math.floor(s/60) + ':' + (s%60).toString().padStart(2,'0'); }
-    function showBanner(text, level) {
-      document.getElementById('thrText').textContent = text;
-      banner.style.background = level === 'warn' ? 'var(--color-debate)' : level === 'soft' ? 'var(--color-prep)' : 'var(--color-discussion)';
-      banner.style.boxShadow = level === 'warn' ? '0 8px 22px rgba(196,68,68,0.3)' : level === 'soft' ? '0 8px 22px rgba(184,107,0,0.3)' : '0 8px 22px rgba(74,111,165,0.3)';
-      banner.style.display = 'flex';
-      setTimeout(() => banner.style.display = 'none', 6000);
-    }
-    function refresh() {
-      const remain = TOTAL - elapsed;
-      timer.textContent = fmt(remain);
-      timer.classList.remove('warn', 'danger');
-      if (remain <= 0) timer.classList.add('danger');
-      else if (remain <= 5 * 60) timer.classList.add('warn');
-    }
-    function tickFn() {
-      elapsed += speed;
-      const remain = TOTAL - elapsed;
-      if (!firedHalf && elapsed >= TOTAL * 0.5) {
-        firedHalf = true;
-        showBanner('已过半 — 还剩约 ' + Math.ceil(remain / 60) + ' 分钟', 'soft');
-      }
-      if (!firedLast5 && remain <= 5 * 60 && remain > 0) {
-        firedLast5 = true;
-        showBanner('最后 5 分钟 — 建议引导学生总结观点', 'warn');
-      }
-      if (!firedEnd && remain <= 0) {
-        firedEnd = true;
-        showBanner('讨论时间到 — 可继续深入，或点【结束讨论】生成报告', 'warn');
-        pause();
-      }
-      refresh();
-    }
-    function start() { if (running) return; running = true; tick = setInterval(tickFn, 1000); }
-    function pause() { running = false; clearInterval(tick); }
-
-    startB && startB.addEventListener('click', start);
-    pauseB && pauseB.addEventListener('click', pause);
-    refresh();
-  })();
-</script>
-
-<script src="prototype-capture.js"></script>
-
-<!-- ========== 评审用 PRD 侧边栏数据 ========== -->
-<script src="prototype-review-panel.js"></script>
-<script>
-  window.PRD_REVIEW_DATA = {
-    pageName: 'AI 思辨·讨论 使用',
-    groups: [
-      {
-        title: '⚠️ 页面本质',
-        items: [
-          {
-            target: '.container',
-            title: '复用已有界面 + 新增控制栏',
-            how:  '从智能体广场点讨论类卡片进入',
-            what: '进入产品线上已有的 AI 思辨·讨论界面，本期仅在其上新增控制栏 + 总倒计时 + 3 档轻提示',
-            from: '复用：6 观点支架卡 / 当前发言者盒 / 支架统计 / 发言历史 / 浮动资料 ｜ 新增：顶栏总时长倒计时 / 底部 control-bar 含操作 + 【退出】（与学问页统一底部）/ 3 档轻提示 banner / 入口链路 / "是否保存"步骤'
-          }
-        ]
-      },
-      {
-        title: '顶部进度',
-        items: [
-          {
-            target: '.topbar',
-            title: '顶栏（讨论名 + 人数 + 发言数 + 总时长倒计时）',
-            how:  '看（不点）',
-            what: '左：讨论名称；中：参与人数 / 已发言条数；右：实时总时长倒计时（MM:SS，分钟级）',
-            from: '与辩论的"每轮秒级倒计时"不同，讨论是"总时长分钟级倒计时"。时长由创建页配置（20/30/45/60）'
-          }
-        ]
-      },
-      {
-        title: '主题条',
-        items: [
-          {
-            target: '.topic-bar',
-            title: '主题条',
-            how:  '看（不点）',
-            what: '主题文本 + 年级/学科/时长标签',
-            from: '主题来自 ?topic 参数；标签由创建页配置'
-          }
-        ]
-      },
-      {
-        title: '6 观点支架卡（核心）',
-        items: [
-          {
-            target: '.scaffold-grid',
-            title: '6 张支架卡网格',
-            how:  '点击卡片切换 active 态',
-            what: '每张：彩色 icon + 支架标签 + 模板文本（含 blank 占位）；当前发言者使用的支架会在"发言者盒"标签处显示',
-            from: '6 张数量固定；卡内文本由创建页"6 观点支架"配置；颜色 c1-c6 为产品默认配色'
-          },
-          {
-            target: '.scaffold-card',
-            title: '单张支架卡',
-            how:  '点击切换 active',
-            what: '点击该卡 → 在"当前发言者盒"中标记当前学生使用的是这个支架',
-            from: '设计意图：让老师能用支架"分类"学生发言，培养表达结构'
-          }
-        ]
-      },
-      {
-        title: '当前发言者盒',
-        items: [
-          {
-            target: '.speaker-box',
-            title: '当前发言者展示',
-            how:  '由【随机选人】 / 【下一位】 / 老师手动选定',
-            what: '左：发言者头像；中：发言内容 + 当前支架标签；右：【AI 引导】 / 【下一位】',
-            from: '本期 demo 是模拟数据；下期接入真实班级名单 + 实时录音转文字'
-          },
-          {
-            target: '.speaker-box [data-action="ai-guide"]',
-            title: '【AI 引导】',
-            how:  '点击触发',
-            what: '调用 AI 给当前发言者一段引导提示（如"试着用论据支撑一下你的观点"）',
-            from: '本期 mock；下期接入大模型 + 当前支架上下文'
-          }
-        ]
-      },
-      {
-        title: '下方双卡',
-        items: [
-          {
-            target: '.panel.stats',
-            title: '左卡：支架使用统计',
-            how:  '看（不点）',
-            what: '6 行：①-⑥ 各使用 X 次；反映班级讨论的"思维分布"',
-            from: '统计数据由学生发言时使用的支架累加；支撑"思辨记录详情"中的支架统计区'
-          },
-          {
-            target: '.panel.history',
-            title: '右卡：发言历史',
-            how:  '滚动浏览；【显示更多】展开',
-            what: '每条：姓名 + 支架标签 + 内容摘要',
-            from: '初始 6 条预设；下期接入真实发言流'
-          }
-        ]
-      },
-      {
-        title: '浮动资料',
-        items: [
-          {
-            target: '.float-material',
-            title: '浮动资料按钮（右下固定）',
-            how:  '点击展开 popup → 点【查看】弹 modal',
-            what: '与辩论使用页一致；3 条资料卡（PDF / 视频 / PDF）',
-            from: '资料来自创建页"已添加"清单'
-          }
-        ]
-      },
-      {
-        title: '底部控制条',
-        items: [
-          {
-            target: '.control-bar',
-            title: '控制条',
-            how:  '老师按节奏点：开始 → 选人 → 选支架 → 引导 → ... → 结束',
-            what: '【开始讨论】/【暂停】/【随机选人】/【AI 引导】/【结束讨论·生成报告】',
-            from: '与辩论控制条不同：没有【切换发言方】【下一轮】，因为讨论是单组多人共同进行'
-          },
-          {
-            target: '#finishBtn',
-            title: '【结束讨论·生成报告】',
-            how:  '老师判断时机点击',
-            what: '跳思辨记录详情 ?mode=discussion&title={topic}',
-            from: '与辩论的"最后一轮自动变结束"不同，讨论需老师主动判断"是否够了"'
-          }
-        ]
-      },
-      {
-        title: '3 档轻提示（核心机制）',
-        items: [
-          {
-            target: '.timer-banner',
-            title: '3 档时间提示 banner',
-            how:  '到达阈值自动浮出',
-            what: '① 过半（柔色）"已过半 — 还剩约 N 分钟" ② 最后 5 分（黄 warn）"建议引导学生总结观点" ③ 时间到（红 danger）"可继续深入，或点结束讨论"，timer 脉冲，自动 pause',
-            from: '设计原则：到点不打断、不强制结束。Banner 6 秒自动收，亦可手动 ×'
-          },
-          {
-            target: '#timer',
-            title: 'timer 颜色状态',
-            how:  '随 remain 自动切换',
-            what: '正常→灰；最后 5 分→黄边框 warn；时间到→红 danger 脉冲',
-            from: '视觉上让老师在余光里都能感知时间状态，无需盯着 banner'
-          }
-        ]
-      },
-      {
-        title: '演示加速（评审专用）',
-        items: [
-          {
-            target: '.meta-bar',
-            title: '演示加速 60×',
-            how:  '点击 meta-bar 右下"▶▶ 演示加速 60×"',
-            what: '总倒计时跑得更快，便于评审现场看到"3 档提示"全过程',
-            from: '比辩论的 10× 快 6 倍，因为讨论是分钟级；正式上线会移除'
-          }
-        ]
-      }
-    ]
-  };
-</script>
 </body>
 </html>

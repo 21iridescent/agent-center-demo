@@ -42,6 +42,13 @@ function lastAssistantText(messages: UIMessage[]): string {
   return '';
 }
 
+const KIND_LABEL: Record<PrepKind, string> = {
+  lesson:   '教学设计',
+  exercise: '习题出题',
+  activity: '课堂活动',
+  outline:  '课件大纲',
+};
+
 export function PrepToolPage({
   toolName,
   kind,
@@ -119,15 +126,67 @@ export function PrepToolPage({
         right={<SaveButton saved={saved} saving={saving} onSave={handleSave} />}
       />
       <main
-        className="mx-auto flex w-full flex-1 flex-col gap-5 px-8 py-7 pb-12"
-        style={{ maxWidth: '880px' }}
+        className="mx-auto flex w-full flex-col px-10 pt-8 pb-8"
+        style={{
+          maxWidth: 'var(--container-form)',
+          height: 'calc(100vh - var(--topbar-height))',
+        }}
       >
-        <ContextStrip
-          fields={contextFields}
-          onEdit={() => toast('编辑参数功能未实现')}
-        />
-        <ChatArea messages={messages} isStreaming={isStreaming} />
-        <ChatInput onSubmit={handleSubmit} disabled={isStreaming} />
+        {/* 章节版口 · stamp + 工具名 + smcp kind */}
+        <header
+          className="mb-6 flex items-end gap-5 border-t pt-5"
+          style={{ borderColor: 'var(--color-paper-rule)' }}
+        >
+          <span
+            className="stamp h-10 w-10 shrink-0 text-[12px]"
+            style={{ borderRadius: 'var(--radius-xs)' }}
+            aria-hidden
+          >
+            {kind.slice(0, 3).toUpperCase()}
+          </span>
+          <div className="flex flex-1 items-baseline gap-4 min-w-0">
+            <h1
+              className="font-display text-[24px] font-medium leading-none tracking-[0.5px]"
+              style={{ color: 'var(--color-ink-1)' }}
+            >
+              {toolName}
+            </h1>
+            <p
+              className="font-numeric text-[11px] uppercase tracking-[0.14em] truncate"
+              style={{ color: 'var(--color-ink-mute)' }}
+            >
+              {KIND_LABEL[kind]}
+            </p>
+          </div>
+        </header>
+
+        <div className="mb-5">
+          <ContextStrip
+            fields={contextFields}
+            onEdit={() => toast('编辑参数功能未实现')}
+          />
+        </div>
+
+        {/* 对话/输出区 paper-card · 包 ChatArea + ChatInput */}
+        <div
+          className="flex min-h-0 flex-1 flex-col overflow-hidden border"
+          style={{
+            background: 'var(--color-paper-card)',
+            borderColor: 'var(--color-paper-edge)',
+            borderRadius: 'var(--radius-sm)',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <ChatArea messages={messages} isStreaming={isStreaming} />
+          </div>
+          <div
+            className="border-t"
+            style={{ borderTopColor: 'var(--color-paper-rule)' }}
+          >
+            <ChatInput onSubmit={handleSubmit} disabled={isStreaming} />
+          </div>
+        </div>
       </main>
     </>
   );

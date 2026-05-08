@@ -4,12 +4,12 @@ import type { RecordType } from '@/lib/types';
 
 export type FilterValue = 'all' | RecordType;
 
-const FILTERS: { value: FilterValue; label: string }[] = [
+const FILTERS: { value: FilterValue; label: string; tone?: string }[] = [
   { value: 'all',        label: '全部' },
-  { value: 'dialogue',   label: 'AI 学问' },
-  { value: 'debate',     label: 'AI 辩论' },
-  { value: 'discussion', label: 'AI 讨论' },
-  { value: 'prep',       label: '产出' },
+  { value: 'dialogue',   label: 'AI 学问',   tone: 'var(--color-type-dialogue-deep)' },
+  { value: 'debate',     label: 'AI 辩论',   tone: 'var(--color-type-debate-deep)' },
+  { value: 'discussion', label: 'AI 讨论',   tone: 'var(--color-type-discussion-deep)' },
+  { value: 'prep',       label: '产出',      tone: 'var(--color-prep)' },
 ];
 
 interface Props {
@@ -18,13 +18,23 @@ interface Props {
   resultHint?: string;
 }
 
+/**
+ * 类型筛选条 · paper-card 浮纸 + 章式 stamp 选中态
+ */
 export function FilterChips({ current, onChange, resultHint }: Props) {
   return (
     <div
-      className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border bg-white px-4 py-3"
-      style={{ borderColor: 'var(--color-border)' }}
+      className="mb-6 flex flex-wrap items-center gap-2 border px-5 py-3"
+      style={{
+        background: 'var(--color-paper-card)',
+        borderColor: 'var(--color-paper-edge)',
+        borderRadius: 'var(--radius-sm)',
+      }}
     >
-      <span className="mr-2 text-[13px]" style={{ color: 'var(--color-text-4)' }}>
+      <span
+        className="font-numeric mr-3 text-[11px] uppercase tracking-[0.14em]"
+        style={{ color: 'var(--color-ink-mute)' }}
+      >
         类型
       </span>
       {FILTERS.map(f => {
@@ -33,18 +43,20 @@ export function FilterChips({ current, onChange, resultHint }: Props) {
           <button
             key={f.value}
             onClick={() => onChange(f.value)}
-            className="rounded-full border px-3.5 py-1 text-[12px] transition-colors"
+            className="px-3.5 py-1.5 text-[13px] font-medium transition-colors"
             style={
               active
                 ? {
-                    background: 'var(--color-primary)',
-                    color: '#fff',
-                    borderColor: 'var(--color-primary)',
+                    background: 'var(--color-paper-stamp)',
+                    color: 'var(--color-paper-base)',
+                    borderRadius: 'var(--radius-xs)',
+                    letterSpacing: '0.2px',
                   }
                 : {
-                    background: 'white',
-                    color: 'var(--color-text-3)',
-                    borderColor: 'var(--color-border)',
+                    background: 'transparent',
+                    color: f.tone ?? 'var(--color-ink-2)',
+                    border: '1px solid var(--color-paper-edge)',
+                    borderRadius: 'var(--radius-xs)',
                   }
             }
           >
@@ -53,7 +65,10 @@ export function FilterChips({ current, onChange, resultHint }: Props) {
         );
       })}
       {resultHint && (
-        <span className="ml-auto text-[12px]" style={{ color: 'var(--color-text-4)' }}>
+        <span
+          className="font-numeric tnum ml-auto text-[12px]"
+          style={{ color: 'var(--color-ink-mute)' }}
+        >
           {resultHint}
         </span>
       )}

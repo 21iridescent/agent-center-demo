@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Topbar } from '@/components/Topbar';
 import { HomePhase } from '@/components/HomePhase';
@@ -53,6 +53,8 @@ const TOOLS = [
   },
 ];
 
+// 注：seed-* id 与 lib/agent-storage.ts 的 SEED_AGENTS 配对
+// 学问/辩论 2 张接真使用页（点"启动"跑真 DeepSeek）；讨论 2 张仍 legacy（无真使用页）
 const INITIAL_AGENTS: AgentSeed[] = [
   {
     id: 'a1',
@@ -63,29 +65,29 @@ const INITIAL_AGENTS: AgentSeed[] = [
     grade: '三年级',
     lastUsed: '昨天',
     launchHref: '/legacy/AI思辨使用-讨论-v0.1.html',
-    editHref: '/legacy/AI思辨创建-讨论-v0.1.html',
+    editHref: '/create',
   },
   {
-    id: 'a2',
+    id: 'seed-machine-vision',
     type: 'dialogue',
     avatar: '像',
-    name: '机器如何识别图像',
+    name: '机器视觉博士',
     subject: '人工智能',
     grade: '五年级',
     lastUsed: '3 天前',
-    launchHref: '/legacy/AI学问使用-v0.1.html',
-    editHref: '/legacy/AI学问创建-v0.1.html',
+    launchHref: '/use/xuewen/seed-machine-vision',
+    editHref: '/create',
   },
   {
-    id: 'a3',
+    id: 'seed-ai-judgement',
     type: 'debate',
     avatar: '判',
     name: 'AI 该有自己判断吗',
     subject: '人工智能',
     grade: '六年级',
     lastUsed: '上周',
-    launchHref: '/legacy/AI思辨使用-辩论-v0.1.html',
-    editHref: '/legacy/AI思辨创建-辩论-v0.1.html',
+    launchHref: '/use/debate/seed-ai-judgement',
+    editHref: '/create',
   },
   {
     id: 'a4',
@@ -96,7 +98,7 @@ const INITIAL_AGENTS: AgentSeed[] = [
     grade: '二年级',
     lastUsed: '2 周前',
     launchHref: '/legacy/AI思辨使用-讨论-v0.1.html',
-    editHref: '/legacy/AI思辨创建-讨论-v0.1.html',
+    editHref: '/create',
   },
 ];
 
@@ -131,10 +133,23 @@ const QUICK_NEW = [
   { type: 'discuss'  as const, label: '讨论', href: '/create/discussion' },
 ];
 
+/**
+ * SavedAgent → 首页 launch URL
+ * - 学问/辩论：跳真使用页 /use/{kind}/{id}
+ * - 讨论：本期使用页未实现，仍指 legacy（不破坏卡片）
+ * 注：INITIAL_AGENTS 4 张 seed 演示数据继续指 legacy，本函数只处理保存到 KV 的智能体
+ */
+const SAVED_LAUNCH: Record<string, (id: string) => string> = {
+  xuewen: id => `/use/xuewen/${id}`,
+  debate: id => `/use/debate/${id}`,
+  discussion: () => '/legacy/AI思辨使用-讨论-v0.1.html',
+};
+
 function savedToSeed(a: SavedAgent): AgentSeed {
   const cfg = a.config as Record<string, string | undefined>;
   const type = KIND_TO_TYPE[a.kind] ?? 'dialogue';
   const name = cfg.name ?? '未命名';
+  const launchFn = SAVED_LAUNCH[a.kind] ?? (() => '/');
   return {
     id: a.id,
     type,
@@ -143,17 +158,48 @@ function savedToSeed(a: SavedAgent): AgentSeed {
     subject: cfg.subject ?? '科学',
     grade: cfg.grade ?? '一年级',
     lastUsed: '刚刚',
-    launchHref: TYPE_TO_LAUNCH[type],
-    editHref: KIND_TO_CREATE[a.kind] ?? '/',
+    launchHref: launchFn(a.id),
+    editHref: '/create',
   };
+}
+
+// localStorage key：跨刷新持久化"已隐藏的 seed id"
+// seed 智能体（demo 演示卡）是源码硬编码，无法真删服务端；前端用 localStorage 记一份隐藏列表，跨刷新一致。
+const HIDDEN_SEEDS_KEY = 'home:hidden-seeds';
+
+function loadHiddenSeeds(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem(HIDDEN_SEEDS_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveHiddenSeeds(s: Set<string>) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(HIDDEN_SEEDS_KEY, JSON.stringify([...s]));
+  } catch {
+    /* localStorage 不可用就接受会话内一致即可 */
+  }
 }
 
 export default function Home() {
   const toast = useToast();
   const [savedAgents, setSavedAgents] = useState<AgentSeed[]>([]);
-  const [seedAgents, setSeedAgents] = useState<AgentSeed[]>(INITIAL_AGENTS);
+  const [hiddenSeeds, setHiddenSeeds] = useState<Set<string>>(new Set());
   const [manageMode, setManageMode] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<AgentSeed | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // 客户端 hydrate 后从 localStorage 读已隐藏 seed 列表（SSR 时 window 不可用）
+  useEffect(() => {
+    setHiddenSeeds(loadHiddenSeeds());
+  }, []);
 
   // 拉真实保存的智能体，拼到 seed 之前
   useEffect(() => {
@@ -167,19 +213,45 @@ export default function Home() {
       .catch(() => {});
   }, []);
 
+  const seedAgents = useMemo(
+    () => INITIAL_AGENTS.filter(a => !hiddenSeeds.has(a.id)),
+    [hiddenSeeds],
+  );
   const agents = [...savedAgents, ...seedAgents];
 
-  function confirmDelete() {
-    if (!pendingDelete) return;
-    const isSaved = savedAgents.some(a => a.id === pendingDelete.id);
-    if (isSaved) {
-      setSavedAgents(prev => prev.filter(a => a.id !== pendingDelete.id));
-      // TODO: real DELETE /api/agents/[id]，本期 demo 只前端隐藏
-    } else {
-      setSeedAgents(prev => prev.filter(a => a.id !== pendingDelete.id));
+  async function confirmDelete() {
+    if (!pendingDelete || deleting) return;
+    const target = pendingDelete;
+    const isSaved = savedAgents.some(a => a.id === target.id);
+
+    setDeleting(true);
+    try {
+      if (isSaved) {
+        // 真删：调 DELETE API，让 KV/内存兜底真清掉，刷新后不会再回来
+        const res = await fetch(`/api/agents/${encodeURIComponent(target.id)}`, {
+          method: 'DELETE',
+        });
+        if (!res.ok && res.status !== 204) {
+          toast('删除失败：服务暂不可用');
+          return;
+        }
+        setSavedAgents(prev => prev.filter(a => a.id !== target.id));
+      } else {
+        // seed 卡片：源码硬编码，服务端删不掉；前端 localStorage 持久化隐藏
+        setHiddenSeeds(prev => {
+          const next = new Set(prev);
+          next.add(target.id);
+          saveHiddenSeeds(next);
+          return next;
+        });
+      }
+      toast(`已删除：${target.name}`);
+      setPendingDelete(null);
+    } catch {
+      toast('删除失败：网络错误');
+    } finally {
+      setDeleting(false);
     }
-    toast(`已删除：${pendingDelete.name}`);
-    setPendingDelete(null);
   }
 
   return (
@@ -229,19 +301,26 @@ export default function Home() {
               </button>
             ) : (
               <>
+                <button
+                  onClick={() => toast('暂未开放')}
+                  className="text-[13px] transition-colors hover:underline"
+                  style={{ color: 'var(--color-ink-3)' }}
+                >
+                  查看全部 →
+                </button>
                 <Link
                   href="/create"
                   className="text-[13px] transition-colors hover:underline"
-                  style={{ color: 'var(--color-primary)' }}
+                  style={{ color: 'var(--color-type-dialogue-deep)' }}
                 >
                   ＋ 新建
                 </Link>
                 <button
                   onClick={() => setManageMode(true)}
-                  className="h-7 rounded-full border bg-white px-4 text-[12px] transition-colors hover:[border-color:var(--color-primary)] hover:[color:var(--color-primary)]"
+                  className="h-7 rounded-full border bg-white px-4 text-[12px] transition-colors hover:[border-color:var(--color-type-dialogue)] hover:[color:var(--color-type-dialogue)]"
                   style={{
-                    color: 'var(--color-text-3)',
-                    borderColor: 'var(--color-border)',
+                    color: 'var(--color-ink-3)',
+                    borderColor: 'var(--color-paper-edge)',
                   }}
                 >
                   管理
@@ -349,9 +428,9 @@ export default function Home() {
         open={!!pendingDelete}
         title="确认删除？"
         message={`删除后该智能体「${pendingDelete?.name ?? ''}」将无法找回。`}
-        confirmText="确认删除"
+        confirmText={deleting ? '删除中…' : '确认删除'}
         onConfirm={confirmDelete}
-        onCancel={() => setPendingDelete(null)}
+        onCancel={() => !deleting && setPendingDelete(null)}
       />
     </>
   );

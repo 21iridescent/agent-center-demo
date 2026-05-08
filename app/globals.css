@@ -1,3 +1,12 @@
+/* ──────────────────────────────────────────────────────────
+   External webfonts
+   - LXGW WenKai (中文 display) · jsdelivr · SIL OFL · 经此 @import url
+   - Source Serif 4 (西文/数字) · 经 next/font/google 加载 (layout.tsx)
+                                · 暴露为 var(--font-numeric-loaded)
+   - 中文正文沿用系统字（PingFang SC / Microsoft YaHei）
+   ────────────────────────────────────────────────────────── */
+@import url('https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css');
+
 @import "tailwindcss";
 
 @source "../app/**/*.{ts,tsx}";
@@ -5,135 +14,249 @@
 @source "../lib/**/*.{ts,tsx}";
 
 /* =========================================================
-   Design Tokens · 智能体中心
-   业务变量放在 :root，避免覆盖 Tailwind v4 默认 spacing/font/radius token
+   Design Tokens · 智能体中心 · v2 (Phase A: editorial paper)
+   见 .impeccable.md / .impeccable-brief.md
+   ─────────────────────────────────────────────────────────
+   :root  → 业务 token 真值
+   @theme inline → 选择性暴露给 Tailwind utility
+   不接管 Tailwind v4 默认 theme（text- · spacing · radius 等保持默认）
    ========================================================= */
 
 :root {
-  /* ── Brand / Primary（学问蓝）── */
-  --color-primary:        #368FFF;
-  --color-primary-dark:   #1F82FF;
-  --color-primary-bg:     #EDF4FF;
-  --color-primary-border: #7EAFF1;
-
-  /* ── Debate（辩论红）── */
-  --color-debate:         #F53B3B;
-  --color-debate-dark:    #D42929;
-  --color-debate-bg:      rgba(245, 59, 59, 0.08);
-  --color-debate-soft:    rgba(245, 59, 59, 0.3);
-
-  /* ── Discussion（讨论青）── */
-  --color-discussion:     #00A9F9;
-  --color-discussion-dark:#0088D0;
-  --color-discussion-bg:  rgba(0, 169, 249, 0.1);
-  --color-discussion-soft:rgba(0, 169, 249, 0.3);
-
-  /* ── Success（启动绿）── */
-  --color-success:        #24C366;
-  --color-success-dark:   #18a84a;
-  --color-success-bg:     rgba(37, 195, 102, 0.11);
-
-  /* ── Prep（产出琥珀）── */
-  --color-prep:           #b86b00;
-  --color-prep-bg:        #fff5e8;
-
-  /* ── Mine（个人紫）── */
-  --color-mine:           #7c5fc8;
-  --color-mine-bg:        #efe8fb;
-
-  /* ── Meta bar ── */
-  --color-warn:           #6d5200;
-  --color-warn-bg:        #fffbe8;
-  --color-warn-border:    #f0d878;
-
-  /* ── Text scale ── */
-  --color-text:           #262626;
-  --color-text-2:         #556377;
-  --color-text-3:         #747884;
-  --color-text-4:         #8C8C8C;
-  --color-text-5:         #BFBFBF;
-  --color-text-6:         #aaaaaa;
-  --color-text-7:         #cccccc;
-
-  /* ── Backgrounds ── */
-  --color-bg:             #F7F8FA;
-  --color-bg-card:        #FFFFFF;
-  --color-bg-soft:        #FAFAFA;
-  --color-bg-gray:        #F0F1F4;
-
-  /* ── Borders ── */
-  --color-border:         #E5E6EB;
-  --color-border-soft:    #F0F1F4;
-  --color-border-input:   #DCDFE6;
-
-  /* ── Radii ── */
-  --radius-xs:   4px;
-  --radius-sm:   6px;
-  --radius-md:   8px;
-  --radius-lg:   12px;
-  --radius-xl:   14px;
-  --radius-pill: 30px;
-
-  /* ── Shadows ── */
-  --shadow-sm:    0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md:    0 2px 8px 0 rgba(73, 77, 82, 0.1);
-  --shadow-card:  0 0 10px 0 rgba(69, 78, 97, 0.1);
-  --shadow-modal: 0 20px 50px 0 rgba(0, 0, 0, 0.1);
-
-  /* ── Misc ── */
-  --mask-primary: rgba(0, 0, 0, 0.5);
-
-  /* ── Layout ── */
-  --topbar-height:  60px;
-  --container-wide: 1180px;
-  --container-list: 960px;
-  --container-form: 820px;
-
-  /* ── Font ── */
+  /* ── Typography 字族 ──────────────────────────────── */
   --font-sans:
-    'Source Han Sans SC', 'Source Han Sans', -apple-system,
-    BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei',
-    'Helvetica Neue', sans-serif;
-  --font-number: 'D-DIN', 'Inter', 'Helvetica Neue', sans-serif;
+    'PingFang SC', 'Microsoft YaHei', 'Source Han Sans SC', 'Source Han Sans',
+    -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  --font-display:
+    'LXGW WenKai', 'LXGW WenKai Screen', 'Source Han Serif SC',
+    'Songti SC', 'STSong', serif;
+  --font-numeric:
+    var(--font-numeric-loaded), 'Source Serif 4', 'Source Serif Pro', ui-serif,
+    'Iowan Old Style', 'Times New Roman', Times, serif;
+  --font-number: var(--font-numeric); /* legacy alias */
+
+  /* ── Type scale (semantic, 1.25-ish ratio) ─────────── */
+  --text-display: 36px;  --leading-display: 44px;
+  --text-h1:      28px;  --leading-h1:      36px;
+  --text-h2:      20px;  --leading-h2:      28px;
+  --text-h3:      16px;  --leading-h3:      24px;
+  --text-body:    14px;  --leading-body:    22px;
+  --text-meta:    13px;  --leading-meta:    20px;
+  --text-fine:    11px;  --leading-fine:    16px;
+
+  /* ── Color · Paper neutrals (OKLCH 偏赭/米黄, c≈0.008–0.012) ── */
+  --color-paper-base:  oklch(0.985 0.008 80);
+  --color-paper-card:  oklch(0.998 0.004 80);
+  --color-paper-soft:  oklch(0.972 0.010 80);
+  --color-paper-edge:  oklch(0.930 0.012 80);
+  --color-paper-rule:  oklch(0.880 0.014 80);
+  --color-paper-stamp: oklch(0.180 0.012 80);
+
+  /* ── Color · Ink scale ────────────────────────────── */
+  --color-ink-1:     oklch(0.220 0.012 80); /* 主文 */
+  --color-ink-2:     oklch(0.420 0.012 80); /* 二级 */
+  --color-ink-3:     oklch(0.580 0.012 80); /* 三级 / meta */
+  --color-ink-mute:  oklch(0.720 0.010 80); /* hint */
+  --color-ink-faint: oklch(0.835 0.008 80); /* 极淡 / disabled */
+
+  /* ── Color · Brand types (语义骨架, 不可改) ──────── */
+  --color-type-dialogue:        oklch(0.620 0.180 250); /* 学问蓝 */
+  --color-type-dialogue-bg:     oklch(0.965 0.022 250);
+  --color-type-dialogue-deep:   oklch(0.500 0.180 250);
+  --color-type-dialogue-edge:   oklch(0.820 0.080 250);
+
+  --color-type-debate:          oklch(0.575 0.200 25);  /* 辩论红 */
+  --color-type-debate-bg:       oklch(0.965 0.025 25);
+  --color-type-debate-deep:     oklch(0.485 0.200 25);
+  --color-type-debate-edge:     oklch(0.800 0.090 25);
+
+  --color-type-discussion:      oklch(0.680 0.140 220); /* 讨论青 */
+  --color-type-discussion-bg:   oklch(0.965 0.022 220);
+  --color-type-discussion-deep: oklch(0.560 0.150 220);
+  --color-type-discussion-edge: oklch(0.835 0.075 220);
+
+  /* ── Color · Functional accents (rare) ────────────── */
+  --color-launch:      oklch(0.640 0.160 145); /* 启动绿 仅"启动" */
+  --color-launch-bg:   oklch(0.960 0.025 145);
+  --color-launch-deep: oklch(0.530 0.160 145);
+
+  --color-warn:        oklch(0.620 0.140 70);
+  --color-warn-bg:     oklch(0.962 0.030 70);
+  --color-warn-edge:   oklch(0.825 0.060 70);
+
+  /* ──────────────────────────────────────────────────────
+     Backwards-compat aliases — 现有组件还在用这些名字
+     Phase B/C 重写时清理; 别名不在 @theme inline 暴露层
+     ────────────────────────────────────────────────────── */
+  --color-primary:        var(--color-type-dialogue);
+  --color-primary-bg:     var(--color-type-dialogue-bg);
+  --color-primary-dark:   var(--color-type-dialogue-deep);
+  --color-primary-border: var(--color-type-dialogue-edge);
+
+  --color-debate:      var(--color-type-debate);
+  --color-debate-bg:   var(--color-type-debate-bg);
+  --color-debate-dark: var(--color-type-debate-deep);
+  --color-debate-soft: var(--color-type-debate-edge);
+
+  --color-discussion:      var(--color-type-discussion);
+  --color-discussion-bg:   var(--color-type-discussion-bg);
+  --color-discussion-dark: var(--color-type-discussion-deep);
+  --color-discussion-soft: var(--color-type-discussion-edge);
+
+  --color-success:      var(--color-launch);
+  --color-success-bg:   var(--color-launch-bg);
+  --color-success-dark: var(--color-launch-deep);
+
+  --color-prep:    oklch(0.520 0.140 70);
+  --color-prep-bg: oklch(0.960 0.030 70);
+  --color-mine:    oklch(0.500 0.140 290);
+  --color-mine-bg: oklch(0.960 0.020 290);
+
+  --color-text:   var(--color-ink-1);
+  --color-text-2: var(--color-ink-2);
+  --color-text-3: var(--color-ink-3);
+  --color-text-4: var(--color-ink-mute);
+  --color-text-5: var(--color-ink-faint);
+  --color-text-6: oklch(0.78 0.008 80);
+  --color-text-7: oklch(0.85 0.006 80);
+
+  --color-bg:      var(--color-paper-base);
+  --color-bg-card: var(--color-paper-card);
+  --color-bg-soft: var(--color-paper-soft);
+  --color-bg-gray: var(--color-paper-soft);
+
+  --color-border:       var(--color-paper-edge);
+  --color-border-soft:  oklch(0.955 0.010 80);
+  --color-border-input: oklch(0.890 0.012 80);
+  --color-warn-border:  var(--color-warn-edge);
+
+  /* ── Spacing · 4pt semantic (additive, 不动 Tailwind --spacing) ── */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  12px;
+  --space-lg:  16px;
+  --space-xl:  24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+  --space-4xl: 64px;
+  --space-5xl: 96px;
+
+  /* ── Radii · 减幅, 纸不需要大圆角 ─────────────── */
+  --radius-xs:   2px;
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   8px;
+  --radius-xl:   12px;
+  --radius-pill: 999px;
+
+  /* ── Shadows · 纸张影, 不浮起 ─────────────────── */
+  --shadow-sm:    0 1px 0 0 var(--color-paper-edge);
+  --shadow-md:    0 1px 2px -1px oklch(0.65 0.015 80 / 0.30);
+  --shadow-card:  0 1px 0 0 var(--color-paper-edge);
+  --shadow-pop:   0 4px 14px -6px oklch(0.55 0.020 80 / 0.18);
+  --shadow-modal: 0 24px 48px -12px oklch(0.30 0.012 80 / 0.20);
+
+  /* ── Layout ────────────────────────────────────── */
+  --topbar-height:  88px;
+  --container-wide: 1180px;
+  --container-list:  920px;
+  --container-form:  760px;
+
+  /* ── Misc ──────────────────────────────────────── */
+  --mask-primary: oklch(0.200 0.012 80 / 0.50);
 }
 
-/* 只把业务 token 暴露给 Tailwind utility，不接管默认 theme */
+/* ============================================================
+   暴露给 Tailwind utility (selective, additive)
+   不覆盖 Tailwind v4 默认 theme
+   ============================================================ */
 @theme inline {
-  --color-primary:        var(--color-primary);
-  --color-primary-dark:   var(--color-primary-dark);
-  --color-primary-bg:     var(--color-primary-bg);
-  --color-primary-border: var(--color-primary-border);
-  --color-debate:         var(--color-debate);
-  --color-debate-bg:      var(--color-debate-bg);
-  --color-discussion:     var(--color-discussion);
-  --color-discussion-bg:  var(--color-discussion-bg);
-  --color-success:        var(--color-success);
-  --color-prep:           var(--color-prep);
-  --color-prep-bg:        var(--color-prep-bg);
-  --color-mine:           var(--color-mine);
-  --color-mine-bg:        var(--color-mine-bg);
-  --color-text:           var(--color-text);
-  --color-text-3:         var(--color-text-3);
-  --color-text-4:         var(--color-text-4);
-  --color-text-5:         var(--color-text-5);
-  --color-bg:             var(--color-bg);
-  --color-bg-card:        var(--color-bg-card);
-  --color-border:         var(--color-border);
-  --color-border-soft:    var(--color-border-soft);
+  /* Fonts → font-sans / font-display / font-numeric */
+  --font-sans:    var(--font-sans);
+  --font-display: var(--font-display);
+  --font-numeric: var(--font-numeric);
 
+  /* Brand types — 完整三组（4 阶 × 3 类型） */
+  --color-type-dialogue:        var(--color-type-dialogue);
+  --color-type-dialogue-bg:     var(--color-type-dialogue-bg);
+  --color-type-dialogue-deep:   var(--color-type-dialogue-deep);
+  --color-type-dialogue-edge:   var(--color-type-dialogue-edge);
+  --color-type-debate:          var(--color-type-debate);
+  --color-type-debate-bg:       var(--color-type-debate-bg);
+  --color-type-debate-deep:     var(--color-type-debate-deep);
+  --color-type-debate-edge:     var(--color-type-debate-edge);
+  --color-type-discussion:      var(--color-type-discussion);
+  --color-type-discussion-bg:   var(--color-type-discussion-bg);
+  --color-type-discussion-deep: var(--color-type-discussion-deep);
+  --color-type-discussion-edge: var(--color-type-discussion-edge);
+
+  /* Paper neutrals */
+  --color-paper-base:  var(--color-paper-base);
+  --color-paper-card:  var(--color-paper-card);
+  --color-paper-soft:  var(--color-paper-soft);
+  --color-paper-edge:  var(--color-paper-edge);
+  --color-paper-rule:  var(--color-paper-rule);
+  --color-paper-stamp: var(--color-paper-stamp);
+
+  /* Ink scale */
+  --color-ink-1:     var(--color-ink-1);
+  --color-ink-2:     var(--color-ink-2);
+  --color-ink-3:     var(--color-ink-3);
+  --color-ink-mute:  var(--color-ink-mute);
+  --color-ink-faint: var(--color-ink-faint);
+
+  /* Functional accents */
+  --color-launch:      var(--color-launch);
+  --color-launch-bg:   var(--color-launch-bg);
+  --color-launch-deep: var(--color-launch-deep);
+  --color-warn:        var(--color-warn);
+  --color-warn-bg:     var(--color-warn-bg);
+
+  /* Legacy aliases — 让旧组件 bg-primary / text-text-3 还能用 */
+  --color-primary:         var(--color-primary);
+  --color-primary-dark:    var(--color-primary-dark);
+  --color-primary-bg:      var(--color-primary-bg);
+  --color-primary-border:  var(--color-primary-border);
+  --color-debate:          var(--color-debate);
+  --color-debate-bg:       var(--color-debate-bg);
+  --color-debate-soft:     var(--color-debate-soft);
+  --color-discussion:      var(--color-discussion);
+  --color-discussion-bg:   var(--color-discussion-bg);
+  --color-discussion-soft: var(--color-discussion-soft);
+  --color-success:         var(--color-success);
+  --color-success-bg:      var(--color-success-bg);
+  --color-prep:            var(--color-prep);
+  --color-prep-bg:         var(--color-prep-bg);
+  --color-mine:            var(--color-mine);
+  --color-mine-bg:         var(--color-mine-bg);
+  --color-text:            var(--color-text);
+  --color-text-2:          var(--color-text-2);
+  --color-text-3:          var(--color-text-3);
+  --color-text-4:          var(--color-text-4);
+  --color-text-5:          var(--color-text-5);
+  --color-text-6:          var(--color-text-6);
+  --color-text-7:          var(--color-text-7);
+  --color-bg:              var(--color-bg);
+  --color-bg-card:         var(--color-bg-card);
+  --color-bg-soft:         var(--color-bg-soft);
+  --color-border:          var(--color-border);
+  --color-border-soft:     var(--color-border-soft);
+
+  /* Project radii / shadows → rounded-pill / shadow-card / shadow-pop */
   --radius-md:    var(--radius-md);
   --radius-lg:    var(--radius-lg);
+  --radius-xl:    var(--radius-xl);
   --radius-pill:  var(--radius-pill);
-
   --shadow-md:    var(--shadow-md);
-
-  --font-sans:    var(--font-sans);
+  --shadow-card:  var(--shadow-card);
+  --shadow-pop:   var(--shadow-pop);
+  --shadow-modal: var(--shadow-modal);
 }
 
 /* =========================================================
-   Base / Reset
+   Base · Reset + body defaults
+   layered 在 base 内, utilities 击穿无忧
    ========================================================= */
-
 @layer base {
   *, *::before, *::after { box-sizing: border-box; }
   * { margin: 0; padding: 0; }
@@ -141,23 +264,62 @@
   html, body { height: 100%; }
   body {
     font-family: var(--font-sans);
-    font-size: 14px;
-    line-height: 1.5;
-    color: var(--color-text);
-    background: var(--color-bg);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+    color: var(--color-ink-1);
+    background: var(--color-paper-base);
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'kern' on, 'liga' on;
+    text-rendering: optimizeLegibility;
   }
 
-  a { color: inherit; text-decoration: none; }
-  button { font-family: inherit; cursor: pointer; border: none; background: none; }
-  input, textarea, select { font-family: inherit; }
+  a       { color: inherit; text-decoration: none; }
+  button  { font-family: inherit; cursor: pointer; border: 0; background: transparent; }
+  input, textarea, select { font-family: inherit; font-size: inherit; color: inherit; }
 
-  /* 禁暗黑模式默认 */
+  /* 禁暗黑模式 — 课堂/儿童阅读环境 */
   @media (prefers-color-scheme: dark) {
     :root { color-scheme: light; }
   }
+
+  /* 选区 · 学问蓝 */
+  ::selection {
+    background: var(--color-type-dialogue-bg);
+    color: var(--color-type-dialogue-deep);
+  }
 }
 
+/* =========================================================
+   Project utilities · OpenType + 章式 stamp
+   ========================================================= */
 @layer utilities {
-  .tnum { font-feature-settings: 'tnum'; }
+  /* OpenType */
+  .tnum { font-feature-settings: 'tnum' on, 'lnum' on; }
+  .pnum { font-feature-settings: 'pnum' on, 'onum' on; }
+  .smcp { font-feature-settings: 'smcp' on; letter-spacing: 0.04em; text-transform: lowercase; }
+
+  /* 字族 (Tailwind 也会自动从 @theme 生成 utility, 这里是显式备份/强化) */
+  .font-display { font-family: var(--font-display); }
+  .font-numeric {
+    font-family: var(--font-numeric);
+    font-feature-settings: 'tnum' on, 'lnum' on;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 章式版印 · 章节号黑底白字方形章 */
+  .stamp {
+    background: var(--color-paper-stamp);
+    color: var(--color-paper-base);
+    font-family: var(--font-numeric);
+    font-weight: 600;
+    font-feature-settings: 'lnum' on, 'tnum' on;
+    letter-spacing: 0.04em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* 投影可读 hint */
+  .proj-readable { font-size: max(var(--text-h3), 1em); }
 }

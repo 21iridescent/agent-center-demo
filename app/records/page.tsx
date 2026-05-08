@@ -31,7 +31,6 @@ export default function RecordsPage() {
     return () => { alive = false; };
   }, []);
 
-  // 远端 + fallback；远端 id 覆盖 fallback；按 createdAt 倒序
   const all = useMemo(() => {
     const remoteIds = new Set(remote.map(r => r.id));
     const merged: AppRecord[] = [
@@ -50,8 +49,8 @@ export default function RecordsPage() {
 
   const resultHint =
     filter === 'all'
-      ? `共 ${all.length} 条记录`
-      : `筛选结果 ${filtered.length} / ${all.length}`;
+      ? `共 ${all.length} 条`
+      : `${filtered.length} / ${all.length} 条`;
 
   function askDelete(r: AppRecord) {
     setPendingDelete(r);
@@ -89,45 +88,86 @@ export default function RecordsPage() {
   return (
     <>
       <Topbar crumb="我的记录" />
-      <main className="mx-auto w-full px-8 pt-6 pb-16" style={{ maxWidth: 'var(--container-list)' }}>
-        <h2 className="mb-3 flex items-center gap-2.5 text-[15px] font-semibold" style={{ color: 'var(--color-text)' }}>
-          <span className="h-3.5 w-[3px]" style={{ background: 'var(--color-primary)' }} />
-          所有记录
+      <main
+        className="mx-auto w-full px-10 pt-8 pb-16"
+        style={{ maxWidth: 'var(--container-list)' }}
+      >
+        {/* 章节版口 · stamp + display 标题 + 副标 */}
+        <header
+          className="mb-6 flex items-end gap-5 border-t pt-5"
+          style={{ borderColor: 'var(--color-paper-rule)' }}
+        >
           <span
-            className="rounded-full px-2 py-0.5 text-[11px] font-normal"
-            style={{ background: 'var(--color-border-soft)', color: 'var(--color-text-5)' }}
+            className="stamp h-10 w-10 shrink-0 text-[14px]"
+            style={{ borderRadius: 'var(--radius-xs)' }}
+            aria-hidden
           >
-            按类型筛选
+            REC
           </span>
-        </h2>
+          <div className="flex flex-1 items-baseline gap-4 min-w-0">
+            <h1
+              className="font-display text-[28px] font-medium leading-none tracking-[0.5px]"
+              style={{ color: 'var(--color-ink-1)' }}
+            >
+              所有记录
+            </h1>
+            <p
+              className="text-[14px] leading-snug truncate"
+              style={{ color: 'var(--color-ink-3)' }}
+            >
+              回看学生与 AI 的全部对话与产出
+            </p>
+          </div>
+          {!loaded && (
+            <span
+              className="font-numeric tnum text-[12px] shrink-0"
+              style={{ color: 'var(--color-ink-mute)' }}
+            >
+              拉取远端中…
+            </span>
+          )}
+        </header>
 
         <FilterChips current={filter} onChange={setFilter} resultHint={resultHint} />
 
         {filtered.length === 0 ? (
           <div
-            className="mt-4 rounded-xl border border-dashed px-5 py-20 text-center text-[14px]"
-            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-5)' }}
+            className="flex flex-col items-center justify-center gap-3 px-6 py-20 text-center"
+            style={{
+              background: 'var(--color-paper-soft)',
+              border: '1px solid var(--color-paper-edge)',
+              borderRadius: 'var(--radius-sm)',
+            }}
           >
-            <div className="mb-3 text-[32px]" style={{ color: 'var(--color-text-7)' }}>○</div>
-            <div>当前筛选下没有记录</div>
-            <div className="mt-2 text-[12px]" style={{ color: 'var(--color-text-6)' }}>
-              换个类型试试
+            <span
+              className="stamp h-10 w-10 text-[12px]"
+              style={{
+                borderRadius: 'var(--radius-xs)',
+                background: 'var(--color-paper-edge)',
+                color: 'var(--color-ink-mute)',
+              }}
+              aria-hidden
+            >
+              ø
+            </span>
+            <div
+              className="font-display text-[18px] font-medium"
+              style={{ color: 'var(--color-ink-2)' }}
+            >
+              当前筛选下没有记录
+            </div>
+            <div
+              className="text-[13px]"
+              style={{ color: 'var(--color-ink-3)' }}
+            >
+              换个类型试试 / 或者去备课页生成新内容
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-3">
             {filtered.map(r => (
               <RecordCard key={r.id} record={r} onDelete={askDelete} />
             ))}
-          </div>
-        )}
-
-        {!loaded && (
-          <div
-            className="mt-4 rounded-md border bg-white px-4 py-3 text-[12px]"
-            style={{ borderColor: 'var(--color-border-soft)', color: 'var(--color-text-5)' }}
-          >
-            正在拉取远端记录…（如未配置 KV，仅显示 12 条预置 fallback）
           </div>
         )}
       </main>

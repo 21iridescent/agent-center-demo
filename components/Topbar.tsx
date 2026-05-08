@@ -13,50 +13,73 @@ interface Props {
 export function Topbar({ crumb, showRecordsNav = true, right }: Props) {
   return (
     <header
-      className="sticky top-0 z-10 flex items-center gap-3 border-b bg-white px-8"
+      className="sticky top-0 z-10 flex items-center gap-7 border-b px-12"
       style={{
         height: 'var(--topbar-height)',
-        borderColor: 'var(--color-border)',
+        background: 'var(--color-paper-card)',
+        borderColor: 'var(--color-paper-rule)',
       }}
     >
+      {/* Brand · 章式印 + display 字 */}
+      <Link href="/" className="flex items-center gap-4 group">
+        <span
+          className="stamp h-12 w-12 text-[18px]"
+          style={{ borderRadius: 'var(--radius-sm)' }}
+          aria-hidden
+        >
+          AC
+        </span>
+        <span
+          className="font-display text-[28px] font-medium tracking-[0.3px] leading-none"
+          style={{ color: 'var(--color-ink-1)' }}
+        >
+          智能体中心
+        </span>
+      </Link>
+
       {crumb ? (
         <>
-          <Link
-            href="/"
-            className="rounded-md px-2.5 py-1 text-[14px] transition-colors hover:bg-[var(--color-primary-bg)] hover:text-[var(--color-primary)]"
-            style={{ color: 'var(--color-primary)' }}
+          <span
+            className="font-numeric text-[22px]"
+            style={{ color: 'var(--color-ink-faint)' }}
+            aria-hidden
           >
-            ← 智能体中心
-          </Link>
-          <span className="text-[12px]" style={{ color: 'var(--color-text-7)' }}>/</span>
-          <span className="text-[16px] font-semibold" style={{ color: 'var(--color-text)' }}>
+            /
+          </span>
+          <span
+            className="font-display text-[22px] font-medium leading-none"
+            style={{ color: 'var(--color-ink-2)' }}
+          >
             {crumb}
           </span>
         </>
       ) : (
-        <>
-          <span className="text-[17px] font-semibold" style={{ color: 'var(--color-primary)' }}>
-            智能体中心
-          </span>
-          {showRecordsNav && (
-            <Link
-              href="/records"
-              className="ml-2 rounded-md px-3 py-1.5 text-[13px] transition-colors hover:bg-[var(--color-primary-bg)] hover:text-[var(--color-primary)]"
-              style={{ color: 'var(--color-text-3)' }}
-            >
-              我的记录
-            </Link>
-          )}
-        </>
+        showRecordsNav && (
+          <Link
+            href="/records"
+            className="ml-4 text-[17px] transition-colors hover:underline underline-offset-[8px] decoration-1"
+            style={{ color: 'var(--color-ink-3)' }}
+          >
+            我的记录
+          </Link>
+        )
       )}
 
       {right ? (
         <div className="ml-auto flex items-center gap-3">{right}</div>
       ) : (
-        <div className="ml-auto flex items-center gap-2 text-[12px]" style={{ color: 'var(--color-text-3)' }}>
+        <div
+          className="ml-auto flex items-center gap-3 text-[15px]"
+          style={{ color: 'var(--color-ink-3)' }}
+        >
           <span
-            className="flex h-7 w-7 items-center justify-center rounded-full text-[12px] font-semibold"
-            style={{ background: 'var(--color-primary-bg)', color: 'var(--color-primary)' }}
+            className="font-numeric flex h-11 w-11 items-center justify-center text-[16px] font-semibold"
+            style={{
+              background: 'var(--color-paper-soft)',
+              color: 'var(--color-ink-2)',
+              borderRadius: 'var(--radius-sm)',
+            }}
+            aria-hidden
           >
             李
           </span>
