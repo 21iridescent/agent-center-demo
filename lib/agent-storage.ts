@@ -147,6 +147,67 @@ const SEED_AGENTS: Record<string, SavedAgent> = {
     createdAt: '2026-04-01T00:00:00.000Z',
     updatedAt: '2026-04-01T00:00:00.000Z',
   },
+  'seed-plastic-ban': {
+    id: 'seed-plastic-ban',
+    kind: 'debate',
+    config: {
+      name: '塑料袋该不该禁用',
+      topic: '一次性塑料袋是否应该禁用',
+      background:
+        '一次性塑料袋方便买菜、装东西，可它要在自然环境里几百年才会被分解，' +
+        '近海塑料垃圾年年增加。一些城市已经开始限塑、禁塑，超市改用纸袋或可重复使用的布袋。' +
+        '该不该把"禁用一次性塑料袋"作为一项严格规定，让每一户家庭都跟着调整购物习惯？',
+      subject: '科学',
+      grade: '六年级',
+      proSide: {
+        type: 'ai',
+        argument: '应该禁用：塑料降解极慢，污染海洋和食物链；早禁早保护环境，可重复使用的替代品已经成熟',
+        actorId: 'pro-ai',
+      },
+      conSide: {
+        type: 'human',
+        argument: '不该一刀切禁用：塑料袋便宜便利，禁用前要先解决替代品供给和回收，否则反而增加普通家庭负担',
+        actorId: 'con-student',
+      },
+      roundDurationSec: 120,
+      totalRounds: 3,
+      judgeTemplate: 'default',
+      bgAsset: 'stage-balanced',
+      thumbAsset: 'plastic-ocean',
+    },
+    createdAt: '2026-04-22T00:00:00.000Z',
+    updatedAt: '2026-04-22T00:00:00.000Z',
+  },
+  'seed-ai-homework': {
+    id: 'seed-ai-homework',
+    kind: 'debate',
+    config: {
+      name: 'AI 该不该帮写作业',
+      topic: '小学生该不该用 AI 帮忙写作业',
+      background:
+        'AI 工具能在几秒钟内写出一篇作文、解开一道数学题。' +
+        '有同学觉得这是"高效学习"，也有家长担心"孩子不再自己思考"。' +
+        '小学生在写作业时，到底应不应该让 AI 来帮忙？',
+      subject: '人工智能',
+      grade: '五年级',
+      proSide: {
+        type: 'ai',
+        argument: '可以用：把 AI 当随身辅导老师，遇到不会的能马上得到讲解，反而能学得更快、更愿意学',
+        actorId: 'pro-ai',
+      },
+      conSide: {
+        type: 'human',
+        argument: '不应该用：作业是练习思考的过程，AI 直接给答案会让自己的脑子越来越懒，慢慢就不会自己想了',
+        actorId: 'con-student',
+      },
+      roundDurationSec: 120,
+      totalRounds: 3,
+      judgeTemplate: 'default',
+      bgAsset: 'stage-balanced',
+    },
+    createdAt: '2026-04-25T00:00:00.000Z',
+    updatedAt: '2026-04-25T00:00:00.000Z',
+  },
 };
 
 export async function createAgent(input: {

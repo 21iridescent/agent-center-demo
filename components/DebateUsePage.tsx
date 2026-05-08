@@ -159,6 +159,8 @@ export function DebateUsePage({ agent }: Props) {
   const [saving, setSaving] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [judgeOpen, setJudgeOpen] = useState(false);
+  // 最近失败的 turn 序号；命中时禁用自动推进，转为手动重试
+  const [lastFailedTurn, setLastFailedTurn] = useState<number | null>(null);
   const speechPopupRef = useRef<HTMLDivElement>(null);
 
   // 流式发言时弹窗内容自动贴底，新文字总在视口
@@ -233,6 +235,7 @@ export function DebateUsePage({ agent }: Props) {
     if (currentSideKind === 'ai') {
       setPhase('ai-thinking');
       setAiPartial('');
+      setLastFailedTurn(null);
       try {
         const full = await streamFetch(
           '/api/debate-turn',
@@ -249,6 +252,7 @@ export function DebateUsePage({ agent }: Props) {
       } catch (e) {
         console.error(e);
         toast('AI 发言失败，请重试');
+        setLastFailedTurn(currentTurn); // 标记失败，禁用本轮自动推进，等待手动重试
         setPhase('idle');
         setAiPartial('');
       }
@@ -257,6 +261,24 @@ export function DebateUsePage({ agent }: Props) {
       setHumanInput('');
     }
   }
+
+  // AI 回合自动推进：phase=idle 且当前轮是 AI 时延迟 700ms 自动 advanceTurn
+  // - history.length === 0：进入页面的第一回合，等用户手动开场，避免一打开就播
+  // - lastFailedTurn === currentTurn：本轮刚失败，转手动重试，避免 LLM 故障死循环
+  useEffect(() => {
+    if (isAllTurnsDone) return;
+    if (phase !== 'idle') return;
+    if (currentSideKind !== 'ai') return;
+    if (history.length === 0) return;
+    if (lastFailedTurn === currentTurn) return;
+    const t = setTimeout(() => {
+      advanceTurn();
+    }, 700);
+    return () => clearTimeout(t);
+    // advanceTurn 依赖 effectiveAgent / history / currentSide / currentRound 等，
+    // 这些值变更时本轮重新调度即可，列在 deps 会引入函数引用抖动
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, isAllTurnsDone, currentSideKind, currentTurn, lastFailedTurn, history.length]);
 
   function submitHuman() {
     const text = humanInput.trim();
@@ -361,10 +383,6 @@ export function DebateUsePage({ agent }: Props) {
   const conSpeaking =
     (phase === 'ai-thinking' || phase === 'human-input') && currentSide === 'con';
 
-  // 取每方最新一条历史，作为非直播时的 fighter 气泡内容
-  const lastProTurn = [...history].reverse().find(h => h.side === 'pro');
-  const lastConTurn = [...history].reverse().find(h => h.side === 'con');
-
   const judgeMeta = JUDGE_TEMPLATES[judgeTemplate];
 
   function resetOverrides() {
@@ -402,6 +420,10 @@ export function DebateUsePage({ agent }: Props) {
           50% {
             box-shadow: 0 0 18px 4px oklch(0.575 0.200 25 / 0.45);
           }
+        }
+        @keyframes turn-pulse {
+          0%, 100% { opacity: 0.4; transform: scale(0.85); }
+          50%      { opacity: 1;   transform: scale(1.05); }
         }
         @keyframes bubbleSlideIn {
           from {
@@ -582,11 +604,11 @@ export function DebateUsePage({ agent }: Props) {
 
         {/* 辩题条 */}
         <div
-          className="mb-4 flex items-center gap-4 rounded-xl border bg-white p-4"
+          className="mb-3 flex items-center gap-3 rounded-xl border bg-white px-4 py-2.5"
           style={{ borderColor: 'var(--color-border)' }}
         >
           {thumb && (
-            <div className="shrink-0 overflow-hidden rounded-md" style={{ width: 96, height: 54 }}>
+            <div className="shrink-0 overflow-hidden rounded-md" style={{ width: 64, height: 36 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={thumb.src} alt={thumb.label} width={640} height={360} className="h-full w-full object-cover" />
             </div>
@@ -642,127 +664,237 @@ export function DebateUsePage({ agent }: Props) {
           </div>
         </div>
 
-        {/* 擂台 */}
-        <div
-          className={`arena-side-glow mb-4 grid items-start gap-6 rounded-xl border bg-white p-6 ${
-            proSpeaking ? 'pro-glow' : conSpeaking ? 'con-glow' : ''
-          }`}
-          style={{ borderColor: 'var(--color-border)', gridTemplateColumns: '1fr 120px 1fr' }}
-        >
-          <Fighter
-            sideLabel="正方"
-            kindLabel={baseProSide?.type === 'human' ? '学生' : 'AI'}
-            roleUrl={proActor?.role}
-            argument={proArgument}
-            argumentEdited={overrideProArg !== null}
-            color="var(--color-primary)"
-            colorBg="var(--color-primary-bg)"
-            colorEdge="var(--color-primary-border)"
-            speaking={proSpeaking}
-            bubbleSide="pro"
-            bubble={
-              proSpeaking && phase === 'human-input'
-                ? { text: '正在等你输入…', kind: 'live-input' }
-                : lastProTurn
-                ? { text: lastProTurn.text, kind: 'history' }
-                : null
-            }
-          />
-
-          <div className="flex items-center justify-center pt-32">
-            <div
-              className={`vs-charge flex h-20 w-20 items-center justify-center rounded-full text-[18px] font-bold ${
-                phase === 'ai-thinking' ? 'switching' : ''
-              }`}
-              style={{
-                border: '3px dashed var(--color-debate)',
-                color: 'var(--color-debate)',
-                background: 'var(--color-bg-card)',
-              }}
-              title="对抗中"
-            >
-              VS
-            </div>
-          </div>
-
-          <Fighter
-            sideLabel="反方"
-            kindLabel={baseConSide?.type === 'human' ? '学生' : 'AI'}
-            roleUrl={conActor?.role}
-            argument={conArgument}
-            argumentEdited={overrideConArg !== null}
-            color="var(--color-debate)"
-            colorBg="var(--color-debate-bg)"
-            colorEdge="var(--color-debate-soft)"
-            speaking={conSpeaking}
-            bubbleSide="con"
-            bubble={
-              conSpeaking && phase === 'human-input'
-                ? { text: '正在等你输入…', kind: 'live-input' }
-                : lastConTurn
-                ? { text: lastConTurn.text, kind: 'history' }
-                : null
-            }
-          />
-        </div>
-
-        {/* 当前回合控制（精简：仅做"动作触发"，发言展示已下放到 fighter 气泡） */}
-        <div className="mb-4">
-          {!isAllTurnsDone && phase === 'idle' && (
-            <div
-              className="rounded-xl border bg-white p-4"
-              style={{ borderColor: 'var(--color-border)' }}
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
-                  <div className="text-[13px]" style={{ color: 'var(--color-text-3)' }}>
-                    {history.length === 0 ? '准备开始' : '上一轮完成'} · 即将进入第 {currentRound} 轮 ·
+        {/* 回合控制条：放在擂台之上，sticky 跟随滚动，避免按钮落到屏幕下方
+            - AI 回合：自动推进（700ms 后），仅显示状态提示，不再要求用户点按
+            - AI 回合发言失败：降级为"重试 AI 发言"手动按钮
+            - 人类回合：显示"由我代为发言"按钮，由教师主动触发 */}
+        {!isAllTurnsDone && phase === 'idle' && (
+          <div
+            className="mb-4 sticky z-20 rounded-xl border p-3.5 backdrop-blur"
+            style={{
+              top: 'var(--topbar-height)',
+              borderColor: 'var(--color-border)',
+              background: 'oklch(1 0 0 / 0.92)',
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex-1 text-[13px]" style={{ color: 'var(--color-text-3)' }}>
+                {history.length === 0 ? '准备开始' : '上一轮完成'} · 即将进入第 {currentRound} 轮 ·
+                <span
+                  className="ml-1 font-semibold"
+                  style={{ color: currentSide === 'pro' ? 'var(--color-primary)' : 'var(--color-debate)' }}
+                >
+                  {currentSide === 'pro' ? '正方' : '反方'}
+                </span>
+                （
+                {currentSideKind === 'ai'
+                  ? history.length === 0
+                    ? '需要点击开始'
+                    : 'AI 自动发言'
+                  : '需要人类输入'}
+                ）
+              </div>
+              {currentSideKind === 'ai' ? (
+                lastFailedTurn === currentTurn ? (
+                  <button
+                    onClick={advanceTurn}
+                    className="rounded-md px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:opacity-90"
+                    style={{ background: 'var(--color-debate)' }}
+                  >
+                    重试 AI 发言
+                  </button>
+                ) : history.length === 0 ? (
+                  <button
+                    onClick={advanceTurn}
+                    className="rounded-md px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:opacity-90"
+                    style={{ background: 'var(--color-debate)' }}
+                  >
+                    点击进行 AI 发言
+                  </button>
+                ) : (
+                  <span
+                    className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-[12px] font-medium"
+                    style={{
+                      background: currentSide === 'pro' ? 'var(--color-primary-bg)' : 'var(--color-debate-bg)',
+                      color: currentSide === 'pro' ? 'var(--color-primary)' : 'var(--color-debate)',
+                    }}
+                    aria-live="polite"
+                  >
                     <span
-                      className="ml-1 font-semibold"
-                      style={{ color: currentSide === 'pro' ? 'var(--color-primary)' : 'var(--color-debate)' }}
-                    >
-                      {currentSide === 'pro' ? '正方' : '反方'}
-                    </span>
-                    （{currentSideKind === 'ai' ? 'AI 自动发言' : '需要人类输入'}）
-                  </div>
-                </div>
+                      className="block h-2 w-2 rounded-full"
+                      style={{
+                        background: currentSide === 'pro' ? 'var(--color-primary)' : 'var(--color-debate)',
+                        animation: 'turn-pulse 1.1s ease-in-out infinite',
+                      }}
+                    />
+                    AI 即将发言…
+                  </span>
+                )
+              ) : (
                 <button
                   onClick={advanceTurn}
                   className="rounded-md px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:opacity-90"
                   style={{ background: 'var(--color-debate)' }}
                 >
-                  {currentSideKind === 'ai' ? '让 AI 开始发言' : '由我代为发言'}
+                  由我代为发言
                 </button>
-              </div>
+              )}
             </div>
-          )}
+          </div>
+        )}
 
-          {phase === 'human-input' && (
-            <div
-              className="rounded-xl border bg-white p-5"
-              style={{ borderColor: 'var(--color-border)' }}
-            >
-              <div className="mb-2 text-[12px]" style={{ color: 'var(--color-text-4)' }}>
-                第 {currentRound} 轮 · {currentSide === 'pro' ? '正方' : '反方'} · 请输入发言（可代学生输入）
-              </div>
-              <textarea
-                value={humanInput}
-                onChange={e => setHumanInput(e.target.value)}
-                rows={4}
-                className="w-full rounded-md border px-3 py-2 text-[13px] outline-none focus:border-[var(--color-primary)]"
-                style={{ borderColor: 'var(--color-border-input)' }}
-                placeholder="一段话写明立场和主要论据，80-150 字"
-              />
+        {/* 主舞台：phase=human-input 切换为「专注输入面板」（上 prev AI 发言 + 下 textarea，整体居中）；其它阶段显示擂台 */}
+        {phase === 'human-input' ? (
+          <div
+            className="mb-3 mx-auto w-full max-w-[680px] rounded-xl border bg-white p-5 shadow-sm"
+            style={{ borderColor: 'var(--color-debate-soft)' }}
+          >
+            <div className="mb-3 flex items-center gap-2 text-[13px]">
+              <span
+                className="rounded-full px-2.5 py-0.5 text-[12px] font-semibold"
+                style={{
+                  background: currentSide === 'pro' ? 'var(--color-primary-bg)' : 'var(--color-debate-bg)',
+                  color: currentSide === 'pro' ? 'var(--color-primary)' : 'var(--color-debate)',
+                }}
+              >
+                第 {currentRound} 轮 · {currentSide === 'pro' ? '正方' : '反方'}
+              </span>
+              <span style={{ color: 'var(--color-text-4)' }}>您正在代为发言</span>
+            </div>
+
+            {(() => {
+              const last = history[history.length - 1];
+              if (!last) return null;
+              const isPro = last.side === 'pro';
+              return (
+                <div
+                  className="mb-4 rounded-lg border px-4 py-3"
+                  style={{
+                    borderColor: isPro ? 'var(--color-primary-border)' : 'var(--color-debate-soft)',
+                    background: isPro ? 'var(--color-primary-bg)' : 'var(--color-debate-bg)',
+                  }}
+                >
+                  <div
+                    className="mb-1 text-[11px] font-semibold tracking-wide"
+                    style={{ color: isPro ? 'var(--color-primary)' : 'var(--color-debate)' }}
+                  >
+                    ↳ 第 {last.round} 轮 · {isPro ? '正方' : '反方'} 刚刚发言
+                  </div>
+                  <div
+                    className="max-h-[160px] overflow-y-auto whitespace-pre-wrap text-[13px] leading-relaxed"
+                    style={{ color: 'var(--color-text)' }}
+                  >
+                    {last.text}
+                  </div>
+                </div>
+              );
+            })()}
+
+            <textarea
+              value={humanInput}
+              onChange={e => setHumanInput(e.target.value)}
+              rows={5}
+              autoFocus
+              className="w-full rounded-md border px-3 py-2.5 text-[14px] leading-relaxed outline-none focus:border-[var(--color-debate)]"
+              style={{ borderColor: 'var(--color-border-input)' }}
+              placeholder="一段话写明立场和主要论据，80-150 字"
+            />
+            <div className="mt-3 flex justify-end">
               <button
                 onClick={submitHuman}
-                className="mt-2 rounded-md px-4 py-1.5 text-[13px] font-semibold text-white transition-colors hover:opacity-90"
+                className="rounded-md px-5 py-2 text-[13px] font-semibold text-white transition-colors hover:opacity-90"
                 style={{ background: 'var(--color-debate)' }}
               >
                 提交发言
               </button>
             </div>
-          )}
+          </div>
+        ) : (
+          <div
+            className={`arena-side-glow mb-3 grid items-start gap-x-4 gap-y-3 rounded-xl border bg-white p-4 ${
+              proSpeaking ? 'pro-glow' : conSpeaking ? 'con-glow' : ''
+            }`}
+            style={{ borderColor: 'var(--color-border)', gridTemplateColumns: '1fr 96px 1fr' }}
+          >
+            <Fighter
+              sideLabel="正方"
+              kindLabel={baseProSide?.type === 'human' ? '学生' : 'AI'}
+              roleUrl={proActor?.role}
+              argument={proArgument}
+              argumentEdited={overrideProArg !== null}
+              color="var(--color-primary)"
+              colorBg="var(--color-primary-bg)"
+              colorEdge="var(--color-primary-border)"
+              speaking={proSpeaking}
+              bubbleSide="pro"
+              bubble={null}
+            />
 
+            <div className="flex items-center justify-center pt-20">
+              <div
+                className={`vs-charge flex h-14 w-14 items-center justify-center rounded-full text-[15px] font-bold ${
+                  phase === 'ai-thinking' ? 'switching' : ''
+                }`}
+                style={{
+                  border: '3px dashed var(--color-debate)',
+                  color: 'var(--color-debate)',
+                  background: 'var(--color-bg-card)',
+                }}
+                title="对抗中"
+              >
+                VS
+              </div>
+            </div>
+
+            <Fighter
+              sideLabel="反方"
+              kindLabel={baseConSide?.type === 'human' ? '学生' : 'AI'}
+              roleUrl={conActor?.role}
+              argument={conArgument}
+              argumentEdited={overrideConArg !== null}
+              color="var(--color-debate)"
+              colorBg="var(--color-debate-bg)"
+              colorEdge="var(--color-debate-soft)"
+              speaking={conSpeaking}
+              bubbleSide="con"
+              bubble={null}
+            />
+
+            {/* 最近发言：居中跨擂台三栏；隐含规则——history 为空时不渲染（首回合不占空间） */}
+            {(() => {
+              const last = history[history.length - 1];
+              if (!last) return null;
+              const isPro = last.side === 'pro';
+              return (
+                <div className="col-span-3 mx-auto mt-1 w-full max-w-[640px]">
+                  <div
+                    className="rounded-lg border px-4 py-2.5 text-left shadow-sm"
+                    style={{
+                      borderColor: isPro ? 'var(--color-primary-border)' : 'var(--color-debate-soft)',
+                      background: isPro ? 'var(--color-primary-bg)' : 'var(--color-debate-bg)',
+                    }}
+                  >
+                    <div
+                      className="mb-1 text-[11px] font-semibold tracking-wide"
+                      style={{ color: isPro ? 'var(--color-primary)' : 'var(--color-debate)' }}
+                    >
+                      ↳ 第 {last.round} 轮 · {isPro ? '正方' : '反方'} 最近发言
+                    </div>
+                    <div
+                      className="max-h-[140px] overflow-y-auto whitespace-pre-wrap text-[13px] leading-relaxed"
+                      style={{ color: 'var(--color-text)' }}
+                    >
+                      {last.text}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* 当前回合控制：idle 上移到擂台之上 sticky；human-input 已替换主舞台为专注面板；这里只承载 全部完成 / 已评判 两态 */}
+        <div className="mb-4">
           {isAllTurnsDone && phase === 'idle' && !judgeText && (
             <div
               className="rounded-xl border bg-white p-5"
@@ -1781,8 +1913,8 @@ function Fighter({
           className={`overflow-hidden rounded-lg ${pulseClass}`}
           style={{
             width: '100%',
-            maxWidth: 280,
-            aspectRatio: '2 / 3',
+            maxWidth: 200,
+            aspectRatio: '3 / 4',
             background: colorBg,
             border: `${speaking ? 3 : 2}px solid ${speaking ? color : colorEdge}`,
             transition: 'all 0.2s',
@@ -1803,8 +1935,8 @@ function Fighter({
           className={`flex items-center justify-center rounded-lg text-[36px] font-bold ${pulseClass}`}
           style={{
             width: '100%',
-            maxWidth: 280,
-            aspectRatio: '2 / 3',
+            maxWidth: 200,
+            aspectRatio: '3 / 4',
             background: colorBg,
             color,
             border: `2px dashed ${color}`,

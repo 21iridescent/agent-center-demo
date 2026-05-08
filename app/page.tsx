@@ -117,6 +117,28 @@ const INITIAL_AGENTS: AgentSeed[] = [
     editHref: '/create',
   },
   {
+    id: 'seed-plastic-ban',
+    type: 'debate',
+    avatar: '塑',
+    name: '塑料袋该不该禁用',
+    subject: '科学',
+    grade: '六年级',
+    lastUsed: '4 天前',
+    launchHref: '/use/debate/seed-plastic-ban',
+    editHref: '/create',
+  },
+  {
+    id: 'seed-ai-homework',
+    type: 'debate',
+    avatar: '业',
+    name: 'AI 该不该帮写作业',
+    subject: '人工智能',
+    grade: '五年级',
+    lastUsed: '2 天前',
+    launchHref: '/use/debate/seed-ai-homework',
+    editHref: '/create',
+  },
+  {
     id: 'a4',
     type: 'discuss',
     avatar: '磁',
@@ -354,13 +376,6 @@ export default function Home() {
                 >
                   查看全部 →
                 </button>
-                <Link
-                  href="/create"
-                  className="text-[13px] transition-colors hover:underline"
-                  style={{ color: 'var(--color-type-dialogue-deep)' }}
-                >
-                  ＋ 新建
-                </Link>
                 <button
                   onClick={() => setManageMode(true)}
                   className="h-7 rounded-full border bg-white px-4 text-[12px] transition-colors hover:[border-color:var(--color-type-dialogue)] hover:[color:var(--color-type-dialogue)]"
@@ -371,42 +386,30 @@ export default function Home() {
                 >
                   管理
                 </button>
+                <Link
+                  href="/create"
+                  className="font-display group flex h-8 items-center gap-1.5 px-4 text-[13px] font-medium text-white transition-all hover:translate-x-[1px]"
+                  style={{
+                    background: 'var(--color-paper-stamp)',
+                    borderRadius: 'var(--radius-sm)',
+                    letterSpacing: '0.3px',
+                  }}
+                  title="AI 创建：描述一句，自动判断类型并生成草稿"
+                >
+                  <span
+                    aria-hidden
+                    className="text-[10px]"
+                    style={{ color: 'var(--color-paper-base)', opacity: 0.55 }}
+                  >
+                    NEW
+                  </span>
+                  <span aria-hidden style={{ opacity: 0.7 }}>▸</span>
+                  AI 创建
+                </Link>
               </>
             )
           }
         >
-          {!manageMode && (
-            <div className="mb-4 flex flex-wrap items-center gap-3">
-              <Link
-                href="/create"
-                className="inline-flex h-9 items-center gap-1.5 rounded-full px-5 text-[13px] font-semibold text-white transition-colors hover:opacity-90"
-                style={{ background: 'var(--color-primary)' }}
-              >
-                <span className="text-[15px] leading-none">＋</span>
-                AI 创建
-              </Link>
-              <span className="text-[12px]" style={{ color: 'var(--color-text-5)' }}>
-                或选模板
-              </span>
-              {QUICK_NEW.map(q => (
-                <Link
-                  key={q.type}
-                  href={q.href}
-                  className="flex h-7 items-center gap-1.5 rounded-full border bg-white px-4 text-[12px] font-medium transition-colors hover:[border-color:var(--color-primary)]"
-                  style={{
-                    color: 'var(--color-text-3)',
-                    borderColor: 'var(--color-border)',
-                  }}
-                >
-                  <span
-                    className="h-1.5 w-1.5 rounded-full"
-                    style={{ background: TYPE_DOT_COLOR[q.type] }}
-                  />
-                  {q.label}
-                </Link>
-              ))}
-            </div>
-          )}
 
           <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
             {agents.map(a => (
