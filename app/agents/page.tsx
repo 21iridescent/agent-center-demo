@@ -124,6 +124,26 @@ function AgentsPageInner() {
               </span>
             )}
           </div>
+          <Link
+            href="/create"
+            className="font-display group flex h-8 shrink-0 items-center gap-1.5 px-4 text-[13px] font-medium text-white transition-all hover:translate-x-[1px]"
+            style={{
+              background: 'var(--color-paper-stamp)',
+              borderRadius: 'var(--radius-sm)',
+              letterSpacing: '0.3px',
+            }}
+            title="AI 创建：描述一句，自动判断类型并生成草稿"
+          >
+            <span
+              aria-hidden
+              className="text-[10px]"
+              style={{ color: 'var(--color-paper-base)', opacity: 0.55 }}
+            >
+              NEW
+            </span>
+            <span aria-hidden style={{ opacity: 0.7 }}>▸</span>
+            AI 创建
+          </Link>
         </header>
 
         <AgentFilters
@@ -158,6 +178,19 @@ function AgentsPageInner() {
                 onDelete={() => { /* /agents 是只读检索页，不开 manage */ }}
               />
             ))}
+            {/* 网格末尾的"新建"占位卡 —— 与首页 ② 同款 dashed 卡 */}
+            <Link
+              href="/create"
+              className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed bg-transparent transition-colors hover:bg-[var(--color-primary-bg)] hover:[border-color:var(--color-primary)]"
+              style={{
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text-5)',
+                minHeight: 168,
+              }}
+            >
+              <span className="text-[22px] leading-none">＋</span>
+              <span className="text-[13px]">AI 对话新建</span>
+            </Link>
           </div>
         ) : (
           loaded && (
