@@ -97,6 +97,7 @@ const INITIAL_AGENTS: AgentSeed[] = [
     type: 'dialogue',
     avatar: '居',
     avatarUrl: getXuewenPersonaResolved({ personaId: 'curie' }).avatarUrl,
+    bgUrl: getXuewenPersonaResolved({ personaId: 'curie' }).roleUrl,
     name: '居里夫人',
     subject: '科学',
     grade: '五年级',
@@ -108,6 +109,7 @@ const INITIAL_AGENTS: AgentSeed[] = [
     type: 'dialogue',
     avatar: '达',
     avatarUrl: getXuewenPersonaResolved({ personaId: 'darwin' }).avatarUrl,
+    bgUrl: getXuewenPersonaResolved({ personaId: 'darwin' }).roleUrl,
     name: '达尔文',
     subject: '科学',
     grade: '六年级',
@@ -119,6 +121,7 @@ const INITIAL_AGENTS: AgentSeed[] = [
     type: 'dialogue',
     avatar: '像',
     avatarUrl: getXuewenPersonaResolved({ personaId: 'socrates' }).avatarUrl,
+    bgUrl: getXuewenPersonaResolved({ personaId: 'socrates' }).roleUrl,
     name: '机器视觉博士',
     subject: '人工智能',
     grade: '五年级',
@@ -227,6 +230,7 @@ function savedToSeed(a: SavedAgent): AgentSeed {
       name,
     });
     avatarUrl = resolved.avatarUrl;
+    bgUrl = resolved.roleUrl; // 全身像作整张卡 bg（被 paper-card 84% overlay 压淡）
   } else if (a.kind === 'debate') {
     // 只用 topic 封面（plastic-ocean 等），不退到通用 stage-balanced 擂台 —
     // 通用底图三张同图刷出来反而显得每个辩论都长一样。

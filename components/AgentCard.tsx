@@ -70,46 +70,34 @@ export function AgentCard({
 }: Props) {
   const t = TYPE_TOKENS[type];
 
+  // bgUrl 时 → 整张卡作为背景，不抽出 hero 条目（不变化卡片高度）。
+  // 用 paper-card 半透明 overlay 压住图，让正文 ink-1 文字仍然清晰可读。
+  // color-mix 走 srgb 把 paper-card 当 base + 84% alpha，剩 16% 让图透出来。
+  const cardBackground = bgUrl
+    ? `linear-gradient(
+         color-mix(in srgb, var(--color-paper-card) 84%, transparent),
+         color-mix(in srgb, var(--color-paper-card) 84%, transparent)
+       ), url(${bgUrl}) center/cover no-repeat`
+    : 'var(--color-paper-card)';
+
   return (
     <article
       className="group relative flex flex-col overflow-hidden border transition-all duration-200 hover:[box-shadow:var(--shadow-pop)]"
       style={{
         borderColor: 'var(--color-paper-edge)',
-        background: 'var(--color-paper-card)',
+        background: cardBackground,
         borderRadius: 'var(--radius-sm)',
         boxShadow: 'var(--shadow-sm)',
       }}
     >
-      {/* 顶部 hero 图（辩论话题封面 / 学问场景背景） — 有 bgUrl 才出现 */}
-      {bgUrl && (
-        <div
-          className="relative w-full overflow-hidden"
-          style={{ height: 96 }}
-          aria-hidden
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={bgUrl}
-            alt=""
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-          {/* 顶薄 paper rule 让图与卡身衔接 */}
-          <span
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-[1px]"
-            style={{ background: 'var(--color-paper-rule)' }}
-          />
-        </div>
-      )}
-
-      {/* 顶部 type 章式横条 — 4px 通栏（无 bgUrl 时是首要分类条；有 bgUrl 时是 hero 下的承接条） */}
+      {/* 顶部 type 章式横条 — 4px 通栏 */}
       <span
         aria-hidden
         className="block h-[4px] w-full"
         style={{ background: t.edge }}
       />
 
-      <div className="flex flex-col gap-3 px-5 pt-4 pb-3">
+      <div className="relative flex flex-col gap-3 px-5 pt-4 pb-3">
         {/* 头部 · 方形头像章 + 标题 + smcp type label */}
         <div className="flex items-start gap-3">
           <span
