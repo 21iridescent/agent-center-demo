@@ -233,6 +233,17 @@ export function DebateUsePage({ agent }: Props) {
     return full;
   }
 
+  /** 计算服务端可信化白名单 overrides —— 与 effectiveAgent 同源但只送可改字段 */
+  function buildOverrides(): Record<string, unknown> {
+    const o: Record<string, unknown> = {};
+    if (overrideTopic !== null) o.topic = overrideTopic;
+    if (overrideRounds !== null) o.totalRounds = overrideRounds;
+    if (overrideJudge !== null) o.judgeTemplate = overrideJudge;
+    if (overrideProArg !== null) o.proArg = overrideProArg;
+    if (overrideConArg !== null) o.conArg = overrideConArg;
+    return o;
+  }
+
   /** 推进当前 turn */
   async function advanceTurn() {
     if (isAllTurnsDone || phase !== 'idle') return;
@@ -243,7 +254,13 @@ export function DebateUsePage({ agent }: Props) {
       try {
         const full = await streamFetch(
           '/api/debate-turn',
-          { agent: effectiveAgent, side: currentSide, history, currentRound },
+          {
+            agentId: agent.id,
+            side: currentSide,
+            history,
+            currentRound,
+            overrides: buildOverrides(),
+          },
           chunk => setAiPartial(prev => prev + chunk),
         );
         setHistory(prev => [
@@ -308,7 +325,7 @@ export function DebateUsePage({ agent }: Props) {
     try {
       const full = await streamFetch(
         '/api/debate-judge',
-        { agent: effectiveAgent, history },
+        { agentId: agent.id, history, overrides: buildOverrides() },
         chunk => setJudgeText(prev => prev + chunk),
       );
       const m = full.match(/<score>([\d.]+)<\/score>/);

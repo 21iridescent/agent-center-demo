@@ -1,24 +1,30 @@
 import { streamText } from 'ai';
 import { deepseek, DEEPSEEK_MODEL, QUALITY_OPTS } from '@/lib/deepseek';
-import type { SavedAgent } from '@/lib/agent-storage';
-import type { DebateAgentConfig } from '@/lib/agent-schemas';
+import { getAgent } from '@/lib/agent-storage';
+import {
+  parseAgentConfig,
+  DebateOverrideSchema,
+  DebateHistorySchema,
+  type DebateAgentConfig,
+} from '@/lib/agent-schemas';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60; // reasoning 模型推理慢；textStreamResponse 会等 reasoning 走完才出 text
 
-interface DebateTurnEntry {
-  round: number;
-  side: 'pro' | 'con';
-  text: string;
-}
-
 interface RequestBody {
-  agent: SavedAgent;
-  history: DebateTurnEntry[];
+  agentId: string;
+  history: unknown; // DebateHistorySchema 校验
+  overrides?: unknown; // DebateOverrideSchema 校验（仅 topic / judgeTemplate 起作用）
 }
 
 /**
  * POST /api/debate-judge — 辩论结束后 AI 评委点评（流式）
+ *
+ * 接口形态：
+ *   body = { agentId, history, overrides? }
+ *
+ * 服务端 getAgent + Zod 校验，挡住客户端任意 config payload。
+ * overrides 共用 DebateOverrideSchema，但只 topic / judgeTemplate 在评审用得上。
  *
  * 关键约定：评委必须在最末尾输出 <score>X.X</score> 标签，
  * 前端用正则 /<score>([\d.]+)<\/score>/ 提取数字。
@@ -43,21 +49,48 @@ export async function POST(req: Request) {
   if (!process.env.OPENROUTER_API_KEY) {
     return new Response('OPENROUTER_API_KEY missing', { status: 500 });
   }
-  if (!body.agent || body.agent.kind !== 'debate') {
-    return new Response('agent (kind=debate) required', { status: 400 });
+  if (!body.agentId || typeof body.agentId !== 'string') {
+    return new Response('agentId required', { status: 400 });
   }
-  if (!Array.isArray(body.history) || body.history.length === 0) {
+  const historyParsed = DebateHistorySchema.safeParse(body.history);
+  if (!historyParsed.success || historyParsed.data.length === 0) {
     return new Response('history required', { status: 400 });
   }
+  const history = historyParsed.data;
 
-  const cfg = body.agent.config as Partial<DebateAgentConfig>;
-  const topic = cfg.topic ?? '（未指定辩题）';
-  const grade = cfg.grade ?? '一年级';
-  const judgeTemplate = cfg.judgeTemplate ?? 'default';
+  const overridesParsed = body.overrides
+    ? DebateOverrideSchema.safeParse(body.overrides)
+    : { success: true as const, data: {} as Record<string, never> };
+  if (!overridesParsed.success) {
+    return new Response('overrides invalid', { status: 400 });
+  }
+  const overrides = overridesParsed.data;
+
+  const agent = await getAgent(body.agentId);
+  if (!agent) {
+    return new Response('agent not found', { status: 404 });
+  }
+  if (agent.kind !== 'debate') {
+    return new Response('agent kind mismatch', { status: 400 });
+  }
+  const validated = parseAgentConfig('debate', agent.config);
+  if (!validated.ok || validated.data.kind !== 'debate') {
+    console.error(
+      'debate-judge: agent config invalid',
+      body.agentId,
+      validated.ok ? 'kind mismatch' : validated.error,
+    );
+    return new Response('agent config invalid', { status: 422 });
+  }
+  const baseCfg = validated.data.config;
+
+  const topic = overrides.topic ?? baseCfg.topic;
+  const judgeTemplate = overrides.judgeTemplate ?? baseCfg.judgeTemplate ?? 'default';
+  const grade = baseCfg.grade;
   const styleDesc = JUDGE_STYLE[judgeTemplate];
 
   // 把 history 拼成可读的辩论实录
-  const transcript = body.history
+  const transcript = history
     .map(h => `第 ${h.round} 轮 · ${h.side === 'pro' ? '正方' : '反方'}：${h.text}`)
     .join('\n\n');
 

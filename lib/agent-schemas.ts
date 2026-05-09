@@ -198,6 +198,38 @@ export type DiscussionAgentConfig = z.infer<typeof DiscussionAgentSchema>;
    通用
    ═══════════════════════════════════════════════════════════════ */
 
+/* ═══════════════════════════════════════════════════════════════
+   辩论运行时可信化校验 schema
+   —— 老师在使用页可改 topic/rounds/judge/args（"对方变量"覆盖），
+      服务端只信白名单字段，且每个字段走 Zod 校验
+   ═══════════════════════════════════════════════════════════════ */
+
+export const DebateOverrideSchema = z
+  .object({
+    topic: z.string().min(1).max(200).optional(),
+    totalRounds: z
+      .union([z.literal(2), z.literal(3), z.literal(4), z.literal(5)])
+      .optional(),
+    judgeTemplate: z
+      .enum(['default', 'strict', 'encouraging', 'neutral'])
+      .optional(),
+    proArg: z.string().min(10).max(800).optional(),
+    conArg: z.string().min(10).max(800).optional(),
+  })
+  .strict();
+export type DebateOverride = z.infer<typeof DebateOverrideSchema>;
+
+/** 辩论 history 条目：单次发言 */
+export const DebateTurnEntrySchema = z.object({
+  round: z.number().int().min(1).max(10),
+  side: z.enum(['pro', 'con']),
+  text: z.string().min(1).max(2000),
+});
+export type DebateTurnEntry = z.infer<typeof DebateTurnEntrySchema>;
+
+/** 辩论 history：bounded array，挡住客户端撑 token */
+export const DebateHistorySchema = z.array(DebateTurnEntrySchema).max(40);
+
 export type CreateKind = 'xuewen' | 'debate' | 'discussion';
 
 export const CREATE_KIND_LABEL: Record<CreateKind, string> = {
