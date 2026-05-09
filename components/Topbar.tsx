@@ -55,13 +55,23 @@ export function Topbar({ crumb, showRecordsNav = true, right }: Props) {
         </>
       ) : (
         showRecordsNav && (
-          <Link
-            href="/records"
-            className="ml-4 text-[17px] transition-colors hover:underline underline-offset-[8px] decoration-1"
-            style={{ color: 'var(--color-ink-3)' }}
-          >
-            我的记录
-          </Link>
+          <nav className="ml-4 flex items-center gap-6">
+            {/* 我的产出 = prep 一类（教案/大纲/习题/活动/PBL）通过 ?filter=prep 落到记录页 */}
+            <Link
+              href="/records?filter=prep"
+              className="text-[17px] transition-colors hover:underline underline-offset-[8px] decoration-1"
+              style={{ color: 'var(--color-ink-3)' }}
+            >
+              我的产出
+            </Link>
+            <Link
+              href="/records"
+              className="text-[17px] transition-colors hover:underline underline-offset-[8px] decoration-1"
+              style={{ color: 'var(--color-ink-3)' }}
+            >
+              我的记录
+            </Link>
+          </nav>
         )
       )}
 

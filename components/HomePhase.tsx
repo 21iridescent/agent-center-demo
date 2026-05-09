@@ -5,7 +5,7 @@ interface Props {
    * 章节号——保留 ①②③ 入参以兼容现有 page.tsx
    * 内部映射到阿拉伯数字 stamp（"01"/"02"/"03"），符合 editorial 章式约定
    */
-  num: '①' | '②' | '③';
+  num: '①' | '②' | '③' | '④';
   title: string;
   sub: string;
   /** 右侧统计文案，如"共 4 个" */
@@ -19,6 +19,7 @@ const NUM_MAP: Record<Props['num'], string> = {
   '①': '01',
   '②': '02',
   '③': '03',
+  '④': '04',
 };
 
 export function HomePhase({ num, title, sub, meta, actions, children }: Props) {

@@ -266,10 +266,11 @@ export default function Home() {
       .catch(() => {});
   }, []);
 
-  // 首页 ③ 评价：拉真实记录，前 N 条；FALLBACK 兜底避免首屏闪空
-  // 已被在 /records 删掉的 FALLBACK demo 也要在这里隐藏，保持两端一致（API 返回 hiddenFallbackIds）
+  // 首页 ③ 智能体使用：只展示学生×AI 对话类记录（dialogue/debate/discussion）。
+  // prep 类（备课产出）走顶栏"我的产出"入口（/records?filter=prep），首页不再混排。
+  // FALLBACK 兜底避免首屏闪空；被在 /records 删掉的 FALLBACK demo 同步隐藏。
   const [recents, setRecents] = useState<AppRecord[]>(
-    FALLBACK_RECORDS.slice(0, HOME_RECORDS_LIMIT),
+    FALLBACK_RECORDS.filter(r => r.type !== 'prep').slice(0, HOME_RECORDS_LIMIT),
   );
   useEffect(() => {
     fetch('/api/records')
@@ -286,7 +287,8 @@ export default function Home() {
             r => !remoteIds.has(r.id) && !hiddenFallback.has(r.id),
           ),
         ];
-        setRecents(merged.slice(0, HOME_RECORDS_LIMIT));
+        const useOnly = merged.filter(r => r.type !== 'prep');
+        setRecents(useOnly.slice(0, HOME_RECORDS_LIMIT));
       })
       .catch(() => { /* 留 FALLBACK 兜底 */ });
   }, []);
@@ -454,10 +456,10 @@ export default function Home() {
           </div>
         </HomePhase>
 
-        {/* ③ 评价 */}
+        {/* ③ 智能体使用 — 学生 × AI 的对话记录（不含 prep 产出，那一类走顶栏"我的产出"） */}
         <HomePhase
           num="③"
-          title="评价"
+          title="智能体使用"
           sub="回看学生与 AI 的对话记录"
           actions={
             <Link

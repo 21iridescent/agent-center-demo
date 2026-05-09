@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Topbar } from '@/components/Topbar';
 import { RecordCard } from '@/components/RecordCard';
 import { FilterChips, type FilterValue } from '@/components/FilterChips';
@@ -9,13 +10,29 @@ import { useToast } from '@/components/Toast';
 import { FALLBACK_RECORDS } from '@/lib/fallback-records';
 import type { AppRecord } from '@/lib/types';
 
+const VALID_FILTERS: FilterValue[] = ['all', 'dialogue', 'debate', 'discussion', 'prep'];
+
 export default function RecordsPage() {
+  // useSearchParams 需要 Suspense 边界（Next.js 静态生成阶段可能没 search params 上下文）
+  return (
+    <Suspense fallback={null}>
+      <RecordsPageInner />
+    </Suspense>
+  );
+}
+
+function RecordsPageInner() {
   const toast = useToast();
+  const sp = useSearchParams();
+  const initialFilter = (() => {
+    const f = sp.get('filter');
+    return f && (VALID_FILTERS as string[]).includes(f) ? (f as FilterValue) : 'all';
+  })();
   const [remote, setRemote] = useState<AppRecord[]>([]);
   // 硬编码 demo（FALLBACK_RECORDS）删不掉源码，KV 里存了一份"已隐藏 id"集合（records:hidden-fallback）
   // 真实 KV 记录走 DELETE 物理删除，不会进这个集合
   const [hiddenFallback, setHiddenFallback] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<FilterValue>('all');
+  const [filter, setFilter] = useState<FilterValue>(initialFilter);
   const [pendingDelete, setPendingDelete] = useState<AppRecord | null>(null);
   const [loaded, setLoaded] = useState(false);
 
