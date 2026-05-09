@@ -14,6 +14,7 @@ import { useToast } from './Toast';
 import type { PrepKind, Citation, ToolTraceEntry } from '@/lib/types';
 import { PREP_KIND_TITLE_SUFFIX } from '@/lib/types';
 import { exportMarkdownAsDocx } from '@/lib/word-export';
+import { applyEdit } from '@/lib/canvas-edit';
 
 interface Props {
   toolName: string;
@@ -241,14 +242,10 @@ function extractEditCalls(messages: UIMessage[]): PendingEdit[] {
   return out;
 }
 
-/** 把一条 edit 应用到 markdown：只替换第一处匹配；找不到时返回原文（标记 not-applied） */
+/** 把一条 edit 应用到 markdown — 走 lib/canvas-edit 的 fuzzy 定位（吃空白差异） */
 function applyOneEdit(md: string, e: PendingEdit): { md: string; matched: boolean } {
-  const idx = md.indexOf(e.find);
-  if (idx < 0) return { md, matched: false };
-  return {
-    md: md.slice(0, idx) + e.replace + md.slice(idx + e.find.length),
-    matched: true,
-  };
+  const r = applyEdit(md, e.find, e.replace);
+  return { md: r.md, matched: r.matched };
 }
 
 /** 从 messages 里抽 webSearch / crawlUrl / findSimilar 的 output → 去重 Citation 列表 */

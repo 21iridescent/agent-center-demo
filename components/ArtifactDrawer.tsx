@@ -3,6 +3,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { exportMarkdownAsDocx } from '@/lib/word-export';
+import { findEditPosition } from '@/lib/canvas-edit';
 
 export interface PendingEdit {
   callId: string;
@@ -240,13 +241,22 @@ function buildSegments(
     return { segments: [{ type: 'text', content: source }], orphanEdits: [] };
   }
 
+  // 走 fuzzy 定位 — exact 失败时归一化空白后再匹配，避免 AI 写出来的 find
+  // 多/少一个空格就被 orphan 掉
   const positioned = pendingEdits
-    .map(edit => ({ edit, idx: source.indexOf(edit.find) }))
+    .map(edit => {
+      const pos = findEditPosition(source, edit.find);
+      return {
+        edit,
+        start: pos?.start ?? -1,
+        end: pos?.end ?? -1,
+      };
+    })
     .sort((a, b) => {
-      if (a.idx < 0 && b.idx < 0) return 0;
-      if (a.idx < 0) return 1; // 找不到的丢后面
-      if (b.idx < 0) return -1;
-      return a.idx - b.idx;
+      if (a.start < 0 && b.start < 0) return 0;
+      if (a.start < 0) return 1; // 找不到的丢后面
+      if (b.start < 0) return -1;
+      return a.start - b.start;
     });
 
   const segments: Segment[] = [];
@@ -254,20 +264,20 @@ function buildSegments(
   let cursor = 0;
 
   for (const p of positioned) {
-    if (p.idx < 0) {
+    if (p.start < 0) {
       orphanEdits.push(p.edit);
       continue;
     }
-    if (p.idx < cursor) {
+    if (p.start < cursor) {
       // find 区间与上一条 edit 重叠 —— 当 orphan 处理
       orphanEdits.push(p.edit);
       continue;
     }
-    if (p.idx > cursor) {
-      segments.push({ type: 'text', content: source.slice(cursor, p.idx) });
+    if (p.start > cursor) {
+      segments.push({ type: 'text', content: source.slice(cursor, p.start) });
     }
     segments.push({ type: 'edit', edit: p.edit });
-    cursor = p.idx + p.edit.find.length;
+    cursor = p.end;
   }
   if (cursor < source.length) {
     segments.push({ type: 'text', content: source.slice(cursor) });
