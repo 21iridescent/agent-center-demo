@@ -14,7 +14,6 @@ import type { SavedAgent } from '@/lib/agent-storage';
 import type { AppRecord } from '@/lib/types';
 import {
   getXuewenPersonaResolved,
-  getBackground,
   getTopicThumb,
 } from '@/lib/asset-catalog';
 
@@ -79,9 +78,7 @@ const TOOLS = [
 //
 // avatarUrl / bgUrl 直接从 lib/asset-catalog.ts 取：
 // - 学问类：persona 头像（curie/darwin/socrates 等）
-// - 辩论类：topic 封面优先（如 plastic-ocean），否则用 stage-balanced 通用擂台
-const XUEWEN_BG = getBackground('xuewen', 'science-lab')?.src;
-const DEBATE_BG = getBackground('debate', 'stage-balanced')?.src;
+// - 辩论类：仅当有 topic 封面时才出 hero；通用 stage-balanced 不够差异化（同图刷三张），不当兜底
 const PLASTIC_THUMB = getTopicThumb('plastic-ocean')?.src;
 
 const INITIAL_AGENTS: AgentSeed[] = [
@@ -132,7 +129,6 @@ const INITIAL_AGENTS: AgentSeed[] = [
     id: 'seed-ai-judgement',
     type: 'debate',
     avatar: '判',
-    bgUrl: DEBATE_BG,
     name: 'AI 该有自己判断吗',
     subject: '人工智能',
     grade: '六年级',
@@ -143,7 +139,7 @@ const INITIAL_AGENTS: AgentSeed[] = [
     id: 'seed-plastic-ban',
     type: 'debate',
     avatar: '塑',
-    bgUrl: PLASTIC_THUMB ?? DEBATE_BG,
+    bgUrl: PLASTIC_THUMB,
     name: '塑料袋该不该禁用',
     subject: '科学',
     grade: '六年级',
@@ -154,7 +150,6 @@ const INITIAL_AGENTS: AgentSeed[] = [
     id: 'seed-ai-homework',
     type: 'debate',
     avatar: '业',
-    bgUrl: DEBATE_BG,
     name: 'AI 该不该帮写作业',
     subject: '人工智能',
     grade: '五年级',
@@ -172,8 +167,6 @@ const INITIAL_AGENTS: AgentSeed[] = [
     launchHref: '/legacy/AI思辨使用-讨论-v0.1.html',
   },
 ];
-
-void XUEWEN_BG; // 备用 — 未来若学问卡也想加 hero 直接换上即可
 
 const TYPE_DOT_COLOR: Record<AgentType, string> = {
   dialogue: 'var(--color-primary)',
@@ -235,9 +228,10 @@ function savedToSeed(a: SavedAgent): AgentSeed {
     });
     avatarUrl = resolved.avatarUrl;
   } else if (a.kind === 'debate') {
+    // 只用 topic 封面（plastic-ocean 等），不退到通用 stage-balanced 擂台 —
+    // 通用底图三张同图刷出来反而显得每个辩论都长一样。
     const thumb = getTopicThumb(cfg.thumbAsset as string | undefined);
-    const bg = getBackground('debate', cfg.bgAsset as string | undefined);
-    bgUrl = thumb?.src ?? bg?.src;
+    bgUrl = thumb?.src;
   }
 
   return {
