@@ -336,7 +336,12 @@ export default function Home() {
   return (
     <>
       <Topbar />
-      <main className="mx-auto w-full px-8 pt-10 pb-24" style={{ maxWidth: 'var(--container-wide)' }}>
+      <main
+        className="mx-auto w-full px-10 pt-10 pb-24"
+        // 首页四宫格 + 长版 record 列表 — 比 detail 页更宽。
+        // viewport 自适应：大屏给到 1480，窄屏自动收回不顶边
+        style={{ maxWidth: 'min(1480px, calc(100vw - 80px))' }}
+      >
         {/* ① 备课 */}
         <HomePhase
           num="①"
