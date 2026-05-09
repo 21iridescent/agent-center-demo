@@ -12,6 +12,11 @@ import { useToast } from '@/components/Toast';
 import { FALLBACK_RECORDS } from '@/lib/fallback-records';
 import type { SavedAgent } from '@/lib/agent-storage';
 import type { AppRecord } from '@/lib/types';
+import {
+  getXuewenPersonaResolved,
+  getBackground,
+  getTopicThumb,
+} from '@/lib/asset-catalog';
 
 const HOME_RECORDS_LIMIT = 3;
 
@@ -19,6 +24,10 @@ interface AgentSeed {
   id: string;
   type: AgentType;
   avatar: string;
+  /** 学问类：persona 头像 PNG；调用 getXuewenPersonaResolved 拿到 */
+  avatarUrl?: string;
+  /** 辩论类：topic thumb / debate bg PNG，作卡片顶部 hero */
+  bgUrl?: string;
   name: string;
   subject: string;
   grade: string;
@@ -67,6 +76,14 @@ const TOOLS = [
 
 // 注：seed-* id 与 lib/agent-storage.ts 的 SEED_AGENTS 配对
 // 学问/辩论 2 张接真使用页（点"启动"跑真 DeepSeek）；讨论 2 张仍 legacy（无真使用页）
+//
+// avatarUrl / bgUrl 直接从 lib/asset-catalog.ts 取：
+// - 学问类：persona 头像（curie/darwin/socrates 等）
+// - 辩论类：topic 封面优先（如 plastic-ocean），否则用 stage-balanced 通用擂台
+const XUEWEN_BG = getBackground('xuewen', 'science-lab')?.src;
+const DEBATE_BG = getBackground('debate', 'stage-balanced')?.src;
+const PLASTIC_THUMB = getTopicThumb('plastic-ocean')?.src;
+
 const INITIAL_AGENTS: AgentSeed[] = [
   {
     id: 'a1',
@@ -82,6 +99,7 @@ const INITIAL_AGENTS: AgentSeed[] = [
     id: 'seed-curie',
     type: 'dialogue',
     avatar: '居',
+    avatarUrl: getXuewenPersonaResolved({ personaId: 'curie' }).avatarUrl,
     name: '居里夫人',
     subject: '科学',
     grade: '五年级',
@@ -92,6 +110,7 @@ const INITIAL_AGENTS: AgentSeed[] = [
     id: 'seed-darwin',
     type: 'dialogue',
     avatar: '达',
+    avatarUrl: getXuewenPersonaResolved({ personaId: 'darwin' }).avatarUrl,
     name: '达尔文',
     subject: '科学',
     grade: '六年级',
@@ -102,6 +121,7 @@ const INITIAL_AGENTS: AgentSeed[] = [
     id: 'seed-machine-vision',
     type: 'dialogue',
     avatar: '像',
+    avatarUrl: getXuewenPersonaResolved({ personaId: 'socrates' }).avatarUrl,
     name: '机器视觉博士',
     subject: '人工智能',
     grade: '五年级',
@@ -112,6 +132,7 @@ const INITIAL_AGENTS: AgentSeed[] = [
     id: 'seed-ai-judgement',
     type: 'debate',
     avatar: '判',
+    bgUrl: DEBATE_BG,
     name: 'AI 该有自己判断吗',
     subject: '人工智能',
     grade: '六年级',
@@ -122,6 +143,7 @@ const INITIAL_AGENTS: AgentSeed[] = [
     id: 'seed-plastic-ban',
     type: 'debate',
     avatar: '塑',
+    bgUrl: PLASTIC_THUMB ?? DEBATE_BG,
     name: '塑料袋该不该禁用',
     subject: '科学',
     grade: '六年级',
@@ -132,6 +154,7 @@ const INITIAL_AGENTS: AgentSeed[] = [
     id: 'seed-ai-homework',
     type: 'debate',
     avatar: '业',
+    bgUrl: DEBATE_BG,
     name: 'AI 该不该帮写作业',
     subject: '人工智能',
     grade: '五年级',
@@ -149,6 +172,8 @@ const INITIAL_AGENTS: AgentSeed[] = [
     launchHref: '/legacy/AI思辨使用-讨论-v0.1.html',
   },
 ];
+
+void XUEWEN_BG; // 备用 — 未来若学问卡也想加 hero 直接换上即可
 
 const TYPE_DOT_COLOR: Record<AgentType, string> = {
   dialogue: 'var(--color-primary)',
@@ -194,17 +219,36 @@ const SAVED_LAUNCH: Record<string, (id: string) => string> = {
 };
 
 function savedToSeed(a: SavedAgent): AgentSeed {
-  const cfg = a.config as Record<string, string | undefined>;
+  const cfg = a.config as Record<string, unknown>;
   const type = KIND_TO_TYPE[a.kind] ?? 'dialogue';
-  const name = cfg.name ?? '未命名';
+  const name = (cfg.name as string) ?? '未命名';
   const launchFn = SAVED_LAUNCH[a.kind] ?? (() => '/');
+
+  // 从 config 解析视觉资产：xuewen 看 personaId / personaCustom；debate 看 thumbAsset / bgAsset
+  let avatarUrl: string | undefined;
+  let bgUrl: string | undefined;
+  if (a.kind === 'xuewen') {
+    const resolved = getXuewenPersonaResolved({
+      personaId: cfg.personaId as string | undefined,
+      personaCustom: cfg.personaCustom as { avatarUrl: string; roleUrl: string } | undefined,
+      name,
+    });
+    avatarUrl = resolved.avatarUrl;
+  } else if (a.kind === 'debate') {
+    const thumb = getTopicThumb(cfg.thumbAsset as string | undefined);
+    const bg = getBackground('debate', cfg.bgAsset as string | undefined);
+    bgUrl = thumb?.src ?? bg?.src;
+  }
+
   return {
     id: a.id,
     type,
     avatar: name.charAt(0),
+    avatarUrl,
+    bgUrl,
     name,
-    subject: cfg.subject ?? '科学',
-    grade: cfg.grade ?? '一年级',
+    subject: (cfg.subject as string) ?? '科学',
+    grade: (cfg.grade as string) ?? '一年级',
     lastUsed: '刚刚',
     launchHref: launchFn(a.id),
   };

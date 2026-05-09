@@ -34,6 +34,10 @@ export type AgentType = keyof typeof TYPE_LABEL;
 interface Props {
   type: AgentType;
   avatar: string;
+  /** 真人头像 URL（学问类的 personaId 解析出来的图）。优先于 avatar 字 */
+  avatarUrl?: string;
+  /** 卡片顶部 hero 图（辩论类用 thumbAsset 解析出来的图） */
+  bgUrl?: string;
   name: string;
   subject: string;
   grade: string;
@@ -53,6 +57,8 @@ interface Props {
 export function AgentCard({
   type,
   avatar,
+  avatarUrl,
+  bgUrl,
   name,
   subject,
   grade,
@@ -74,7 +80,29 @@ export function AgentCard({
         boxShadow: 'var(--shadow-sm)',
       }}
     >
-      {/* 顶部 type 章式横条 — 4px 通栏 */}
+      {/* 顶部 hero 图（辩论话题封面 / 学问场景背景） — 有 bgUrl 才出现 */}
+      {bgUrl && (
+        <div
+          className="relative w-full overflow-hidden"
+          style={{ height: 96 }}
+          aria-hidden
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={bgUrl}
+            alt=""
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+          {/* 顶薄 paper rule 让图与卡身衔接 */}
+          <span
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-[1px]"
+            style={{ background: 'var(--color-paper-rule)' }}
+          />
+        </div>
+      )}
+
+      {/* 顶部 type 章式横条 — 4px 通栏（无 bgUrl 时是首要分类条；有 bgUrl 时是 hero 下的承接条） */}
       <span
         aria-hidden
         className="block h-[4px] w-full"
@@ -85,15 +113,27 @@ export function AgentCard({
         {/* 头部 · 方形头像章 + 标题 + smcp type label */}
         <div className="flex items-start gap-3">
           <span
-            className="font-numeric flex h-11 w-11 shrink-0 items-center justify-center text-[16px] font-bold"
+            className="font-numeric flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden text-[16px] font-bold"
             style={{
-              background: t.bg,
+              background: avatarUrl ? 'transparent' : t.bg,
               color: t.deep,
               borderRadius: 'var(--radius-xs)',
             }}
             aria-hidden
           >
-            {avatar}
+            {avatarUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={avatarUrl}
+                alt={name}
+                width={44}
+                height={44}
+                loading="lazy"
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              avatar
+            )}
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             <h3
