@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Topbar } from '@/components/Topbar';
 import { ToolCard } from '@/components/ToolCard';
 import { AgentCard } from '@/components/AgentCard';
+import { AgentFilters } from '@/components/AgentFilters';
 import { RecordCard } from '@/components/RecordCard';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { useToast } from '@/components/Toast';
@@ -165,6 +166,24 @@ export default function Home() {
   const [pendingDelete, setPendingDelete] = useState<AgentSeed | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // 授课 tab 内联筛选 — 不持久化到 URL，scope 在当前 tab session
+  const [agentSubject, setAgentSubject] = useState<string>('all');
+  const [agentGrade, setAgentGrade] = useState<string>('all');
+  const [agentSort, setAgentSort] = useState<string>('lastUsed');
+  const [agentType, setAgentType] = useState<string>('all');
+
+  const filteredAgents = useMemo(() => {
+    const filtered = agents.filter(
+      a =>
+        (agentSubject === 'all' || a.subject === agentSubject) &&
+        (agentGrade === 'all' || a.grade === agentGrade) &&
+        (agentType === 'all' || a.type === agentType),
+    );
+    const key: 'createdAt' | 'lastUsedAt' =
+      agentSort === 'createdAt' ? 'createdAt' : 'lastUsedAt';
+    return [...filtered].sort((a, b) => (a[key] < b[key] ? 1 : -1));
+  }, [agents, agentSubject, agentGrade, agentType, agentSort]);
+
   // 主分页：备课 / 授课 / 记录。url hash 同步，刷新 / 后退保留状态。
   const [tab, setTab] = useState<HomeTab>('prep');
   useEffect(() => {
@@ -309,13 +328,6 @@ export default function Home() {
                   </button>
                 ) : (
                   <>
-                    <Link
-                      href="/agents"
-                      className="text-[13px] transition-colors hover:underline"
-                      style={{ color: 'var(--color-ink-3)' }}
-                    >
-                      查看全部 →
-                    </Link>
                     <button
                       onClick={() => setManageMode(true)}
                       className="h-7 rounded-full border bg-white px-4 text-[12px] transition-colors hover:[border-color:var(--color-type-dialogue)] hover:[color:var(--color-type-dialogue)]"
@@ -350,8 +362,25 @@ export default function Home() {
                 )
               }
             />
+            {!manageMode && (
+              <AgentFilters
+                subject={agentSubject}
+                grade={agentGrade}
+                sort={agentSort}
+                type={agentType}
+                onSubjectChange={setAgentSubject}
+                onGradeChange={setAgentGrade}
+                onSortChange={setAgentSort}
+                onTypeChange={setAgentType}
+                resultHint={
+                  filteredAgents.length === agents.length
+                    ? `共 ${agents.length} 个`
+                    : `${filteredAgents.length} / ${agents.length} 个`
+                }
+              />
+            )}
             <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-              {agents.map(a => (
+              {filteredAgents.map(a => (
                 <AgentCard
                   key={a.id}
                   {...a}

@@ -21,6 +21,14 @@ const SORTS = [
   { value: 'createdAt', label: '创建时间' },
 ];
 
+// AgentType（dialogue/debate/discuss）→ 用户可见标签
+const TYPES = [
+  { value: 'all',      label: '全部' },
+  { value: 'dialogue', label: '学问' },
+  { value: 'debate',   label: '辩论' },
+  { value: 'discuss',  label: '讨论' },
+];
+
 interface Props {
   subject: string;
   grade: string;
@@ -29,6 +37,9 @@ interface Props {
   onSubjectChange: (v: string) => void;
   onGradeChange: (v: string) => void;
   onSortChange: (v: string) => void;
+  /** 可选 · 种类筛选（学问/辩论/讨论），传 type+onTypeChange 启用 */
+  type?: string;
+  onTypeChange?: (v: string) => void;
 }
 
 /**
@@ -45,7 +56,10 @@ export function AgentFilters({
   onSubjectChange,
   onGradeChange,
   onSortChange,
+  type,
+  onTypeChange,
 }: Props) {
+  const showType = !!onTypeChange;
   return (
     <div
       className="mb-6 border px-5 py-1"
@@ -56,6 +70,15 @@ export function AgentFilters({
       }}
     >
       <Row label="排序" options={SORTS} current={sort} onChange={onSortChange} resultHint={resultHint} />
+      {showType && (
+        <Row
+          label="种类"
+          options={TYPES}
+          current={type ?? 'all'}
+          onChange={onTypeChange}
+          divider
+        />
+      )}
       <Row label="学科" options={SUBJECTS} current={subject} onChange={onSubjectChange} divider />
       <Row label="年级" options={GRADES} current={grade} onChange={onGradeChange} divider />
     </div>
