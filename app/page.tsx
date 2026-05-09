@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Topbar } from '@/components/Topbar';
 import { HomePhase } from '@/components/HomePhase';
@@ -11,12 +11,8 @@ import { ConfirmModal } from '@/components/ConfirmModal';
 import { useToast } from '@/components/Toast';
 import { FALLBACK_RECORDS } from '@/lib/fallback-records';
 import type { AppRecord } from '@/lib/types';
-import {
-  INITIAL_AGENTS,
-  KIND_TO_TYPE,
-  savedToSeed,
-  type AgentSeed,
-} from '@/lib/agents-display';
+import { type AgentSeed } from '@/lib/agents-display';
+import { useAgents } from '@/lib/use-agents';
 
 const HOME_RECORDS_LIMIT = 3;
 
@@ -58,61 +54,14 @@ const TOOLS = [
   },
 ];
 
-// localStorage key：跨刷新持久化"已隐藏的 seed id"
-// seed 智能体（demo 演示卡）是源码硬编码，无法真删服务端；前端用 localStorage 记一份隐藏列表，跨刷新一致。
-const HIDDEN_SEEDS_KEY = 'home:hidden-seeds';
-
-function loadHiddenSeeds(): Set<string> {
-  if (typeof window === 'undefined') return new Set();
-  try {
-    const raw = localStorage.getItem(HIDDEN_SEEDS_KEY);
-    if (!raw) return new Set();
-    const arr = JSON.parse(raw);
-    return new Set(Array.isArray(arr) ? arr : []);
-  } catch {
-    return new Set();
-  }
-}
-
-function saveHiddenSeeds(s: Set<string>) {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(HIDDEN_SEEDS_KEY, JSON.stringify([...s]));
-  } catch {
-    /* localStorage 不可用就接受会话内一致即可 */
-  }
-}
-
 export default function Home() {
   const toast = useToast();
-  const [savedAgents, setSavedAgents] = useState<AgentSeed[]>([]);
-  const [hiddenSeeds, setHiddenSeeds] = useState<Set<string>>(new Set());
-  // 服务端持久化的隐藏 seed id（KV 'agents:hidden-seeds'），
-  // 用于编辑 seed 后 copy-on-write 的隐藏 —— 跨设备一致
-  const [hiddenSeedIds, setHiddenSeedIds] = useState<Set<string>>(new Set());
+  // 共用 hook：合并 KV 已保存 + INITIAL_AGENTS 种子 + localStorage/KV 双隐藏过滤；
+  // alive guard 在 hook 内处理。manage 模式删卡的本地 state 同步走 hook 暴露的两个 mutator。
+  const { agents, savedAgents, removeSavedLocally, hideSeedLocally } = useAgents();
   const [manageMode, setManageMode] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<AgentSeed | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  // 客户端 hydrate 后从 localStorage 读已隐藏 seed 列表（SSR 时 window 不可用）
-  useEffect(() => {
-    setHiddenSeeds(loadHiddenSeeds());
-  }, []);
-
-  // 拉真实保存的智能体 + 服务端隐藏 seed 集合
-  useEffect(() => {
-    fetch('/api/agents')
-      .then(r => r.json())
-      .then(d => {
-        if (Array.isArray(d.agents)) {
-          setSavedAgents(d.agents.map(savedToSeed));
-        }
-        if (Array.isArray(d.hiddenSeedIds)) {
-          setHiddenSeedIds(new Set(d.hiddenSeedIds));
-        }
-      })
-      .catch(() => {});
-  }, []);
 
   // 首页 ③ 智能体使用：只展示学生×AI 对话类记录（dialogue/debate/discussion）。
   // prep 类（备课产出）走顶栏"我的产出"入口（/records?filter=prep），首页不再混排。
@@ -121,9 +70,11 @@ export default function Home() {
     FALLBACK_RECORDS.filter(r => r.type !== 'prep').slice(0, HOME_RECORDS_LIMIT),
   );
   useEffect(() => {
+    let alive = true;
     fetch('/api/records')
       .then(r => r.json())
       .then(d => {
+        if (!alive) return;
         const remote: AppRecord[] = Array.isArray(d.records) ? d.records : [];
         const hiddenFallback: Set<string> = new Set(
           Array.isArray(d.hiddenFallbackIds) ? d.hiddenFallbackIds : [],
@@ -139,14 +90,8 @@ export default function Home() {
         setRecents(useOnly.slice(0, HOME_RECORDS_LIMIT));
       })
       .catch(() => { /* 留 FALLBACK 兜底 */ });
+    return () => { alive = false; };
   }, []);
-
-  // 隐藏来源有两路：localStorage 兜底（旧的"删 seed"流）+ KV agents:hidden-seeds（新的"编辑 seed copy-on-write"流）
-  const seedAgents = useMemo(
-    () => INITIAL_AGENTS.filter(a => !hiddenSeeds.has(a.id) && !hiddenSeedIds.has(a.id)),
-    [hiddenSeeds, hiddenSeedIds],
-  );
-  const agents = [...savedAgents, ...seedAgents];
 
   async function confirmDelete() {
     if (!pendingDelete || deleting) return;
@@ -164,15 +109,10 @@ export default function Home() {
           toast('删除失败：服务暂不可用');
           return;
         }
-        setSavedAgents(prev => prev.filter(a => a.id !== target.id));
+        removeSavedLocally(target.id);
       } else {
-        // seed 卡片：源码硬编码，服务端删不掉；前端 localStorage 持久化隐藏
-        setHiddenSeeds(prev => {
-          const next = new Set(prev);
-          next.add(target.id);
-          saveHiddenSeeds(next);
-          return next;
-        });
+        // seed 卡片：源码硬编码，服务端删不掉；hook 内部走 localStorage 持久化隐藏
+        hideSeedLocally(target.id);
       }
       toast(`已删除：${target.name}`);
       setPendingDelete(null);

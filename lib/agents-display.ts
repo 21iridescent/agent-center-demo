@@ -153,6 +153,34 @@ export const INITIAL_AGENTS: AgentSeed[] = [
   },
 ];
 
+/**
+ * 用户在首页"管理"模式删除 seed 智能体的隐藏列表 —— 走 localStorage（seed 在源码里，
+ * 服务端删不掉，只能前端记一份隐藏 id 集合）。首页 + /agents 全部页都要读，否则两侧
+ * 显示的智能体数量会对不齐。
+ */
+export const HIDDEN_SEEDS_LS_KEY = 'home:hidden-seeds';
+
+export function loadHiddenSeeds(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = window.localStorage.getItem(HIDDEN_SEEDS_LS_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
+
+export function saveHiddenSeeds(s: Set<string>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(HIDDEN_SEEDS_LS_KEY, JSON.stringify([...s]));
+  } catch {
+    /* localStorage 不可用就接受会话内一致即可 */
+  }
+}
+
 /** SavedAgent.kind → UI AgentType */
 export const KIND_TO_TYPE: Record<string, AgentType> = {
   xuewen: 'dialogue',

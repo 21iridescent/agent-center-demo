@@ -1,17 +1,13 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Topbar } from '@/components/Topbar';
 import { AgentCard } from '@/components/AgentCard';
 import { AgentFilters } from '@/components/AgentFilters';
-import {
-  INITIAL_AGENTS,
-  savedToSeed,
-  type AgentSeed,
-} from '@/lib/agents-display';
-import type { SavedAgent } from '@/lib/agent-storage';
+import { useAgents } from '@/lib/use-agents';
+import type { AgentSeed } from '@/lib/agents-display';
 
 const VALID_SUBJECTS = ['all', '科学', '人工智能'] as const;
 const VALID_GRADES = ['all', '一年级', '二年级', '三年级', '四年级', '五年级', '六年级'] as const;
@@ -32,33 +28,12 @@ function AgentsPageInner() {
   const grade   = readParam(sp.get('grade'),   VALID_GRADES,   'all');
   const sort    = readParam(sp.get('sort'),    VALID_SORTS,    'lastUsed');
 
-  const [savedAgents, setSavedAgents] = useState<AgentSeed[]>([]);
-  const [hiddenSeedIds, setHiddenSeedIds] = useState<Set<string>>(new Set());
-  const [loaded, setLoaded] = useState(false);
-
-  // 拉真实保存的智能体 + 服务端隐藏 seed 集合 —— 同首页 useEffect 形态
-  useEffect(() => {
-    let alive = true;
-    fetch('/api/agents')
-      .then(r => r.json())
-      .then((d: { agents?: SavedAgent[]; hiddenSeedIds?: string[] }) => {
-        if (!alive) return;
-        if (Array.isArray(d.agents)) setSavedAgents(d.agents.map(savedToSeed));
-        if (Array.isArray(d.hiddenSeedIds)) setHiddenSeedIds(new Set(d.hiddenSeedIds));
-      })
-      .catch(() => { /* 静默：留 INITIAL_AGENTS 兜底 */ })
-      .finally(() => { if (alive) setLoaded(true); });
-    return () => { alive = false; };
-  }, []);
-
-  const all = useMemo<AgentSeed[]>(() => {
-    const seedAgents = INITIAL_AGENTS.filter(a => !hiddenSeedIds.has(a.id));
-    return [...savedAgents, ...seedAgents];
-  }, [savedAgents, hiddenSeedIds]);
+  // 共用 hook：合并 KV 已保存 + INITIAL_AGENTS 种子 + localStorage/KV 双隐藏过滤
+  const { agents: all, loaded } = useAgents();
 
   const filteredSorted = useMemo(() => {
     const filtered = all.filter(
-      a =>
+      (a: AgentSeed) =>
         (subject === 'all' || a.subject === subject) &&
         (grade   === 'all' || a.grade   === grade),
     );
