@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Topbar } from '@/components/Topbar';
-import { HomePhase } from '@/components/HomePhase';
 import { ToolCard } from '@/components/ToolCard';
 import { AgentCard } from '@/components/AgentCard';
 import { RecordCard } from '@/components/RecordCard';
@@ -14,7 +13,110 @@ import type { AppRecord } from '@/lib/types';
 import { type AgentSeed } from '@/lib/agents-display';
 import { useAgents } from '@/lib/use-agents';
 
-const HOME_RECORDS_LIMIT = 3;
+// 记录 tab 现在是 1/3 的页面，给的额度比之前混排时多
+const HOME_RECORDS_LIMIT = 8;
+
+type HomeTab = 'prep' | 'use' | 'records' | 'outputs';
+
+const TAB_DEFS: { id: HomeTab; num: string; label: string }[] = [
+  { id: 'prep', num: '01', label: '备课' },
+  { id: 'use', num: '02', label: '授课' },
+  { id: 'records', num: '03', label: '记录' },
+  { id: 'outputs', num: '04', label: '我的产出' },
+];
+
+/**
+ * tab 模式下的瘦身 section 头：sub 副标 + meta + 右侧 actions
+ * 不带 stamp/title —— 那两块已经由 HomeTabNav 承担
+ */
+function SectionActions({
+  sub,
+  meta,
+  right,
+}: {
+  sub: string;
+  meta?: React.ReactNode;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-6 flex items-baseline gap-4 min-w-0">
+      <p
+        className="text-[14px] leading-snug truncate"
+        style={{ color: 'var(--color-ink-3)' }}
+      >
+        {sub}
+      </p>
+      {meta && (
+        <span
+          className="font-numeric tnum text-[12px] shrink-0"
+          style={{ color: 'var(--color-ink-mute)' }}
+        >
+          {meta}
+        </span>
+      )}
+      {right && (
+        <div className="ml-auto flex items-center gap-3 shrink-0">{right}</div>
+      )}
+    </div>
+  );
+}
+
+function HomeTabNav({
+  active,
+  onChange,
+}: {
+  active: HomeTab;
+  onChange: (t: HomeTab) => void;
+}) {
+  return (
+    <nav
+      className="mb-10 flex items-end gap-12 border-b"
+      style={{ borderColor: 'var(--color-paper-rule)' }}
+      aria-label="主分页"
+    >
+      {TAB_DEFS.map(t => {
+        const isActive = active === t.id;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => onChange(t.id)}
+            className="relative pb-4 pt-1 transition-colors"
+            aria-current={isActive ? 'page' : undefined}
+          >
+            <span className="flex items-baseline gap-3.5">
+              <span
+                className="font-numeric text-[12px] tracking-[0.18em]"
+                style={{
+                  color: isActive
+                    ? 'var(--color-paper-stamp)'
+                    : 'var(--color-ink-mute)',
+                }}
+              >
+                {t.num}
+              </span>
+              <span
+                className="font-display text-[26px] font-medium leading-none tracking-[0.4px]"
+                style={{
+                  color: isActive ? 'var(--color-ink-1)' : 'var(--color-ink-3)',
+                }}
+              >
+                {t.label}
+              </span>
+            </span>
+            {isActive && (
+              <span
+                aria-hidden
+                className="absolute bottom-[-1px] left-0 right-0 h-[2px]"
+                style={{ background: 'var(--color-paper-stamp)' }}
+              />
+            )}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
 
 const TOOLS = [
   {
@@ -63,11 +165,37 @@ export default function Home() {
   const [pendingDelete, setPendingDelete] = useState<AgentSeed | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // 首页 ③ 智能体使用：只展示学生×AI 对话类记录（dialogue/debate/discussion）。
-  // prep 类（备课产出）走顶栏"我的产出"入口（/records?filter=prep），首页不再混排。
+  // 主分页：备课 / 授课 / 记录。url hash 同步，刷新 / 后退保留状态。
+  const [tab, setTab] = useState<HomeTab>('prep');
+  useEffect(() => {
+    const apply = () => {
+      const h = window.location.hash.slice(1);
+      if (h === 'prep' || h === 'use' || h === 'records' || h === 'outputs') {
+        setTab(h);
+      }
+    };
+    apply();
+    window.addEventListener('hashchange', apply);
+    return () => window.removeEventListener('hashchange', apply);
+  }, []);
+  function selectTab(next: HomeTab) {
+    setTab(next);
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, '', `#${next}`);
+    }
+    // 切走时退出管理模式，避免在隐藏 tab 里残留 dirty state
+    if (next !== 'use' && manageMode) setManageMode(false);
+  }
+
+  // 首页"记录" + "我的产出"两个 tab 共用一次拉取：
+  //   recents     = 学生×AI 对话类（dialogue/debate/discussion）
+  //   prepRecents = 备课产出类（type === 'prep'）
   // FALLBACK 兜底避免首屏闪空；被在 /records 删掉的 FALLBACK demo 同步隐藏。
   const [recents, setRecents] = useState<AppRecord[]>(
     FALLBACK_RECORDS.filter(r => r.type !== 'prep').slice(0, HOME_RECORDS_LIMIT),
+  );
+  const [prepRecents, setPrepRecents] = useState<AppRecord[]>(
+    FALLBACK_RECORDS.filter(r => r.type === 'prep').slice(0, HOME_RECORDS_LIMIT),
   );
   useEffect(() => {
     let alive = true;
@@ -86,8 +214,8 @@ export default function Home() {
             r => !remoteIds.has(r.id) && !hiddenFallback.has(r.id),
           ),
         ];
-        const useOnly = merged.filter(r => r.type !== 'prep');
-        setRecents(useOnly.slice(0, HOME_RECORDS_LIMIT));
+        setRecents(merged.filter(r => r.type !== 'prep').slice(0, HOME_RECORDS_LIMIT));
+        setPrepRecents(merged.filter(r => r.type === 'prep').slice(0, HOME_RECORDS_LIMIT));
       })
       .catch(() => { /* 留 FALLBACK 兜底 */ });
     return () => { alive = false; };
@@ -132,148 +260,187 @@ export default function Home() {
         // viewport 自适应：大屏给到 1480，窄屏自动收回不顶边
         style={{ maxWidth: 'min(1480px, calc(100vw - 80px))' }}
       >
-        {/* ① 备课 */}
-        <HomePhase
-          num="①"
-          title="备课"
-          sub="平台 AI 工具，把课备扎实"
-          actions={
-            <button
-              onClick={() => toast('暂未开放')}
-              className="text-[13px] transition-colors hover:underline"
-              style={{ color: 'var(--color-text-3)' }}
-            >
-              查看全部 →
-            </button>
-          }
-        >
-          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-            {TOOLS.map(t => (
-              <ToolCard key={t.name} {...t} />
-            ))}
-          </div>
-        </HomePhase>
+        <HomeTabNav active={tab} onChange={selectTab} />
 
-        {/* ② 授课 */}
-        <HomePhase
-          num="②"
-          title="授课"
-          sub={manageMode ? '管理模式 · 可编辑或删除你的智能体' : '我配置好的，随时启动'}
-          meta={!manageMode && `共 ${agents.length} 个${savedAgents.length > 0 ? `（${savedAgents.length} 个已保存）` : ''}`}
-          actions={
-            manageMode ? (
-              <button
-                onClick={() => setManageMode(false)}
-                className="h-7 rounded-full border px-4 text-[12px] transition-colors"
-                style={{
-                  background: 'var(--color-success)',
-                  color: '#fff',
-                  borderColor: 'var(--color-success)',
-                }}
-              >
-                完成
-              </button>
-            ) : (
-              <>
-                <Link
-                  href="/agents"
+        {/* 备课 tab — 平台 AI 工具卡片格 */}
+        {tab === 'prep' && (
+          <section>
+            <SectionActions
+              sub="平台 AI 工具，把课备扎实"
+              right={
+                <button
+                  onClick={() => toast('暂未开放')}
                   className="text-[13px] transition-colors hover:underline"
-                  style={{ color: 'var(--color-ink-3)' }}
+                  style={{ color: 'var(--color-text-3)' }}
                 >
                   查看全部 →
-                </Link>
-                <button
-                  onClick={() => setManageMode(true)}
-                  className="h-7 rounded-full border bg-white px-4 text-[12px] transition-colors hover:[border-color:var(--color-type-dialogue)] hover:[color:var(--color-type-dialogue)]"
-                  style={{
-                    color: 'var(--color-ink-3)',
-                    borderColor: 'var(--color-paper-edge)',
-                  }}
-                >
-                  管理
                 </button>
-                <Link
-                  href="/create"
-                  className="font-display group flex h-8 items-center gap-1.5 px-4 text-[13px] font-medium text-white transition-all hover:translate-x-[1px]"
-                  style={{
-                    background: 'var(--color-paper-stamp)',
-                    borderRadius: 'var(--radius-sm)',
-                    letterSpacing: '0.3px',
-                  }}
-                  title="AI 创建：描述一句，自动判断类型并生成草稿"
-                >
-                  <span
-                    aria-hidden
-                    className="text-[10px]"
-                    style={{ color: 'var(--color-paper-base)', opacity: 0.55 }}
-                  >
-                    NEW
-                  </span>
-                  <span aria-hidden style={{ opacity: 0.7 }}>▸</span>
-                  AI 创建
-                </Link>
-              </>
-            )
-          }
-        >
-
-          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-            {agents.map(a => (
-              <AgentCard
-                key={a.id}
-                {...a}
-                editHref={`/edit/${a.id}`}
-                manageMode={manageMode}
-                onDelete={() => setPendingDelete(a)}
-              />
-            ))}
-            {!manageMode && (
-              <Link
-                href="/create"
-                className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed bg-transparent transition-colors hover:bg-[var(--color-primary-bg)] hover:[border-color:var(--color-primary)]"
-                style={{
-                  borderColor: 'var(--color-border)',
-                  color: 'var(--color-text-5)',
-                  minHeight: 168,
-                }}
-              >
-                <span className="text-[22px] leading-none">＋</span>
-                <span className="text-[13px]">AI 对话新建</span>
-              </Link>
-            )}
-          </div>
-        </HomePhase>
-
-        {/* ③ 智能体使用 — 学生 × AI 的对话记录（不含 prep 产出，那一类走顶栏"我的产出"） */}
-        <HomePhase
-          num="③"
-          title="智能体使用"
-          sub="回看学生与 AI 的对话记录"
-          actions={
-            <Link
-              href="/records"
-              className="text-[13px] transition-colors hover:underline"
-              style={{ color: 'var(--color-text-3)' }}
-            >
-              全部记录 →
-            </Link>
-          }
-        >
-          {recents.length === 0 ? (
-            <div
-              className="rounded-xl border bg-white p-6 text-center text-[13px]"
-              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-4)' }}
-            >
-              暂无记录
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {recents.map(r => (
-                <RecordCard key={r.id} record={r} />
+              }
+            />
+            <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+              {TOOLS.map(t => (
+                <ToolCard key={t.name} {...t} />
               ))}
             </div>
-          )}
-        </HomePhase>
+          </section>
+        )}
+
+        {/* 授课 tab */}
+        {tab === 'use' && (
+          <section>
+            <SectionActions
+              sub={manageMode ? '管理模式 · 可编辑或删除你的智能体' : '我配置好的，随时启动'}
+              meta={
+                !manageMode &&
+                `共 ${agents.length} 个${savedAgents.length > 0 ? `（${savedAgents.length} 个已保存）` : ''}`
+              }
+              right={
+                manageMode ? (
+                  <button
+                    onClick={() => setManageMode(false)}
+                    className="h-7 rounded-full border px-4 text-[12px] transition-colors"
+                    style={{
+                      background: 'var(--color-success)',
+                      color: '#fff',
+                      borderColor: 'var(--color-success)',
+                    }}
+                  >
+                    完成
+                  </button>
+                ) : (
+                  <>
+                    <Link
+                      href="/agents"
+                      className="text-[13px] transition-colors hover:underline"
+                      style={{ color: 'var(--color-ink-3)' }}
+                    >
+                      查看全部 →
+                    </Link>
+                    <button
+                      onClick={() => setManageMode(true)}
+                      className="h-7 rounded-full border bg-white px-4 text-[12px] transition-colors hover:[border-color:var(--color-type-dialogue)] hover:[color:var(--color-type-dialogue)]"
+                      style={{
+                        color: 'var(--color-ink-3)',
+                        borderColor: 'var(--color-paper-edge)',
+                      }}
+                    >
+                      管理
+                    </button>
+                    <Link
+                      href="/create"
+                      className="font-display group flex h-8 items-center gap-1.5 px-4 text-[13px] font-medium text-white transition-all hover:translate-x-[1px]"
+                      style={{
+                        background: 'var(--color-paper-stamp)',
+                        borderRadius: 'var(--radius-sm)',
+                        letterSpacing: '0.3px',
+                      }}
+                      title="AI 创建：描述一句，自动判断类型并生成草稿"
+                    >
+                      <span
+                        aria-hidden
+                        className="text-[10px]"
+                        style={{ color: 'var(--color-paper-base)', opacity: 0.55 }}
+                      >
+                        NEW
+                      </span>
+                      <span aria-hidden style={{ opacity: 0.7 }}>▸</span>
+                      AI 创建
+                    </Link>
+                  </>
+                )
+              }
+            />
+            <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+              {agents.map(a => (
+                <AgentCard
+                  key={a.id}
+                  {...a}
+                  editHref={`/edit/${a.id}`}
+                  manageMode={manageMode}
+                  onDelete={() => setPendingDelete(a)}
+                />
+              ))}
+              {!manageMode && (
+                <Link
+                  href="/create"
+                  className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed bg-transparent transition-colors hover:bg-[var(--color-primary-bg)] hover:[border-color:var(--color-primary)]"
+                  style={{
+                    borderColor: 'var(--color-border)',
+                    color: 'var(--color-text-5)',
+                    minHeight: 168,
+                  }}
+                >
+                  <span className="text-[22px] leading-none">＋</span>
+                  <span className="text-[13px]">AI 对话新建</span>
+                </Link>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* 记录 tab — 学生 × AI 的对话记录（不含 prep 产出；那一类走顶栏"我的产出"） */}
+        {tab === 'records' && (
+          <section>
+            <SectionActions
+              sub="回看学生与 AI 的对话记录"
+              right={
+                <Link
+                  href="/records"
+                  className="text-[13px] transition-colors hover:underline"
+                  style={{ color: 'var(--color-text-3)' }}
+                >
+                  全部记录 →
+                </Link>
+              }
+            />
+            {recents.length === 0 ? (
+              <div
+                className="rounded-xl border bg-white p-6 text-center text-[13px]"
+                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-4)' }}
+              >
+                暂无记录
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {recents.map(r => (
+                  <RecordCard key={r.id} record={r} />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* 我的产出 tab — 仅 type === 'prep' 的备课产出 */}
+        {tab === 'outputs' && (
+          <section>
+            <SectionActions
+              sub="备课工具的稿件产出（教案 / 大纲 / 习题 / 活动 / PBL）"
+              right={
+                <Link
+                  href="/records?filter=prep"
+                  className="text-[13px] transition-colors hover:underline"
+                  style={{ color: 'var(--color-text-3)' }}
+                >
+                  全部产出 →
+                </Link>
+              }
+            />
+            {prepRecents.length === 0 ? (
+              <div
+                className="rounded-xl border bg-white p-6 text-center text-[13px]"
+                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-4)' }}
+              >
+                还没有产出，去备课 tab 生成一份
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {prepRecents.map(r => (
+                  <RecordCard key={r.id} record={r} />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
       </main>
 
       <ConfirmModal

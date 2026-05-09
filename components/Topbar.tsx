@@ -4,13 +4,13 @@ import type { ReactNode } from 'react';
 interface Props {
   /** 显示在 brand 之后的面包屑名（如"课件大纲规划"），不传则只展示 brand */
   crumb?: string;
-  /** 是否显示"我的记录"导航链接（默认显示） */
+  /** 兼容遗留 call site —— 顶栏不再放 nav，本字段已无作用，留着不破坏调用 */
   showRecordsNav?: boolean;
   /** 顶栏右侧自定义槽位（保存按钮等）；不传则用默认用户 chip */
   right?: ReactNode;
 }
 
-export function Topbar({ crumb, showRecordsNav = true, right }: Props) {
+export function Topbar({ crumb, right }: Props) {
   return (
     <header
       className="sticky top-0 z-10 flex items-center gap-7 border-b px-12"
@@ -53,35 +53,7 @@ export function Topbar({ crumb, showRecordsNav = true, right }: Props) {
             {crumb}
           </span>
         </>
-      ) : (
-        showRecordsNav && (
-          <nav className="ml-4 flex items-center gap-6">
-            {/* 全部智能体 = 按学科 / 年级 / 时间检索的归档页 */}
-            <Link
-              href="/agents"
-              className="text-[17px] transition-colors hover:underline underline-offset-[8px] decoration-1"
-              style={{ color: 'var(--color-ink-3)' }}
-            >
-              全部智能体
-            </Link>
-            {/* 我的产出 = prep 一类（教案/大纲/习题/活动/PBL）通过 ?filter=prep 落到记录页 */}
-            <Link
-              href="/records?filter=prep"
-              className="text-[17px] transition-colors hover:underline underline-offset-[8px] decoration-1"
-              style={{ color: 'var(--color-ink-3)' }}
-            >
-              我的产出
-            </Link>
-            <Link
-              href="/records"
-              className="text-[17px] transition-colors hover:underline underline-offset-[8px] decoration-1"
-              style={{ color: 'var(--color-ink-3)' }}
-            >
-              我的记录
-            </Link>
-          </nav>
-        )
-      )}
+      ) : null /* 顶栏不再放 nav；首页 tab 承担分页 */}
 
       {right ? (
         <div className="ml-auto flex items-center gap-3">{right}</div>
