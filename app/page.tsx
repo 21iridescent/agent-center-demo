@@ -13,6 +13,7 @@ import { FALLBACK_RECORDS } from '@/lib/fallback-records';
 import type { SavedAgent } from '@/lib/agent-storage';
 import type { AppRecord } from '@/lib/types';
 import {
+  getBackground,
   getXuewenPersonaResolved,
   getTopicThumb,
 } from '@/lib/asset-catalog';
@@ -77,8 +78,10 @@ const TOOLS = [
 // 学问/辩论 2 张接真使用页（点"启动"跑真 DeepSeek）；讨论 2 张仍 legacy（无真使用页）
 //
 // avatarUrl / bgUrl 直接从 lib/asset-catalog.ts 取：
-// - 学问类：persona 头像（curie/darwin/socrates 等）
-// - 辩论类：仅当有 topic 封面时才出 hero；通用 stage-balanced 不够差异化（同图刷三张），不当兜底
+// - 学问类：persona 头像 + 场景背景（science-lab / natural-history / classical-academy）作卡片衬底
+// - 辩论类：仅当有 topic 封面时才出衬底；通用 stage-balanced 不够差异化（同图刷三张），不当兜底
+const XUEWEN_BG_LAB = getBackground('xuewen', 'science-lab')?.src;
+const XUEWEN_BG_NATURAL = getBackground('xuewen', 'natural-history')?.src;
 const PLASTIC_THUMB = getTopicThumb('plastic-ocean')?.src;
 
 const INITIAL_AGENTS: AgentSeed[] = [
@@ -97,7 +100,7 @@ const INITIAL_AGENTS: AgentSeed[] = [
     type: 'dialogue',
     avatar: '居',
     avatarUrl: getXuewenPersonaResolved({ personaId: 'curie' }).avatarUrl,
-    bgUrl: getXuewenPersonaResolved({ personaId: 'curie' }).roleUrl,
+    bgUrl: XUEWEN_BG_LAB,
     name: '居里夫人',
     subject: '科学',
     grade: '五年级',
@@ -109,7 +112,7 @@ const INITIAL_AGENTS: AgentSeed[] = [
     type: 'dialogue',
     avatar: '达',
     avatarUrl: getXuewenPersonaResolved({ personaId: 'darwin' }).avatarUrl,
-    bgUrl: getXuewenPersonaResolved({ personaId: 'darwin' }).roleUrl,
+    bgUrl: XUEWEN_BG_NATURAL,
     name: '达尔文',
     subject: '科学',
     grade: '六年级',
@@ -121,7 +124,7 @@ const INITIAL_AGENTS: AgentSeed[] = [
     type: 'dialogue',
     avatar: '像',
     avatarUrl: getXuewenPersonaResolved({ personaId: 'socrates' }).avatarUrl,
-    bgUrl: getXuewenPersonaResolved({ personaId: 'socrates' }).roleUrl,
+    bgUrl: XUEWEN_BG_LAB,
     name: '机器视觉博士',
     subject: '人工智能',
     grade: '五年级',
@@ -230,7 +233,9 @@ function savedToSeed(a: SavedAgent): AgentSeed {
       name,
     });
     avatarUrl = resolved.avatarUrl;
-    bgUrl = resolved.roleUrl; // 全身像作整张卡 bg（被 paper-card 84% overlay 压淡）
+    // 场景图作衬底（不是人物全身像）—— science-lab / natural-history / classical-academy
+    const bg = getBackground('xuewen', cfg.bgAsset as string | undefined);
+    bgUrl = bg?.src;
   } else if (a.kind === 'debate') {
     // 只用 topic 封面（plastic-ocean 等），不退到通用 stage-balanced 擂台 —
     // 通用底图三张同图刷出来反而显得每个辩论都长一样。
