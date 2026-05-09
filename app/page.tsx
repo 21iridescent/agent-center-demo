@@ -119,6 +119,118 @@ function HomeTabNav({
   );
 }
 
+/**
+ * 底部 mini tab dock —— 投影 / 大屏场景下顶部 tab 触不到，给同一组 tab 在底部
+ * 再镜像一份。设计上：圆角 paper-card pill + active 走 stamp 黑底白字，触控热区 ≥ 44px。
+ */
+function BottomTabDock({
+  active,
+  onChange,
+}: {
+  active: HomeTab;
+  onChange: (t: HomeTab) => void;
+}) {
+  return (
+    <div
+      className="fixed bottom-6 left-1/2 z-30 -translate-x-1/2"
+      role="navigation"
+      aria-label="底部分页"
+    >
+      <div
+        className="flex items-center gap-1 border px-2 py-2"
+        style={{
+          background: 'var(--color-paper-card)',
+          borderColor: 'var(--color-paper-edge)',
+          borderRadius: 'var(--radius-md)',
+          boxShadow: 'var(--shadow-pop)',
+        }}
+      >
+        {TAB_DEFS.map(t => {
+          const isActive = active === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => onChange(t.id)}
+              className="font-display px-5 py-2 text-[14px] font-medium transition-colors"
+              style={
+                isActive
+                  ? {
+                      background: 'var(--color-paper-stamp)',
+                      color: 'var(--color-paper-base)',
+                      borderRadius: 'var(--radius-sm)',
+                      letterSpacing: '0.3px',
+                      minHeight: 44,
+                    }
+                  : {
+                      color: 'var(--color-ink-2)',
+                      borderRadius: 'var(--radius-sm)',
+                      minHeight: 44,
+                    }
+              }
+              aria-current={isActive ? 'page' : undefined}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 右下 floating primary action —— 不同 tab 显示对应主操作。
+ * 大屏下手指落点距 [bottom-right] 比 [top-right "AI 创建"] 顺得多。
+ */
+function FabPrimary({
+  tab,
+  onScrollTop,
+}: {
+  tab: HomeTab;
+  onScrollTop: () => void;
+}) {
+  if (tab === 'use') {
+    return (
+      <Link
+        href="/create"
+        className="fixed bottom-6 right-6 z-30 flex h-14 items-center gap-2 px-5 font-display text-[14px] font-medium text-white transition-all hover:translate-y-[-1px]"
+        style={{
+          background: 'var(--color-paper-stamp)',
+          borderRadius: 'var(--radius-md)',
+          boxShadow: 'var(--shadow-pop)',
+          letterSpacing: '0.3px',
+        }}
+        title="AI 创建：描述一句，自动判断类型并生成草稿"
+      >
+        <span aria-hidden style={{ opacity: 0.7 }}>＋</span>
+        <span>AI 创建</span>
+      </Link>
+    );
+  }
+  if (tab === 'records' || tab === 'outputs') {
+    return (
+      <button
+        type="button"
+        onClick={onScrollTop}
+        className="fixed bottom-6 right-6 z-30 flex h-14 w-14 items-center justify-center border text-[18px] transition-all hover:translate-y-[-1px]"
+        style={{
+          background: 'var(--color-paper-card)',
+          borderColor: 'var(--color-paper-edge)',
+          color: 'var(--color-ink-1)',
+          borderRadius: 'var(--radius-md)',
+          boxShadow: 'var(--shadow-pop)',
+        }}
+        aria-label="回到顶部"
+        title="回到顶部"
+      >
+        ↑
+      </button>
+    );
+  }
+  return null;
+}
+
 const TOOLS = [
   {
     icon: '🗺',
@@ -274,7 +386,7 @@ export default function Home() {
     <>
       <Topbar />
       <main
-        className="mx-auto w-full px-10 pt-10 pb-24"
+        className="mx-auto w-full px-10 pt-10 pb-40"
         // 首页四宫格 + 长版 record 列表 — 比 detail 页更宽。
         // viewport 自适应：大屏给到 1480，窄屏自动收回不顶边
         style={{ maxWidth: 'min(1480px, calc(100vw - 80px))' }}
@@ -471,6 +583,13 @@ export default function Home() {
           </section>
         )}
       </main>
+
+      {/* 大屏 / 投影场景：底部镜像 tab + 右下主操作 — 不用伸手够顶部 */}
+      <BottomTabDock active={tab} onChange={selectTab} />
+      <FabPrimary
+        tab={tab}
+        onScrollTop={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      />
 
       <ConfirmModal
         open={!!pendingDelete}
