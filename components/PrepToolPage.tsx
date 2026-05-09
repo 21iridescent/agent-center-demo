@@ -380,34 +380,45 @@ export function PrepToolPage({
   //   editedBy    = 用户在 drawer 自己又改过了 → 完全覆盖（最高优先）
   //
   // 这套派生让"应用 / 撤销"是纯前端的，不需要把改动同步回 chat history。
-  const canvasFromTool = lastWriteCanvasMarkdown(messages);
-  const aiText = lastAssistantText(messages);
-  const baseCanvas = canvasFromTool || aiText;
+  // 全部包 useMemo：流式期间每个 chunk 都会让 messages 引用变；不过 baseCanvas
+  // 这种字符串 === 一致的话，下游 ArtifactDrawer/MarkdownRenderer/MermaidBlock
+  // 不会重新挂载。
+  const baseCanvas = useMemo(() => {
+    const fromTool = lastWriteCanvasMarkdown(messages);
+    const fromText = lastAssistantText(messages);
+    return fromTool || fromText;
+  }, [messages]);
 
-  const allEditCalls = extractEditCalls(messages);
+  const allEditCalls = useMemo(() => extractEditCalls(messages), [messages]);
+
   const editById = useMemo(() => {
     const m = new Map<string, PendingEdit>();
     for (const e of allEditCalls) m.set(e.callId, e);
     return m;
-    // allEditCalls 是 messages 的派生；用 messages.length + last call id 触发即可
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allEditCalls.length, allEditCalls[allEditCalls.length - 1]?.callId]);
+  }, [allEditCalls]);
 
   // 把已 Apply 的 edit 按点击顺序叠加应用到 baseCanvas
-  let composedCanvas = baseCanvas;
-  for (const id of appliedEditIds) {
-    const e = editById.get(id);
-    if (!e) continue;
-    composedCanvas = applyOneEdit(composedCanvas, e).md;
-  }
+  const composedCanvas = useMemo(() => {
+    let md = baseCanvas;
+    for (const id of appliedEditIds) {
+      const e = editById.get(id);
+      if (!e) continue;
+      md = applyOneEdit(md, e).md;
+    }
+    return md;
+  }, [baseCanvas, appliedEditIds, editById]);
 
   const artifactSource = editedArtifact ?? composedCanvas;
   const showDrawerToggle = KINDS_WITH_DRAWER.includes(kind);
   const filename = `${saveTitleStem}${PREP_KIND_TITLE_SUFFIX[kind]}`;
 
   // 待审改动 = 还没 Apply 也没撤销的 editCanvas 调用
-  const pendingEdits = allEditCalls.filter(
-    e => !appliedEditIds.includes(e.callId) && !rejectedEditIds.has(e.callId),
+  const pendingEdits = useMemo(
+    () =>
+      allEditCalls.filter(
+        e => !appliedEditIds.includes(e.callId) && !rejectedEditIds.has(e.callId),
+      ),
+    [allEditCalls, appliedEditIds, rejectedEditIds],
   );
 
   function handleApplyEdit(callId: string) {
