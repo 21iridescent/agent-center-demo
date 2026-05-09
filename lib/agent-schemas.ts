@@ -211,3 +211,40 @@ export const CREATE_TOOL_NAME: Record<CreateKind, string> = {
   debate: 'proposeDebateAgent',
   discussion: 'proposeDiscussionAgent',
 };
+
+/**
+ * KV 写路径的可信化校验：服务端在持久化前必须跑这个 ——
+ * - 防止客户端塞兆字节 / 注 HTML / 写非法枚举值进 config
+ * - z.object 默认 strip，多余字段会被丢，不会落 KV
+ * - 失败时只回前 3 条 issue，避免吐整棵 zod 错误树到响应里
+ */
+export type ValidatedAgentConfig =
+  | { kind: 'xuewen'; config: XuewenAgentConfig }
+  | { kind: 'debate'; config: DebateAgentConfig }
+  | { kind: 'discussion'; config: DiscussionAgentConfig };
+
+export function parseAgentConfig(
+  kind: CreateKind,
+  raw: unknown,
+):
+  | { ok: true; data: ValidatedAgentConfig }
+  | { ok: false; error: string } {
+  const schema =
+    kind === 'xuewen'
+      ? XuewenAgentSchema
+      : kind === 'debate'
+        ? DebateAgentSchema
+        : DiscussionAgentSchema;
+  const parsed = schema.safeParse(raw);
+  if (!parsed.success) {
+    const issues = parsed.error.issues
+      .slice(0, 3)
+      .map(i => `${i.path.join('.') || '(root)'}: ${i.message}`)
+      .join('; ');
+    return { ok: false, error: issues || 'config invalid' };
+  }
+  // TS narrowing：parsed.data 的类型由 schema 决定，按 kind discriminate
+  if (kind === 'xuewen') return { ok: true, data: { kind, config: parsed.data as XuewenAgentConfig } };
+  if (kind === 'debate') return { ok: true, data: { kind, config: parsed.data as DebateAgentConfig } };
+  return { ok: true, data: { kind, config: parsed.data as DiscussionAgentConfig } };
+}

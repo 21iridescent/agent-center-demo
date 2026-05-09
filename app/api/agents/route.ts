@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { listAgents, createAgent, listHiddenSeedAgentIds } from '@/lib/agent-storage';
-import type { CreateKind } from '@/lib/agent-schemas';
+import { parseAgentConfig, type CreateKind } from '@/lib/agent-schemas';
 
 export const runtime = 'nodejs';
 
@@ -36,8 +36,19 @@ export async function POST(req: Request) {
   if (!VALID_KINDS.includes(kind)) {
     return NextResponse.json({ error: 'unknown kind' }, { status: 400 });
   }
+  // KV 持久化前必须走 Zod —— 阻止任意客户端 payload 落库
+  const validated = parseAgentConfig(kind, body.config);
+  if (!validated.ok) {
+    return NextResponse.json(
+      { error: 'invalid_config', detail: validated.error },
+      { status: 400 },
+    );
+  }
   try {
-    const agent = await createAgent({ kind, config: body.config });
+    const agent = await createAgent({
+      kind,
+      config: validated.data.config as Record<string, unknown>,
+    });
     return NextResponse.json({ agent });
   } catch (e) {
     console.error('create agent failed', e);

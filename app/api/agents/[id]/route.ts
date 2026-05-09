@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAgent, deleteAgent, updateAgent, SEED_AGENT_IDS } from '@/lib/agent-storage';
-import type { CreateKind } from '@/lib/agent-schemas';
+import { parseAgentConfig, type CreateKind } from '@/lib/agent-schemas';
 
 export const runtime = 'nodejs';
 
@@ -72,8 +72,19 @@ export async function PUT(
   if (SEED_AGENT_IDS.has(id)) {
     return NextResponse.json({ error: 'seed_not_writable' }, { status: 409 });
   }
+  // KV 持久化前必须走 Zod —— 阻止任意客户端 payload 落库
+  const validated = parseAgentConfig(kind, body.config);
+  if (!validated.ok) {
+    return NextResponse.json(
+      { error: 'invalid_config', detail: validated.error },
+      { status: 400 },
+    );
+  }
   try {
-    const agent = await updateAgent(id, { kind, config: body.config });
+    const agent = await updateAgent(id, {
+      kind,
+      config: validated.data.config as Record<string, unknown>,
+    });
     if (!agent) {
       return NextResponse.json({ error: 'not_found' }, { status: 404 });
     }
