@@ -32,7 +32,10 @@ export const MermaidBlock = memo(function MermaidBlock({ source }: Props) {
           mermaid.initialize({
             startOnLoad: false,
             theme: 'neutral',
-            securityLevel: 'loose',
+            // strict 模式：转义节点 label / edge 文本里的 HTML 标签，
+            // 阻止 mermaid 把 raw HTML 渲染进 SVG。
+            // 我们渲流程图 / 时序图 / 思维导图，都不需要 raw HTML 节点。
+            securityLevel: 'strict',
             fontFamily: 'inherit',
             themeVariables: PAPER_THEME,
           });
