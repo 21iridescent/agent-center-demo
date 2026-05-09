@@ -122,13 +122,17 @@ function HomeTabNav({
 /**
  * 底部 mini tab dock —— 投影 / 大屏场景下顶部 tab 触不到，给同一组 tab 在底部
  * 再镜像一份。设计上：圆角 paper-card pill + active 走 stamp 黑底白字，触控热区 ≥ 44px。
+ *
+ * 桌面备课场景下用户可以收起，状态写 localStorage 持久化；收起态留一个细收纳条以便重新展开。
  */
 function BottomTabDock({
   active,
   onChange,
+  onHide,
 }: {
   active: HomeTab;
   onChange: (t: HomeTab) => void;
+  onHide: () => void;
 }) {
   return (
     <div
@@ -174,8 +178,52 @@ function BottomTabDock({
             </button>
           );
         })}
+        <span
+          aria-hidden
+          className="mx-1 h-5 w-px"
+          style={{ background: 'var(--color-paper-rule)' }}
+        />
+        <button
+          type="button"
+          onClick={onHide}
+          className="flex h-10 w-10 items-center justify-center text-[14px] transition-colors hover:[color:var(--color-ink-1)]"
+          style={{
+            color: 'var(--color-ink-3)',
+            borderRadius: 'var(--radius-sm)',
+          }}
+          aria-label="收起底部导航"
+          title="收起底部导航（桌面备课时不挡内容）"
+        >
+          ▾
+        </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * 收起态的小收纳条 —— 始终在屏幕底部中央，点一下重新展开 dock。
+ * 占位极小（仅一行像素+点击区域），不挡内容。
+ */
+function DockToggleStub({ onShow }: { onShow: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onShow}
+      className="fixed bottom-2 left-1/2 z-30 -translate-x-1/2 px-4 py-1 transition-colors hover:[color:var(--color-ink-1)]"
+      style={{
+        background: 'var(--color-paper-card)',
+        color: 'var(--color-ink-3)',
+        border: '1px solid var(--color-paper-edge)',
+        borderRadius: 'var(--radius-sm)',
+        boxShadow: 'var(--shadow-sm)',
+        fontSize: '12px',
+      }}
+      aria-label="展开底部导航"
+      title="展开底部导航（投影 / 大屏时方便切 tab）"
+    >
+      ▴
+    </button>
   );
 }
 
@@ -318,6 +366,25 @@ export default function Home() {
     if (next !== 'use' && manageMode) setManageMode(false);
   }
 
+  // 底部 dock 可隐藏 — 桌面备课不需要、投影时打开。state 持久化到 localStorage。
+  const [dockVisible, setDockVisible] = useState(true);
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem('home:dock-visible');
+      if (v === '0') setDockVisible(false);
+    } catch {
+      /* localStorage 不可用 → 接受默认 true */
+    }
+  }, []);
+  function setDockPersisted(v: boolean) {
+    setDockVisible(v);
+    try {
+      localStorage.setItem('home:dock-visible', v ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  }
+
   // 首页"记录" + "我的产出"两个 tab 共用一次拉取：
   //   recents     = 学生×AI 对话类（dialogue/debate/discussion）
   //   prepRecents = 备课产出类（type === 'prep'）
@@ -386,7 +453,7 @@ export default function Home() {
     <>
       <Topbar />
       <main
-        className="mx-auto w-full px-10 pt-10 pb-40"
+        className={`mx-auto w-full px-10 pt-10 ${dockVisible ? 'pb-40' : 'pb-16'}`}
         // 首页四宫格 + 长版 record 列表 — 比 detail 页更宽。
         // viewport 自适应：大屏给到 1480，窄屏自动收回不顶边
         style={{ maxWidth: 'min(1480px, calc(100vw - 80px))' }}
@@ -584,12 +651,23 @@ export default function Home() {
         )}
       </main>
 
-      {/* 大屏 / 投影场景：底部镜像 tab + 右下主操作 — 不用伸手够顶部 */}
-      <BottomTabDock active={tab} onChange={selectTab} />
-      <FabPrimary
-        tab={tab}
-        onScrollTop={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      />
+      {/* 大屏 / 投影场景：底部镜像 tab + 右下主操作 — 不用伸手够顶部。
+          桌面备课时可点 ▾ 收起，状态写 localStorage 持久。 */}
+      {dockVisible ? (
+        <>
+          <BottomTabDock
+            active={tab}
+            onChange={selectTab}
+            onHide={() => setDockPersisted(false)}
+          />
+          <FabPrimary
+            tab={tab}
+            onScrollTop={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          />
+        </>
+      ) : (
+        <DockToggleStub onShow={() => setDockPersisted(true)} />
+      )}
 
       <ConfirmModal
         open={!!pendingDelete}
