@@ -264,6 +264,8 @@
   * { margin: 0; padding: 0; }
 
   html, body { height: 100%; }
+  /* 始终预留滚动条槽位 —— tab 切换时内容长短不同，避免 scrollbar 显隐导致 viewport 抖动 */
+  html { scrollbar-gutter: stable; }
   body {
     font-family: var(--font-sans);
     font-size: var(--text-body);
