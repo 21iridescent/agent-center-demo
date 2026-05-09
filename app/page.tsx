@@ -56,6 +56,13 @@ const TOOLS = [
     tags: ['课件', '结构'],
     href: '/prep/outline',
   },
+  {
+    icon: '🧪',
+    name: '项目化学习设计',
+    desc: '按驱动性问题 + 阶段拆分 + 评价量规生成跨课时 PBL 方案',
+    tags: ['PBL', '跨学科'],
+    href: '/prep/project',
+  },
 ];
 
 // 注：seed-* id 与 lib/agent-storage.ts 的 SEED_AGENTS 配对

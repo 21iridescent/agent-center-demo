@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import type { AppRecord } from '@/lib/types';
-import { PREP_KIND_LABEL, PREP_KIND_TO_PATH } from '@/lib/types';
+import { PREP_KIND_LABEL } from '@/lib/types';
 
 const TYPE_LABEL: Record<string, string> = {
   dialogue:   'AI 学问',
@@ -57,15 +57,12 @@ export function RecordCard({ record: r, onPrimary, onDelete }: Props) {
   function handlePrimary(e: React.MouseEvent) {
     e.stopPropagation();
     if (onPrimary) return onPrimary(r);
-    if (r.type === 'prep') {
-      router.push(PREP_KIND_TO_PATH[r.kind]);
-      return;
-    }
+    // 所有类型都先去回看页 /records/[id]；prep 回看页里再有"回到 工具"按钮
     router.push(`/records/${encodeURIComponent(r.id)}`);
   }
 
   const primaryLabel =
-    r.type === 'prep'        ? '打开' :
+    r.type === 'prep'        ? '查看稿件' :
     r.type === 'dialogue'    ? '恢复对话' :
     r.type === 'debate'      ? '查看报告' :
     r.type === 'discussion'  ? '查看记录' :

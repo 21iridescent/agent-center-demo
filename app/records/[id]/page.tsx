@@ -4,6 +4,9 @@ import { FALLBACK_RECORDS } from '@/lib/fallback-records';
 import { Topbar } from '@/components/Topbar';
 import { DialogueReplayPage } from '@/components/DialogueReplayPage';
 import { DebateReplayPage } from '@/components/DebateReplayPage';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
+import { CitationsPanel } from '@/components/CitationsPanel';
+import { PrepExportButton } from '@/components/PrepExportButton';
 import { PREP_KIND_LABEL, PREP_KIND_TO_PATH, type AppRecord, type PrepRecord } from '@/lib/types';
 import Link from 'next/link';
 
@@ -109,27 +112,35 @@ function PrepReplayPage({ record }: { record: PrepRecord }) {
               </div>
             )}
           </div>
-          <Link
-            href={toolPath}
-            className="shrink-0 rounded-md border px-3 py-1.5 text-[12px] transition-colors hover:border-[var(--color-type-dialogue-deep)] hover:text-[var(--color-type-dialogue-deep)]"
-            style={{ borderColor: 'var(--color-paper-edge)', color: 'var(--color-ink-3)' }}
-          >
-            回到 {kindLabel} 工具 →
-          </Link>
+          <div className="flex shrink-0 items-center gap-2">
+            <PrepExportButton source={record.content ?? ''} filename={record.title} />
+            <Link
+              href={toolPath}
+              className="rounded-md border px-3 py-1.5 text-[12px] transition-colors hover:border-[var(--color-type-dialogue-deep)] hover:text-[var(--color-type-dialogue-deep)]"
+              style={{ borderColor: 'var(--color-paper-edge)', color: 'var(--color-ink-3)' }}
+            >
+              回到 {kindLabel} 工具 →
+            </Link>
+          </div>
         </header>
 
         {record.content ? (
-          <article
-            className="rounded-md border bg-white px-6 py-5"
-            style={{ borderColor: 'var(--color-paper-edge)' }}
-          >
-            <div
-              className="whitespace-pre-wrap text-[14px] leading-[1.85]"
-              style={{ color: 'var(--color-ink-1)' }}
+          <>
+            <article
+              className="rounded-md border bg-white px-6 py-5"
+              style={{ borderColor: 'var(--color-paper-edge)' }}
             >
-              {record.content}
-            </div>
-          </article>
+              <div className="text-[14px]" style={{ color: 'var(--color-ink-1)' }}>
+                <MarkdownRenderer source={record.content} />
+              </div>
+            </article>
+
+            {record.citations && record.citations.length > 0 && (
+              <div className="mt-5">
+                <CitationsPanel citations={record.citations} />
+              </div>
+            )}
+          </>
         ) : (
           <div
             className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center"

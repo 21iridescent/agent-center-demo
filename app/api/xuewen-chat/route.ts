@@ -1,5 +1,5 @@
 import { streamText, convertToModelMessages, type UIMessage } from 'ai';
-import { deepseek, DEEPSEEK_MODEL } from '@/lib/deepseek';
+import { deepseek, DEEPSEEK_MODEL, FAST_OPTS } from '@/lib/deepseek';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60; // reasoning 模型推理慢
@@ -12,6 +12,7 @@ export const maxDuration = 60; // reasoning 模型推理慢
  * - 用 streamText 直连 DeepSeek（不走 ToolLoopAgent，因为不需要 tools）
  * - 必须 deepseek.chat(...)，默认 deepseek(model) 走 Responses API 在 DeepSeek 上 404
  * - 必须 nodejs runtime；edge + DeepSeek 在 Phase 1 调试时挂过
+ * - 沉浸式角色对话 → FAST_OPTS 关思考、不送 reasoning（露 chain-of-thought 会破戏）
  */
 interface RequestBody {
   messages: UIMessage[];
@@ -43,7 +44,8 @@ export async function POST(req: Request) {
     system: body.systemPrompt,
     messages: modelMessages,
     temperature: 0.7,
+    ...FAST_OPTS,
   });
 
-  return result.toUIMessageStreamResponse({ sendReasoning: true });
+  return result.toUIMessageStreamResponse();
 }

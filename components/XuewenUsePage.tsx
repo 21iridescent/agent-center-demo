@@ -181,28 +181,34 @@ export function XuewenUsePage({ agent }: Props) {
           </div>
         }
       />
+
+      {/* 背景水印 — 全视口 fixed,从 topbar 下方一直铺到底,左右 gutter 不漏白 */}
+      {bg && (
+        <div
+          className="pointer-events-none fixed inset-x-0 bottom-0 -z-10 overflow-hidden"
+          style={{
+            top: 'var(--topbar-height)',
+            opacity: 0.34,
+            maskImage:
+              'linear-gradient(to bottom, transparent 0%, black 8%, black 78%, transparent 100%)',
+            WebkitMaskImage:
+              'linear-gradient(to bottom, transparent 0%, black 8%, black 78%, transparent 100%)',
+          }}
+          aria-hidden
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={bg.src} alt="" className="h-full w-full object-cover" />
+        </div>
+      )}
+
       <main
-        className="relative mx-auto flex w-full flex-col px-10 pt-8 pb-8"
+        className="relative mx-auto flex w-full flex-col px-12 pt-8 pb-8"
         style={{
-          maxWidth: 'var(--container-wide)',
+          maxWidth: 1520,
           height: 'calc(100vh - var(--topbar-height))',
         }}
       >
-        {/* 背景水印（淡）*/}
-        {bg && (
-          <div
-            className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
-            style={{ opacity: 0.05 }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={bg.src}
-              alt=""
-              className="h-full w-full object-cover"
-              aria-hidden
-            />
-          </div>
-        )}
+        {/* 背景水印移至最外层(fixed),见 main 之外的渲染块 */}
 
         {/* 章节版口 */}
         <header
@@ -241,7 +247,7 @@ export function XuewenUsePage({ agent }: Props) {
           </span>
         </header>
 
-        <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
           <RoleCard
             name={name}
             subject={subject}

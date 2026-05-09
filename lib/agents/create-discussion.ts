@@ -1,5 +1,5 @@
 import { ToolLoopAgent, tool } from 'ai';
-import { deepseek, DEEPSEEK_MODEL } from '@/lib/deepseek';
+import { deepseek, DEEPSEEK_MODEL, QUALITY_OPTS } from '@/lib/deepseek';
 import { DiscussionAgentSchema, CREATE_TOOL_NAME } from '@/lib/agent-schemas';
 
 const INSTRUCTIONS = `你是「AI 思辨·讨论 智能体配置」助手，服务对象是小学科学/AI 课教师。
@@ -39,6 +39,7 @@ export const createDiscussionAgent = new ToolLoopAgent({
   model: deepseek(DEEPSEEK_MODEL),
   instructions: INSTRUCTIONS,
   temperature: 0.5,
+  ...QUALITY_OPTS,
   tools: {
     [CREATE_TOOL_NAME.discussion]: tool({
       description:

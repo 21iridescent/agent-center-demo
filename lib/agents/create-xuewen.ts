@@ -1,5 +1,5 @@
 import { ToolLoopAgent, tool } from 'ai';
-import { deepseek, DEEPSEEK_MODEL } from '@/lib/deepseek';
+import { deepseek, DEEPSEEK_MODEL, QUALITY_OPTS } from '@/lib/deepseek';
 import { XuewenAgentSchema, CREATE_TOOL_NAME } from '@/lib/agent-schemas';
 
 /**
@@ -37,6 +37,7 @@ export const createXuewenAgent = new ToolLoopAgent({
   model: deepseek(DEEPSEEK_MODEL),
   instructions: INSTRUCTIONS,
   temperature: 0.5,
+  ...QUALITY_OPTS,
   tools: {
     [CREATE_TOOL_NAME.xuewen]: tool({
       description:

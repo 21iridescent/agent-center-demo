@@ -1,13 +1,20 @@
 'use client';
 
+import type { ReactElement } from 'react';
 import type { UIMessage } from 'ai';
 import { CREATE_KIND_LABEL, type CreateKind } from '@/lib/agent-schemas';
+import { MarkdownRenderer } from './MarkdownRenderer';
+import { ToolStatusChip, isPrepToolType } from './ToolStatusChip';
+import { CitationsPanel, extractCitations } from './CitationsPanel';
 
 interface ToolPart {
   type: string;
   state?: string;
   toolCallId?: string;
   input?: unknown;
+  output?: unknown;
+  errorText?: string;
+  text?: string;
 }
 
 function kindFromToolType(type: string): CreateKind | null {
@@ -160,9 +167,199 @@ function ThinkingBubble() {
   );
 }
 
+function TextBubble({
+  isUser,
+  text,
+}: {
+  isUser: boolean;
+  text: string;
+}) {
+  return (
+    <div
+      className={`flex max-w-[86%] gap-3 ${isUser ? 'self-end flex-row-reverse' : 'self-start'}`}
+    >
+      <Avatar kind={isUser ? 'user' : 'ai'} />
+      <div
+        className={`break-words px-4 py-3 text-[14px] leading-[1.7] ${isUser ? 'whitespace-pre-wrap' : ''}`}
+        style={
+          isUser
+            ? {
+                background: 'var(--color-paper-stamp)',
+                color: 'var(--color-paper-base)',
+                borderRadius: 'var(--radius-sm)',
+              }
+            : {
+                background: 'var(--color-paper-card)',
+                border: '1px solid var(--color-paper-edge)',
+                color: 'var(--color-ink-1)',
+                borderRadius: 'var(--radius-sm)',
+              }
+        }
+      >
+        {isUser ? text : <MarkdownRenderer source={text} />}
+      </div>
+    </div>
+  );
+}
+
+function ReasoningDetails({
+  text,
+  streaming,
+}: {
+  text: string;
+  streaming: boolean;
+}) {
+  return (
+    <details
+      className="self-start ml-[44px] max-w-[640px] px-4 py-2.5 border"
+      style={{
+        background: 'var(--color-paper-soft)',
+        borderColor: 'var(--color-paper-edge)',
+        color: 'var(--color-ink-3)',
+        borderRadius: 'var(--radius-sm)',
+      }}
+      open={streaming}
+    >
+      <summary className="cursor-pointer text-[12px] font-medium select-none font-numeric uppercase tracking-[0.1em]">
+        思考过程{streaming ? '（推理中…）' : ''}
+      </summary>
+      <pre
+        className="mt-2 whitespace-pre-wrap break-words text-[12px] leading-[1.6]"
+        style={{ fontFamily: 'inherit', color: 'var(--color-ink-3)' }}
+      >
+        {text}
+      </pre>
+    </details>
+  );
+}
+
+function ProposeDraftCard({
+  kind,
+  callId,
+  input,
+  state,
+  applied,
+  onApply,
+}: {
+  kind: CreateKind;
+  callId: string;
+  input: unknown;
+  state: string | undefined;
+  applied: boolean;
+  onApply: ((kind: CreateKind, toolCallId: string, input: unknown) => void) | undefined;
+}) {
+  if (state === 'input-streaming') {
+    return (
+      <div
+        className="self-start ml-[44px] inline-flex items-center gap-2 px-3 py-1.5 text-[12px] font-numeric uppercase tracking-[0.12em]"
+        style={{
+          background: 'var(--color-paper-soft)',
+          color: 'var(--color-ink-3)',
+          border: '1px solid var(--color-paper-edge)',
+          borderRadius: 'var(--radius-xs)',
+        }}
+      >
+        <span
+          className="h-1.5 w-1.5 rounded-full animate-pulse"
+          style={{ background: 'var(--color-ink-mute)' }}
+        />
+        <span>正在生成 {CREATE_KIND_LABEL[kind]} 草稿</span>
+      </div>
+    );
+  }
+  if (state !== 'input-available' && state !== 'output-available') return null;
+  if (!input) return null;
+
+  const rows = summarizeDraft(kind, input);
+  const canApply = !!onApply && !applied;
+  return (
+    <div
+      className="self-start ml-[44px] flex w-full max-w-[640px] flex-col overflow-hidden border"
+      style={{
+        background: 'var(--color-paper-card)',
+        borderColor: 'var(--color-paper-edge)',
+        borderRadius: 'var(--radius-sm)',
+        boxShadow: 'var(--shadow-sm)',
+      }}
+    >
+      <div
+        className="flex items-baseline gap-2 border-b px-4 py-2"
+        style={{ borderColor: 'var(--color-paper-rule)' }}
+      >
+        <span
+          className="font-numeric text-[10.5px] uppercase tracking-[0.16em]"
+          style={{ color: 'var(--color-ink-mute)' }}
+        >
+          DRAFT
+        </span>
+        <span
+          className="font-display text-[14px] font-medium"
+          style={{ color: 'var(--color-ink-1)' }}
+        >
+          {CREATE_KIND_LABEL[kind]} 草稿
+        </span>
+        {applied && (
+          <span
+            className="ml-auto font-numeric text-[10.5px] uppercase tracking-[0.16em]"
+            style={{ color: 'var(--color-launch-deep)' }}
+          >
+            · 已应用
+          </span>
+        )}
+      </div>
+
+      <dl
+        className="flex flex-col gap-1.5 px-4 py-3 text-[13px] leading-snug"
+        style={{ color: 'var(--color-ink-1)' }}
+      >
+        {rows.map(r => (
+          <div key={r.label} className="flex gap-3">
+            <dt
+              className="w-[64px] shrink-0 font-numeric text-[11px] uppercase tracking-[0.12em]"
+              style={{ color: 'var(--color-ink-3)' }}
+            >
+              {r.label}
+            </dt>
+            <dd className="flex-1 break-words" style={{ color: 'var(--color-ink-1)' }}>
+              {r.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      {(canApply || applied) && (
+        <div
+          className="flex items-center gap-3 border-t px-4 py-2.5"
+          style={{ borderColor: 'var(--color-paper-rule)' }}
+        >
+          {canApply && (
+            <button
+              type="button"
+              onClick={() => onApply?.(kind, callId, input)}
+              className="font-display flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-white"
+              style={{
+                background: 'var(--color-paper-stamp)',
+                borderRadius: 'var(--radius-xs)',
+              }}
+            >
+              <span aria-hidden style={{ color: 'var(--color-paper-base)', opacity: 0.6 }}>
+                ▸
+              </span>
+              <span>应用到表单</span>
+            </button>
+          )}
+          <span className="text-[11.5px]" style={{ color: 'var(--color-ink-3)' }}>
+            {applied
+              ? '已写入右侧；继续在下方对话框说要改什么，AI 会出新版'
+              : '或在下方对话框继续说要改什么，AI 会出新一版'}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ChatArea({ messages, isStreaming, appliedToolCallId, onApplyDraft }: Props) {
-  // Loading 触发条件：① 等首 token 中（status='submitted'，messages 末尾还是 user）
-  // ② 已 streaming 但 assistant 还没出文字也没出 tool part（极短瞬间）
   const last = messages[messages.length - 1];
   const lastHasContent = last
     ? (last.parts ?? []).some(p => {
@@ -176,198 +373,133 @@ export function ChatArea({ messages, isStreaming, appliedToolCallId, onApplyDraf
 
   return (
     <div className="flex flex-col gap-5 px-5 py-5">
-      {messages.map(m => {
-        const isUser = m.role === 'user';
-        const text = (m.parts ?? [])
-          .filter(p => p.type === 'text')
-          .map(p => (p as { type: 'text'; text: string }).text)
-          .join('');
-        const reasoning = (m.parts ?? [])
-          .filter(p => p.type === 'reasoning')
-          .map(p => (p as { type: 'reasoning'; text: string }).text)
-          .join('');
-        const reasoningStreaming = (m.parts ?? []).some(
-          p =>
-            p.type === 'reasoning' &&
-            (p as { state?: 'streaming' | 'done' }).state === 'streaming',
-        );
-        const toolParts = (m.parts ?? []).filter(p =>
-          p.type.startsWith('tool-'),
-        ) as ToolPart[];
-        const showBubble = text.length > 0;
-
-        return (
-          <div key={m.id} className="flex flex-col gap-2.5">
-            {!isUser && reasoning.length > 0 && (
-              <details
-                className="self-start ml-[44px] max-w-[640px] px-4 py-2.5 border"
-                style={{
-                  background: 'var(--color-paper-soft)',
-                  borderColor: 'var(--color-paper-edge)',
-                  color: 'var(--color-ink-3)',
-                  borderRadius: 'var(--radius-sm)',
-                }}
-                open={reasoningStreaming}
-              >
-                <summary className="cursor-pointer text-[12px] font-medium select-none font-numeric uppercase tracking-[0.1em]">
-                  思考过程{reasoningStreaming ? '（推理中…）' : ''}
-                </summary>
-                <pre
-                  className="mt-2 whitespace-pre-wrap break-words text-[12px] leading-[1.6]"
-                  style={{ fontFamily: 'inherit', color: 'var(--color-ink-3)' }}
-                >
-                  {reasoning}
-                </pre>
-              </details>
-            )}
-
-            {showBubble && (
-              <div
-                className={`flex max-w-[86%] gap-3 ${isUser ? 'self-end flex-row-reverse' : 'self-start'}`}
-              >
-                <Avatar kind={isUser ? 'user' : 'ai'} />
-                <div
-                  className="whitespace-pre-wrap break-words px-4 py-3 text-[14px] leading-[1.7]"
-                  style={
-                    isUser
-                      ? {
-                          background: 'var(--color-paper-stamp)',
-                          color: 'var(--color-paper-base)',
-                          borderRadius: 'var(--radius-sm)',
-                        }
-                      : {
-                          background: 'var(--color-paper-card)',
-                          border: '1px solid var(--color-paper-edge)',
-                          color: 'var(--color-ink-1)',
-                          borderRadius: 'var(--radius-sm)',
-                        }
-                  }
-                >
-                  {text}
-                </div>
-              </div>
-            )}
-
-            {toolParts.map(part => {
-              const kind = kindFromToolType(part.type);
-              if (!kind) return null;
-
-              if (part.state === 'input-streaming') {
-                return (
-                  <div
-                    key={part.toolCallId ?? `${m.id}-${part.type}`}
-                    className="self-start ml-[44px] inline-flex items-center gap-2 px-3 py-1.5 text-[12px] font-numeric uppercase tracking-[0.12em]"
-                    style={{
-                      background: 'var(--color-paper-soft)',
-                      color: 'var(--color-ink-3)',
-                      border: '1px solid var(--color-paper-edge)',
-                      borderRadius: 'var(--radius-xs)',
-                    }}
-                  >
-                    <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: 'var(--color-ink-mute)' }} />
-                    <span>正在生成 {CREATE_KIND_LABEL[kind]} 草稿</span>
-                  </div>
-                );
-              }
-
-              if (part.state === 'input-available' && part.input && part.toolCallId) {
-                const callId = part.toolCallId;
-                const isApplied = appliedToolCallId === callId;
-                const rows = summarizeDraft(kind, part.input);
-                const canApply = !!onApplyDraft && !isApplied;
-                return (
-                  <div
-                    key={callId}
-                    className="self-start ml-[44px] flex w-full max-w-[640px] flex-col overflow-hidden border"
-                    style={{
-                      background: 'var(--color-paper-card)',
-                      borderColor: 'var(--color-paper-edge)',
-                      borderRadius: 'var(--radius-sm)',
-                      boxShadow: 'var(--shadow-sm)',
-                    }}
-                  >
-                    <div
-                      className="flex items-baseline gap-2 border-b px-4 py-2"
-                      style={{ borderColor: 'var(--color-paper-rule)' }}
-                    >
-                      <span
-                        className="font-numeric text-[10.5px] uppercase tracking-[0.16em]"
-                        style={{ color: 'var(--color-ink-mute)' }}
-                      >
-                        DRAFT
-                      </span>
-                      <span
-                        className="font-display text-[14px] font-medium"
-                        style={{ color: 'var(--color-ink-1)' }}
-                      >
-                        {CREATE_KIND_LABEL[kind]} 草稿
-                      </span>
-                      {isApplied && (
-                        <span
-                          className="ml-auto font-numeric text-[10.5px] uppercase tracking-[0.16em]"
-                          style={{ color: 'var(--color-launch-deep)' }}
-                        >
-                          · 已应用
-                        </span>
-                      )}
-                    </div>
-
-                    <dl
-                      className="flex flex-col gap-1.5 px-4 py-3 text-[13px] leading-snug"
-                      style={{ color: 'var(--color-ink-1)' }}
-                    >
-                      {rows.map(r => (
-                        <div key={r.label} className="flex gap-3">
-                          <dt
-                            className="w-[64px] shrink-0 font-numeric text-[11px] uppercase tracking-[0.12em]"
-                            style={{ color: 'var(--color-ink-3)' }}
-                          >
-                            {r.label}
-                          </dt>
-                          <dd className="flex-1 break-words" style={{ color: 'var(--color-ink-1)' }}>
-                            {r.value}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-
-                    {(canApply || isApplied) && (
-                      <div
-                        className="flex items-center gap-3 border-t px-4 py-2.5"
-                        style={{ borderColor: 'var(--color-paper-rule)' }}
-                      >
-                        {canApply && (
-                          <button
-                            type="button"
-                            onClick={() => onApplyDraft?.(kind, callId, part.input)}
-                            className="font-display flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-white"
-                            style={{
-                              background: 'var(--color-paper-stamp)',
-                              borderRadius: 'var(--radius-xs)',
-                            }}
-                          >
-                            <span aria-hidden style={{ color: 'var(--color-paper-base)', opacity: 0.6 }}>
-                              ▸
-                            </span>
-                            <span>应用到表单</span>
-                          </button>
-                        )}
-                        <span className="text-[11.5px]" style={{ color: 'var(--color-ink-3)' }}>
-                          {isApplied
-                            ? '已写入右侧；继续在下方对话框说要改什么，AI 会出新版'
-                            : '或在下方对话框继续说要改什么，AI 会出新一版'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-              return null;
-            })}
-          </div>
-        );
-      })}
+      {messages.map(m => (
+        <MessageGroup
+          key={m.id}
+          message={m}
+          appliedToolCallId={appliedToolCallId}
+          onApplyDraft={onApplyDraft}
+        />
+      ))}
       {showThinking && <ThinkingBubble />}
     </div>
   );
+}
+
+/**
+ * 一条消息的渲染：按 m.parts 数组顺序遍历，把内容**按时间线**排好。
+ * - 连续的 text part 合并成一个 bubble；遇到非 text part 时 flush
+ * - reasoning / tool 状态条原位插入
+ * - 引用面板始终在末尾（汇总该消息的所有 web/crawl 结果）
+ */
+function MessageGroup({
+  message: m,
+  appliedToolCallId,
+  onApplyDraft,
+}: {
+  message: UIMessage;
+  appliedToolCallId?: string | null;
+  onApplyDraft?: (kind: CreateKind, toolCallId: string, input: unknown) => void;
+}) {
+  const isUser = m.role === 'user';
+  const parts = (m.parts ?? []) as ToolPart[];
+  const elements: ReactElement[] = [];
+
+  let textAcc = '';
+  let textRunIdx = 0;
+
+  const flushText = () => {
+    if (textAcc) {
+      elements.push(
+        <TextBubble
+          key={`${m.id}-text-${textRunIdx++}`}
+          isUser={isUser}
+          text={textAcc}
+        />,
+      );
+      textAcc = '';
+    }
+  };
+
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i];
+    if (p.type === 'text') {
+      textAcc += p.text ?? '';
+      continue;
+    }
+    if (p.type === 'reasoning') {
+      flushText();
+      const text = p.text ?? '';
+      const streaming = p.state === 'streaming';
+      if (text) {
+        elements.push(
+          <ReasoningDetails
+            key={`${m.id}-reason-${i}`}
+            text={text}
+            streaming={streaming}
+          />,
+        );
+      }
+      continue;
+    }
+    if (p.type.startsWith('tool-')) {
+      flushText();
+      // 备课 agent 工具走通用 ToolStatusChip
+      if (isPrepToolType(p.type)) {
+        elements.push(
+          <ToolStatusChip
+            key={p.toolCallId ?? `${m.id}-tool-${i}`}
+            toolType={p.type}
+            state={p.state}
+            input={p.input}
+            output={p.output}
+            errorText={p.errorText}
+          />,
+        );
+        continue;
+      }
+      // agent-create 流的 propose* draft 卡
+      const kind = kindFromToolType(p.type);
+      if (kind) {
+        const callId = p.toolCallId;
+        if (!callId && p.state === 'input-streaming') {
+          elements.push(
+            <ProposeDraftCard
+              key={`${m.id}-streaming-${i}`}
+              kind={kind}
+              callId="__streaming__"
+              input={p.input}
+              state={p.state}
+              applied={false}
+              onApply={undefined}
+            />,
+          );
+        } else if (callId) {
+          elements.push(
+            <ProposeDraftCard
+              key={callId}
+              kind={kind}
+              callId={callId}
+              input={p.input}
+              state={p.state}
+              applied={appliedToolCallId === callId}
+              onApply={onApplyDraft}
+            />,
+          );
+        }
+      }
+      continue;
+    }
+  }
+  flushText();
+
+  // 引用面板 — 只对 assistant 消息显示，在该消息所有内容之后
+  if (!isUser) {
+    const cs = extractCitations([m as { parts?: ToolPart[] }]);
+    if (cs.length > 0) {
+      elements.push(<CitationsPanel key={`${m.id}-cite`} citations={cs} />);
+    }
+  }
+
+  return <div className="flex flex-col gap-2.5">{elements}</div>;
 }

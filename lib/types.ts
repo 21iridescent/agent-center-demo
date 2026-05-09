@@ -1,6 +1,6 @@
 import type { UIMessage } from 'ai';
 
-export type PrepKind = 'outline' | 'lesson' | 'exercise' | 'activity';
+export type PrepKind = 'outline' | 'lesson' | 'exercise' | 'activity' | 'project';
 
 export type RecordType = 'dialogue' | 'debate' | 'discussion' | 'prep';
 
@@ -27,6 +27,26 @@ export interface DebateTranscript {
   score?: number;
 }
 
+/* ───────────────────────────────────────────────────────────────
+   Tool-call 副产品 — 备课 agent 接入工具后的留痕
+   - Citation：联网搜索 / URL 抓取的引用条目，UI 末尾 panel + 保存归档
+   - ToolTraceEntry：调过哪些工具、是否成功；不留 output 全文（output 已写进 markdown）
+   ─────────────────────────────────────────────────────────────── */
+
+export interface Citation {
+  url: string;
+  title: string;
+  snippet?: string;
+  publishedDate?: string;
+}
+
+export interface ToolTraceEntry {
+  name: string;          // 'webSearch' | 'crawlUrl' | 'findMisconceptions' | …
+  input: unknown;
+  ok: boolean;
+  ts: string;            // ISO
+}
+
 export interface BaseRecord {
   id: string;
   type: RecordType;
@@ -44,7 +64,9 @@ export interface BaseRecord {
 export interface PrepRecord extends BaseRecord {
   type: 'prep';
   kind: PrepKind;
-  content?: string; // full assistant-generated content
+  content?: string;                // full assistant-generated content (markdown source)
+  citations?: Citation[];          // web_search / crawl_url 工具产出的引用合集
+  toolTrace?: ToolTraceEntry[];    // 工具调用留痕（调了什么/输入/成败/时间）
 }
 
 export interface DialogueRecord extends BaseRecord {
@@ -78,6 +100,7 @@ export const PREP_KIND_LABEL: { [K in PrepKind]: string } = {
   lesson: '教案',
   exercise: '习题',
   activity: '课堂活动',
+  project: '项目化学习',
 };
 
 export const PREP_KIND_TITLE_SUFFIX: { [K in PrepKind]: string } = {
@@ -85,6 +108,7 @@ export const PREP_KIND_TITLE_SUFFIX: { [K in PrepKind]: string } = {
   lesson: '教案',
   exercise: '练习题',
   activity: '课堂活动方案',
+  project: '项目化学习方案',
 };
 
 export const PREP_KIND_TO_PATH: { [K in PrepKind]: string } = {
@@ -92,4 +116,5 @@ export const PREP_KIND_TO_PATH: { [K in PrepKind]: string } = {
   lesson: '/prep/lesson',
   exercise: '/prep/exercise',
   activity: '/prep/activity',
+  project: '/prep/project',
 };

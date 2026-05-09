@@ -1,6 +1,6 @@
 'use client';
 
-import { COURSE_SEEDS } from '@/lib/courses';
+import { COURSE_UNITS } from '@/lib/courses';
 
 interface Props {
   value: string | null;
@@ -9,7 +9,7 @@ interface Props {
 
 /**
  * 课程归档选择器 · 顶栏右侧
- * - 直接 import COURSE_SEEDS（demo 阶段静态种子，无需 fetch）
+ * - 直接 import COURSE_UNITS（demo 阶段静态种子，无需 fetch）；用 optgroup 把课程按「年级·学科·单元」分组
  * - paper-card 底 + paper-rule 边线，与 SaveButton 共栖
  * - 默认 '不关联课程'，选中后小圆点上学问蓝（与 records:byCourse:* 反向索引一一对应）
  */
@@ -44,10 +44,17 @@ export function CoursePicker({ value, onChange }: Props) {
         style={{ color: 'var(--color-ink-1)' }}
       >
         <option value="">不关联课程</option>
-        {COURSE_SEEDS.map(c => (
-          <option key={c.id} value={c.id}>
-            {c.title} · {c.grade}{c.subject}
-          </option>
+        {COURSE_UNITS.map(u => (
+          <optgroup
+            key={u.id}
+            label={`${u.grade} · ${u.subject} · ${u.title}`}
+          >
+            {u.courses.map(c => (
+              <option key={c.id} value={c.id}>
+                {c.title}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </select>
     </label>

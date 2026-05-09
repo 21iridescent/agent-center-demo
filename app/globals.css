@@ -161,6 +161,8 @@
   --container-wide: 1180px;
   --container-list:  920px;
   --container-form:  760px;
+  /* prep 页两栏宽度直接 inline `min(2080px, calc(100vw - 80px))`，不再用 token —
+     因为它的"上限 + viewport 自适应"没法在纯 CSS var 里表达 */
 
   /* ── Misc ──────────────────────────────────────── */
   --mask-primary: oklch(0.200 0.012 80 / 0.50);

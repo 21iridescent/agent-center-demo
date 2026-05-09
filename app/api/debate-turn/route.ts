@@ -1,5 +1,5 @@
 import { streamText } from 'ai';
-import { deepseek, DEEPSEEK_MODEL } from '@/lib/deepseek';
+import { deepseek, DEEPSEEK_MODEL, FAST_OPTS } from '@/lib/deepseek';
 import type { SavedAgent } from '@/lib/agent-storage';
 import type { DebateAgentConfig } from '@/lib/agent-schemas';
 
@@ -97,6 +97,8 @@ ${ownPrior.length > 0 ? ownPrior.map((h, i) => `第 ${h.round} 轮：${h.text}`)
       },
     ],
     temperature: 0.8,
+    // 一轮限时 60-300s，思考会吃掉发言时间 → 关
+    ...FAST_OPTS,
   });
 
   // 返回纯文本流（非 UI message 格式）— 前端 fetch + reader 直接累加 chunk

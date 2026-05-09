@@ -1,5 +1,5 @@
 import { streamText } from 'ai';
-import { deepseek, DEEPSEEK_MODEL } from '@/lib/deepseek';
+import { deepseek, DEEPSEEK_MODEL, QUALITY_OPTS } from '@/lib/deepseek';
 import type { SavedAgent } from '@/lib/agent-storage';
 import type { DebateAgentConfig } from '@/lib/agent-schemas';
 
@@ -98,6 +98,8 @@ export async function POST(req: Request) {
       },
     ],
     temperature: 0.5,
+    // reasoning 全站关闭（lib/deepseek.ts）；评委判分依赖纯文本输出，分数仍走末尾 <score> 正则提取
+    ...QUALITY_OPTS,
   });
 
   // 纯文本流 — DebateUsePage 自管 stream + 末尾正则提取 <score>X.X</score>

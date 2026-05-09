@@ -1,11 +1,12 @@
-import { ToolLoopAgent, tool } from 'ai';
-import { deepseek, DEEPSEEK_MODEL } from '@/lib/deepseek';
+import { ToolLoopAgent, tool, stepCountIs } from 'ai';
+import { deepseek, DEEPSEEK_MODEL, QUALITY_OPTS } from '@/lib/deepseek';
 import {
   XuewenAgentSchema,
   DebateAgentSchema,
   DiscussionAgentSchema,
   CREATE_TOOL_NAME,
 } from '@/lib/agent-schemas';
+import { webSearch } from '@/lib/tools/exa';
 
 const INSTRUCTIONS = `你是「AI 创建」助手，帮小学科学/AI 课教师配置三类智能体：AI 学问 / AI 辩论 / AI 讨论。
 
@@ -52,13 +53,37 @@ const INSTRUCTIONS = `你是「AI 创建」助手，帮小学科学/AI 课教师
   ④ 提问澄清 — 「我想问<同学名>：<空>」
   ⑤ 总结归纳 — 「目前我们达成的共识是：<空>；分歧是：<空>」
   ⑥ 联系实际 — 「在我自己的生活中，<空>」
-  · 资源字段：bgAsset 当前唯一候选 classroom-roundtable（默认填上）`;
+  · 资源字段：bgAsset 当前唯一候选 classroom-roundtable（默认填上）
+
+可选工具 · 联网搜索（启发式使用）：
+- 工具：webSearch({ query, numResults? }) → 返回 [{ title, url, snippet, publishedDate }]
+- **什么时候搜**（满足任一即值得搜）：
+  · 辩题/讨论涉及**最近政策/事件/统计**（"塑料袋禁令""校园人脸识别""AI 写作业"）→ 先搜近 1-2 年案例，让 argument/scaffolds 引用真实近况
+  · 学问的人物想加**当代角度**（如"AI 时代怎么看牛顿""达尔文遭遇的争议"）→ 可选搜
+  · 用户给的辩题/主题**你不太确定有没有可辩性或当前讨论度** → 搜一下确认
+- **什么时候不搜**（直接 propose 即可）：
+  · 恒定知识（动物的一生、月相变化、简单电路、植物的叶）—— 教材内容稳定，搜浪费 step
+  · 用户已经把立场/论据/支架自己写得很完整时 —— 不要画蛇添足
+  · 任何 "学问" 类，除非用户明确要求时事化
+- **怎么搜**：
+  · query 写法："<topic> <角度> 最新" 或 "<topic> 学校案例 2024"，2-30 字
+  · 一次最多 2 次 webSearch；搜完直接 propose，不要无限拓展
+  · numResults 默认 3，足够提炼用
+- **怎么把结果用进字段**：
+  · **提炼，不抄链接**：把 snippet 里的事实/数据/案例融入 background / argument / coldStart / topic 描述
+  · 不要在字段里贴 URL 或"据某某网站"——这是给小学生看的，要自然语言
+  · 例：搜到"上海 2024 年起禁用一次性塑料吸管"→ 写进辩论 background：「2024 年起，国内多地学校开始限制塑料制品..」`;
 
 export const unifiedCreateAgent = new ToolLoopAgent({
   model: deepseek.chat(DEEPSEEK_MODEL),
   instructions: INSTRUCTIONS,
   temperature: 0.5,
+  ...QUALITY_OPTS,
+  // search → propose 至少 2 步；给充裕余量但限上限防 LLM 反复搜
+  stopWhen: stepCountIs(8),
   tools: {
+    // 启发式联网搜索（per INSTRUCTIONS 的"可选工具"段；LLM 自行判断要不要调）
+    webSearch,
     [CREATE_TOOL_NAME.xuewen]: tool({
       description:
         '提交 AI 学问智能体的完整配置。当 name / background / subject / grade 全部清晰时调用；前端会把 input 渲染成可编辑表单卡片',

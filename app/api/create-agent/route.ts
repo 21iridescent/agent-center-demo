@@ -32,19 +32,19 @@ export async function POST(req: Request) {
         return createAgentUIStreamResponse({
           agent: CREATE_AGENTS.xuewen,
           uiMessages: body.messages,
-          sendReasoning: true,
+          sendReasoning: false,
         });
       case 'debate':
         return createAgentUIStreamResponse({
           agent: CREATE_AGENTS.debate,
           uiMessages: body.messages,
-          sendReasoning: true,
+          sendReasoning: false,
         });
       case 'discussion':
         return createAgentUIStreamResponse({
           agent: CREATE_AGENTS.discussion,
           uiMessages: body.messages,
-          sendReasoning: true,
+          sendReasoning: false,
         });
       default:
         return new Response(`unknown create kind: ${String(body.kind)}`, { status: 400 });
@@ -55,6 +55,6 @@ export async function POST(req: Request) {
   return createAgentUIStreamResponse({
     agent: unifiedCreateAgent,
     uiMessages: body.messages,
-    sendReasoning: true,
+    sendReasoning: false,
   });
 }

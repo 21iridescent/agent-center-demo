@@ -27,7 +27,6 @@ export function RoleCard({
   subject,
   grade,
   background,
-  avatarUrl,
   roleUrl,
   voiceStyle,
   knowledgeBases,
@@ -54,73 +53,15 @@ export function RoleCard({
         style={{ background: 'var(--color-type-dialogue)' }}
       />
 
-      <div className="flex flex-col gap-4 px-5 pt-2 pb-5">
-        {/* 头像 stamp · 方形 paper-edge 框 */}
-        <div
-          className="font-numeric mx-auto flex shrink-0 items-center justify-center overflow-hidden text-[26px] font-bold"
-          style={{
-            width: 80,
-            height: 80,
-            background: 'var(--color-type-dialogue-bg)',
-            color: 'var(--color-type-dialogue-deep)',
-            border: '1px solid var(--color-paper-edge)',
-            borderRadius: 'var(--radius-xs)',
-          }}
-        >
-          {avatarUrl ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={avatarUrl}
-              alt={name}
-              width={512}
-              height={512}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            fallbackChar
-          )}
-        </div>
-
-        {/* 名字 */}
-        <div
-          className="font-display text-center text-[20px] font-medium leading-tight"
-          style={{ color: 'var(--color-ink-1)' }}
-        >
-          {name}
-        </div>
-
-        {/* 学科 + 年级 */}
-        <div className="flex flex-wrap justify-center gap-2">
-          <span
-            className="font-numeric px-2.5 py-1 text-[11px] uppercase tracking-[0.12em]"
-            style={{
-              background: 'var(--color-paper-soft)',
-              color: 'var(--color-ink-2)',
-              borderRadius: 'var(--radius-xs)',
-            }}
-          >
-            {subject}
-          </span>
-          <span
-            className="font-numeric px-2.5 py-1 text-[11px] uppercase tracking-[0.12em]"
-            style={{
-              background: 'var(--color-paper-soft)',
-              color: 'var(--color-ink-2)',
-              borderRadius: 'var(--radius-xs)',
-            }}
-          >
-            {grade}
-          </span>
-        </div>
-
-        {/* 全身像 */}
-        {roleUrl && (
+      <div className="flex flex-col gap-4 px-5 pt-4 pb-5">
+        {/* 全身像 (主视觉) — 全宽 3:4 框,object-cover 充满,无重复头像 */}
+        {roleUrl ? (
           <div
-            className="overflow-hidden border"
+            className="relative overflow-hidden border"
             style={{
               borderColor: 'var(--color-paper-edge)',
               background: 'var(--color-paper-soft)',
-              maxHeight: 280,
+              aspectRatio: '3 / 4',
               borderRadius: 'var(--radius-xs)',
             }}
           >
@@ -131,10 +72,56 @@ export function RoleCard({
               width={1024}
               height={1536}
               loading="lazy"
-              className="h-full w-full object-contain"
+              className="h-full w-full object-cover"
+              style={{ objectPosition: 'center 20%' }}
             />
           </div>
+        ) : (
+          <div
+            className="font-display flex items-center justify-center overflow-hidden text-[44px] font-bold"
+            style={{
+              aspectRatio: '3 / 4',
+              background: 'var(--color-type-dialogue-bg)',
+              color: 'var(--color-type-dialogue-deep)',
+              border: '1px solid var(--color-paper-edge)',
+              borderRadius: 'var(--radius-xs)',
+            }}
+          >
+            {fallbackChar}
+          </div>
         )}
+
+        {/* 名字 + 学科/年级 chips · 左对齐显得像档案卡而非头像卡 */}
+        <div className="flex flex-col gap-2">
+          <div
+            className="font-display text-[22px] font-medium leading-tight"
+            style={{ color: 'var(--color-ink-1)' }}
+          >
+            {name}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <span
+              className="font-numeric px-2 py-0.5 text-[11px] uppercase tracking-[0.12em]"
+              style={{
+                background: 'var(--color-paper-soft)',
+                color: 'var(--color-ink-2)',
+                borderRadius: 'var(--radius-xs)',
+              }}
+            >
+              {subject}
+            </span>
+            <span
+              className="font-numeric px-2 py-0.5 text-[11px] uppercase tracking-[0.12em]"
+              style={{
+                background: 'var(--color-paper-soft)',
+                color: 'var(--color-ink-2)',
+                borderRadius: 'var(--radius-xs)',
+              }}
+            >
+              {grade}
+            </span>
+          </div>
+        </div>
 
         {/* 角色背景 */}
         <Section label="角色背景">

@@ -6,8 +6,8 @@ import {
   TopicThumbPicker,
   DebateActorPicker,
 } from '../AssetPicker';
+import { CourseFormPicker } from './CourseFormPicker';
 import type { DebateAgentConfig } from '@/lib/agent-schemas';
-import { COURSE_SEEDS } from '@/lib/courses';
 
 interface Props {
   value: Partial<DebateAgentConfig>;
@@ -111,20 +111,11 @@ export function DebateForm({ value, onChange }: Props) {
         </Field>
       </div>
 
-      <Field label="是否关联课程" hint="可选 · 选择后此智能体会出现在该门课程的工具中">
-        <select
-          className={INPUT_CX}
-          style={INPUT_STYLE}
-          value={value.linkedCourseId ?? ''}
-          onChange={e => set('linkedCourseId', e.target.value || undefined)}
-        >
-          <option value="">不关联（默认）</option>
-          {COURSE_SEEDS.map(c => (
-            <option key={c.id} value={c.id}>
-              {c.subject} · {c.grade} · {c.title}
-            </option>
-          ))}
-        </select>
+      <Field label="关联课程" hint="可选 · 三级选完后，此智能体会出现在该课程的工具中">
+        <CourseFormPicker
+          value={value.linkedCourseId}
+          onChange={id => set('linkedCourseId', id)}
+        />
       </Field>
 
       {/* 正方 */}

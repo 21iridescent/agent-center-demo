@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { generatePersonaImages } from '@/lib/openai-image';
+import { generatePersonaImages } from '@/lib/gemini-image';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -10,11 +10,11 @@ interface RequestBody {
 }
 
 export async function POST(req: Request) {
-  if (!process.env.OPENAI_API_KEY) {
+  if (!process.env.GOOGLE_GENAI_API_KEY) {
     return NextResponse.json(
       {
         error:
-          'OPENAI_API_KEY missing — 请在 .env.local 设置 OpenAI 直连 key 后重启 dev 服务',
+          'GOOGLE_GENAI_API_KEY missing — 请在 .env.local 设置 Gemini API key 后重启 dev 服务',
       },
       { status: 500 },
     );
