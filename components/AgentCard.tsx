@@ -112,11 +112,11 @@ export function AgentCard({
         style={{ background: t.edge }}
       />
 
-      <div className="relative flex flex-col gap-3 px-5 pt-4 pb-3">
+      <div className="relative flex flex-1 flex-col gap-2 px-4 pt-3 pb-2.5">
         {/* 头部 · 方形头像章 + 标题 + smcp type label */}
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-2.5">
           <span
-            className="font-numeric flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden text-[16px] font-bold"
+            className="font-numeric flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden text-[14px] font-bold"
             style={{
               background: avatarUrl ? 'transparent' : t.bg,
               color: t.deep,
@@ -129,8 +129,8 @@ export function AgentCard({
               <img
                 src={avatarUrl}
                 alt={name}
-                width={44}
-                height={44}
+                width={36}
+                height={36}
                 loading="lazy"
                 className="h-full w-full object-cover"
               />
@@ -138,15 +138,15 @@ export function AgentCard({
               avatar
             )}
           </span>
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <h3
-              className="font-display truncate text-[18px] font-medium leading-tight"
+              className="font-display truncate text-[16px] font-medium leading-tight"
               style={{ color: 'var(--color-ink-1)' }}
             >
               {name}
             </h3>
             <span
-              className="font-numeric text-[11px] uppercase tracking-[0.14em]"
+              className="font-numeric text-[10.5px] uppercase tracking-[0.14em]"
               style={{ color: t.deep }}
             >
               {TYPE_LABEL[type]}
@@ -156,7 +156,7 @@ export function AgentCard({
 
         {/* meta line · subject · grade */}
         <div
-          className="flex items-center gap-2 text-[13px] font-numeric tnum"
+          className="flex items-center gap-2 text-[12px] font-numeric tnum"
           style={{ color: 'var(--color-ink-3)' }}
         >
           <span>{subject}</span>
@@ -164,43 +164,31 @@ export function AgentCard({
           <span>{grade}</span>
         </div>
 
-        {/* 副描述 · xuewen=人物简介 / debate=辩题 / discuss=主题。两行夹紧不让卡片高度漂。 */}
+        {/* 副描述 · 单行截断（带 title 兜全文）。多行会让密度爆炸，1 行刚好。 */}
         {description && (
           <p
-            className="text-[12.5px] leading-snug"
-            style={{
-              color: 'var(--color-ink-2)',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-              minHeight: '2.6em',
-            }}
+            className="truncate text-[12px] leading-snug"
+            style={{ color: 'var(--color-ink-2)' }}
             title={description}
           >
             {description}
           </p>
         )}
 
-        {/* 评价维度 chips · 辩论 / 讨论限定。前缀小标签写"评分"提示这是评估维度。 */}
+        {/* 评价维度 chips · 辩论 / 讨论限定 · 单行 overflow-hidden 防止 wrap 撑高 */}
         {showDims && (
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            <span
-              className="font-numeric mr-0.5 text-[10px] uppercase tracking-[0.16em]"
-              style={{ color: 'var(--color-ink-mute)' }}
-              aria-hidden
-            >
-              评分
-            </span>
+          <div
+            className="flex items-center gap-1 overflow-hidden"
+            style={{ minWidth: 0 }}
+          >
             {dimsHead.map(d => (
               <span
                 key={d}
-                className="px-1.5 py-[2px] text-[11px]"
+                className="shrink-0 px-1.5 py-[1px] text-[10.5px] leading-snug"
                 style={{
                   background: t.bg,
                   color: t.deep,
                   borderRadius: 'var(--radius-xs)',
-                  border: `1px solid ${t.bg}`,
                 }}
               >
                 {d}
@@ -208,7 +196,7 @@ export function AgentCard({
             ))}
             {dimsRest > 0 && (
               <span
-                className="font-numeric tnum text-[11px]"
+                className="font-numeric tnum shrink-0 text-[10.5px]"
                 style={{ color: 'var(--color-ink-mute)' }}
               >
                 +{dimsRest}
@@ -219,7 +207,7 @@ export function AgentCard({
 
         {!manageMode && (
           <span
-            className="text-[12px] font-numeric tnum"
+            className="mt-auto pt-1 text-[11px] font-numeric tnum"
             style={{ color: 'var(--color-ink-mute)' }}
           >
             上次 · {lastUsed}
@@ -230,19 +218,19 @@ export function AgentCard({
       {/* 操作区 · 顶部 paper-rule 横线 + 文字按钮 */}
       {manageMode ? (
         <div
-          className="grid grid-cols-2 border-t mt-1"
+          className="grid grid-cols-2 border-t"
           style={{ borderTopColor: 'var(--color-paper-rule)' }}
         >
           <Link
             href={editHref}
-            className="py-3 text-center text-[13px] font-medium transition-colors hover:bg-[var(--color-type-dialogue-bg)]"
+            className="py-2.5 text-center text-[12.5px] font-medium transition-colors hover:bg-[var(--color-type-dialogue-bg)]"
             style={{ color: 'var(--color-type-dialogue-deep)' }}
           >
             编辑
           </Link>
           <button
             onClick={onDelete}
-            className="border-l py-3 text-[13px] font-medium transition-colors hover:bg-[var(--color-type-debate-bg)]"
+            className="border-l py-2.5 text-[12.5px] font-medium transition-colors hover:bg-[var(--color-type-debate-bg)]"
             style={{
               color: 'var(--color-type-debate-deep)',
               borderLeftColor: 'var(--color-paper-rule)',
@@ -254,7 +242,7 @@ export function AgentCard({
       ) : (
         <Link
           href={launchHref}
-          className="mt-1 inline-flex items-center justify-center gap-2 border-t py-3.5 text-[15px] font-display font-medium transition-colors hover:bg-[var(--color-launch-bg)]"
+          className="inline-flex items-center justify-center gap-1.5 border-t py-2.5 text-[13.5px] font-display font-medium transition-colors hover:bg-[var(--color-launch-bg)]"
           style={{
             color: 'var(--color-launch-deep)',
             borderTopColor: 'var(--color-paper-rule)',
