@@ -216,7 +216,15 @@ export interface PendingEdit {
   anchorType: AnchorType;
 }
 
-/** 抽出所有 input 已就绪的 editCanvas 调用 —— 候选 pending 改动 */
+/**
+ * 抽出 editCanvas 调用 —— 候选 pending 改动。
+ *
+ * 关键：只接受 output.ok === true 的成功调用。execute 里做了严格校验
+ * （find 是否在 canvas 唯一存在），失败的会带 ok=false + hint，那是给
+ * LLM 看的反馈让它重试，**不**该作为 pending 卡渲染给老师。
+ *
+ * 兼容旧版 no-op execute 的场景：output 不是对象（或没 ok 字段）时认为通过。
+ */
 function extractEditCalls(messages: UIMessage[]): PendingEdit[] {
   const out: PendingEdit[] = [];
   for (const m of messages) {
@@ -224,8 +232,8 @@ function extractEditCalls(messages: UIMessage[]): PendingEdit[] {
     for (const raw of m.parts ?? []) {
       const p = raw as ToolPart;
       if (p.type !== 'tool-editCanvas') continue;
-      // 只在 input 拼完之后才暴露给 UI（streaming 时 find 可能不全）
-      if (p.state !== 'input-available' && p.state !== 'output-available') continue;
+      // 必须等 execute 跑完拿到 output —— 失败的不渲染
+      if (p.state !== 'output-available') continue;
       const callId = p.toolCallId;
       if (!callId) continue;
       const inp = p.input as
@@ -233,6 +241,9 @@ function extractEditCalls(messages: UIMessage[]): PendingEdit[] {
         | undefined;
       if (typeof inp?.find !== 'string' || typeof inp.replace !== 'string') continue;
       if (!inp.find) continue;
+      // execute 严格校验后失败的不渲染（output.ok === false）
+      const out_ = p.output as { ok?: boolean } | undefined;
+      if (out_ && out_.ok === false) continue;
       const anchorType: AnchorType =
         inp.anchorType === 'section' ? 'section' : 'exact';
       out.push({

@@ -1,5 +1,6 @@
-import { tool } from 'ai';
+import { tool, type ModelMessage } from 'ai';
 import { z } from 'zod';
+import { countMatches, extractHeadings, findEditPosition } from '@/lib/canvas-edit';
 
 /**
  * Canvas/稿件 写入工具
@@ -105,13 +106,106 @@ export const editCanvas = tool({
       .optional()
       .describe('一句话解释为什么这么改 —— 显示在 pending 卡片标题。'),
   }),
-  execute: async ({ find, replace, reason, anchorType }) => {
+  // 严格校验：参考 Anthropic Edit 工具的设计 ——
+  //   1. 从消息历史里抽出当前 canvas（最新 writeCanvas 的 input.markdown）
+  //   2. exact 模式 → 要求 find 在 canvas 中精确（或归一化）匹配，且唯一
+  //   3. section 模式 → 要求 find 的 heading 在 canvas 中能定位
+  //   4. 失败时返 { ok: false, error, hint } —— ToolLoopAgent 会把错误反馈给 LLM，
+  //      LLM 在同一轮看到 hint（含 canvas 当前 heading 列表）后会自动重试。
+  //      不像之前 no-op 直接返 ok，AI 永远拿不到失败信号 → 凭记忆瞎猜 find。
+  execute: async ({ find, replace, reason, anchorType }, { messages }) => {
+    const at: 'exact' | 'section' = anchorType ?? 'exact';
+    const canvas = lastCanvasFromMessages(messages);
+
+    if (!canvas) {
+      return {
+        ok: false as const,
+        error: 'NO_CANVAS' as const,
+        anchorType: at,
+        hint: '当前还没有 canvas 内容；请先用 writeCanvas 出第一稿，再用 editCanvas 局部修改。',
+      };
+    }
+
+    if (at === 'section') {
+      const pos = findEditPosition(canvas, find, 'section');
+      if (!pos) {
+        return {
+          ok: false as const,
+          error: 'SECTION_NOT_FOUND' as const,
+          anchorType: at,
+          hint:
+            '提供的 heading 在 canvas 当前内容里找不到。请直接 verbatim 复制下面这些 heading 之一作为 find（不要凭记忆改写标题）：',
+          availableHeadings: extractHeadings(canvas),
+        };
+      }
+      // section 命中 → ok
+      return {
+        ok: true as const,
+        anchorType: at,
+        reason: reason ?? '',
+        findLength: find.length,
+        replaceLength: replace.length,
+      };
+    }
+
+    // exact 模式：要求精确（或归一化）匹配 + 唯一
+    const matches = countMatches(canvas, find);
+    if (matches === 0) {
+      return {
+        ok: false as const,
+        error: 'FIND_NOT_FOUND' as const,
+        anchorType: at,
+        hint:
+          'find 在当前 canvas 里找不到。常见原因：' +
+          '(1) canvas 已被新版 writeCanvas 覆盖，旧版 find 失效；' +
+          '(2) find 是凭记忆生成的，没从 canvas 字面复制；' +
+          '(3) 标点 / 数字 / 空格细微差异。' +
+          '建议：从 canvas 当前文本字面复制一段独特短锚（5-30 字），' +
+          '或改用 anchorType="section" + heading 锚定整节（更稳）。',
+        availableHeadings: extractHeadings(canvas),
+      };
+    }
+    if (matches > 1) {
+      return {
+        ok: false as const,
+        error: 'AMBIGUOUS' as const,
+        anchorType: at,
+        hint: `find 在 canvas 中有 ${matches} 处匹配，无法定位唯一位置。请加更多前后文让 find 唯一（或改用 anchorType="section" 按 heading 锚整节）。`,
+      };
+    }
+
     return {
       ok: true as const,
+      anchorType: at,
       reason: reason ?? '',
-      anchorType: anchorType ?? 'exact',
       findLength: find.length,
       replaceLength: replace.length,
     };
   },
 });
+
+/**
+ * 从 ModelMessage[] 历史里抽最新 writeCanvas 调用的 input.markdown。
+ * 不到则返空串。
+ *
+ * v6 ModelMessage 的 assistant.content 是 Array<TextPart | ToolCallPart | ...>；
+ * tool-call part 形状：{ type: 'tool-call', toolCallId, toolName, input: unknown }
+ */
+function lastCanvasFromMessages(messages: ModelMessage[] | undefined): string {
+  if (!messages?.length) return '';
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m.role !== 'assistant') continue;
+    const content = m.content;
+    if (!Array.isArray(content)) continue;
+    for (let j = content.length - 1; j >= 0; j--) {
+      const part = content[j] as { type?: string; toolName?: string; input?: unknown };
+      if (part?.type !== 'tool-call' || part.toolName !== 'writeCanvas') continue;
+      const input = part.input as { markdown?: unknown } | undefined;
+      if (typeof input?.markdown === 'string' && input.markdown.length > 0) {
+        return input.markdown;
+      }
+    }
+  }
+  return '';
+}

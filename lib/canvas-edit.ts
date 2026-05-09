@@ -146,6 +146,54 @@ export function applyEdit(
 }
 
 /**
+ * 数 find 在 source 里出现几次（exact + fuzzy 各算一次类）：
+ *   - 优先精确匹配；若有精确匹配，返回精确匹配次数（不混进 fuzzy）
+ *   - 精确匹配 0 次时，回退到归一化后匹配，返回该次数
+ *
+ * Anthropic Edit 风格的"唯一性强制"用：== 1 才允许 apply；== 0 → not found；> 1 → ambiguous。
+ */
+export function countMatches(source: string, find: string): number {
+  if (!source || !find) return 0;
+  // exact
+  let count = 0;
+  let idx = 0;
+  while (true) {
+    const found = source.indexOf(find, idx);
+    if (found < 0) break;
+    count++;
+    idx = found + find.length;
+  }
+  if (count > 0) return count;
+  // fuzzy
+  const ns = normalizeWithMap(source);
+  const nf = normalizeWithMap(find);
+  if (!nf.norm) return 0;
+  let fcount = 0;
+  let fidx = 0;
+  while (true) {
+    const found = ns.norm.indexOf(nf.norm, fidx);
+    if (found < 0) break;
+    fcount++;
+    fidx = found + nf.norm.length;
+  }
+  return fcount;
+}
+
+/**
+ * 抽出 source 中所有的 markdown heading 行（trim 后），用于失败时反馈给 AI ——
+ * AI 看到 "canvas 当前的 heading 列表" 后能精确定位下一次 editCanvas 应该用什么 find。
+ */
+export function extractHeadings(source: string): string[] {
+  if (!source) return [];
+  const out: string[] = [];
+  for (const raw of source.split('\n')) {
+    const line = raw.trim();
+    if (/^#{1,6}\s+/.test(line)) out.push(line);
+  }
+  return out;
+}
+
+/**
  * 字符串归一化 + 字符级 index map
  *
  * 归一化规则（保留语义、吃掉空白差异）：

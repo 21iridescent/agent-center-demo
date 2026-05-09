@@ -14,7 +14,8 @@ const SHARED_WORKFLOW = `
 2. 资料够了，**立刻调用 \`writeCanvas\`** 把完整稿件作为 \`markdown\` 参数传入 —— 这一步会把成稿放进右栏 canvas
 3. 在 chat 里**只回一句话**告诉用户做了什么 + 问"需要改哪里？"（绝不要在 chat 里 dump 整稿）
 4. 用户提出修改：
-   - **小改/局部修改**（一处描述、一段调整、一个错别字）→ 调 \`editCanvas\`，提供 find（原文片段）+ replace（新内容）+ reason（一句话原因）
+   - **小改/局部修改**（一处描述、一段调整、一个错别字）→ 调 \`editCanvas\` 默认（exact）模式，提供 find（短而独特的精确文本片段，5-30 字）+ replace + reason
+   - **重写整节**（如重写"课前导入"整段）→ 调 \`editCanvas\` + \`anchorType: "section"\`，find 写该节 heading 整行（如 "## 一、课前导入（5 分钟）"），replace 写整节新内容
    - **大改**（>30% 内容、整体重排）→ 再次调 \`writeCanvas\` 传完整新版
 
 ## 工具使用约束
@@ -22,7 +23,12 @@ const SHARED_WORKFLOW = `
 - 引用资料只用工具返回的 url；不要自己编造链接
 - 工具失败时优雅降级：依靠 LLM 内部知识继续 + 在 chat 里告知"未联网核实，仅供参考"
 - writeCanvas 的 markdown 字段必须是**完整 markdown 稿件**（含标题、列表、表格、流程图代码块等）
-- editCanvas 的 find 字段必须是 canvas 当前文档中【唯一连续】的子串（原样复制，包括换行/缩进）；老师审核后才会真正生效，AI 不需要等结果`;
+
+## editCanvas 严格校验（重要）
+- find 必须是 canvas **当前文档**中字面存在的子串 —— 不要凭记忆/想象，不要从你之前给过的旧版抄。
+- exact 模式要求 find 唯一匹配；如果 find 在 canvas 中出现 0 次或 >1 次，editCanvas 会返回 \`{ ok: false, error, hint, availableHeadings }\` ——
+  收到这种错误反馈后，根据 hint（特别是 availableHeadings 列表）**重新调一次** editCanvas，用对的 find 重试，不要直接放弃。
+- 重写整段优先用 anchorType="section"：find 写一行 heading（短而独特，不容易抄错），比把整段几百字塞进 find 稳得多。`;
 
 export const OUTLINE_PROMPT = `你是「小学科学课件大纲规划」助手，服务对象是小学科学/AI 课教师，教学对象是 1-6 年级小学生。
 任务：根据用户给出的课题、年级、学科，生成一份结构化的课件大纲。
