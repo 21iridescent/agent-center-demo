@@ -41,6 +41,16 @@ interface Props {
   name: string;
   subject: string;
   grade: string;
+  /**
+   * 副标行 —— 一句话告诉老师"这是个什么"：
+   * xuewen=人物简介首句 / debate=辩题 / discuss=讨论主题
+   */
+  description?: string;
+  /**
+   * 评价维度（最多 5 条上屏，多余 "+N" 收）—— 辩论 / 讨论卡片露出来，
+   * 让老师选卡时直接看到学生会被按哪些维度评分。
+   */
+  evalDimensions?: string[];
   lastUsed: string;
   launchHref: string;
   editHref: string;
@@ -62,6 +72,8 @@ export function AgentCard({
   name,
   subject,
   grade,
+  description,
+  evalDimensions,
   lastUsed,
   launchHref,
   editHref,
@@ -69,6 +81,9 @@ export function AgentCard({
   onDelete,
 }: Props) {
   const t = TYPE_TOKENS[type];
+  const showDims = (type === 'debate' || type === 'discuss') && evalDimensions && evalDimensions.length > 0;
+  const dimsHead = showDims ? evalDimensions!.slice(0, 4) : [];
+  const dimsRest = showDims ? evalDimensions!.length - dimsHead.length : 0;
 
   // bgUrl 时 → 整张卡作为背景，不抽出 hero 条目（不变化卡片高度）。
   // 用 paper-card 半透明 overlay 压住图，让正文 ink-1 文字仍然清晰可读。
@@ -148,6 +163,59 @@ export function AgentCard({
           <span aria-hidden style={{ color: 'var(--color-ink-faint)' }}>·</span>
           <span>{grade}</span>
         </div>
+
+        {/* 副描述 · xuewen=人物简介 / debate=辩题 / discuss=主题。两行夹紧不让卡片高度漂。 */}
+        {description && (
+          <p
+            className="text-[12.5px] leading-snug"
+            style={{
+              color: 'var(--color-ink-2)',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              minHeight: '2.6em',
+            }}
+            title={description}
+          >
+            {description}
+          </p>
+        )}
+
+        {/* 评价维度 chips · 辩论 / 讨论限定。前缀小标签写"评分"提示这是评估维度。 */}
+        {showDims && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            <span
+              className="font-numeric mr-0.5 text-[10px] uppercase tracking-[0.16em]"
+              style={{ color: 'var(--color-ink-mute)' }}
+              aria-hidden
+            >
+              评分
+            </span>
+            {dimsHead.map(d => (
+              <span
+                key={d}
+                className="px-1.5 py-[2px] text-[11px]"
+                style={{
+                  background: t.bg,
+                  color: t.deep,
+                  borderRadius: 'var(--radius-xs)',
+                  border: `1px solid ${t.bg}`,
+                }}
+              >
+                {d}
+              </span>
+            ))}
+            {dimsRest > 0 && (
+              <span
+                className="font-numeric tnum text-[11px]"
+                style={{ color: 'var(--color-ink-mute)' }}
+              >
+                +{dimsRest}
+              </span>
+            )}
+          </div>
+        )}
 
         {!manageMode && (
           <span

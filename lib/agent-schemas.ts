@@ -126,6 +126,16 @@ export const DebateAgentSchema = z.object({
     .enum(['default', 'strict', 'encouraging', 'neutral'])
     .default('default')
     .describe('AI 评委语气模板：default=默认 / strict=严格 / encouraging=鼓励 / neutral=中性'),
+  evalDimensions: z
+    .array(z.string().min(2).max(20))
+    .min(2)
+    .max(6)
+    .optional()
+    .describe(
+      '评价维度（2-6 条），AI 评委按这些维度逐项点评 + 综合给分。' +
+        '示例：["论据充分性","论证逻辑","立场清晰","反驳质量","表达流畅"]。' +
+        '不填则用通用维度兜底，但建议显式填写——这是辩论智能体最重要的配置。',
+    ),
   bgAsset: z
     .enum(DEBATE_BG_IDS)
     .optional()
@@ -177,6 +187,16 @@ export const DiscussionAgentSchema = z.object({
     .array(Scaffold)
     .length(6)
     .describe('恰好 6 个观点支架（标签 + 模板句）'),
+  evalDimensions: z
+    .array(z.string().min(2).max(20))
+    .min(2)
+    .max(6)
+    .optional()
+    .describe(
+      '评价维度（2-6 条），主持人/教师据此给参与者打分或写课堂反馈。' +
+        '示例：["观点新颖","论据合理","倾听同伴","提出追问","总结深化"]。' +
+        '建议显式填写——这是讨论智能体最重要的配置。',
+    ),
   bgAsset: z
     .enum(DISCUSSION_BG_IDS)
     .optional()

@@ -7,7 +7,9 @@ import {
   DebateActorPicker,
 } from '../AssetPicker';
 import { CourseFormPicker } from './CourseFormPicker';
+import { EvalDimensionsInput } from './EvalDimensionsInput';
 import type { DebateAgentConfig } from '@/lib/agent-schemas';
+import { DEFAULT_EVAL_DIMENSIONS } from '@/lib/agents-display';
 
 interface Props {
   value: Partial<DebateAgentConfig>;
@@ -189,6 +191,45 @@ export function DebateForm({ value, onChange }: Props) {
             rows={2}
           />
         </Field>
+      </div>
+
+      {/* 评价维度 —— 辩论智能体最关键的配置：决定了 AI 评委按什么打分。
+          独立成块，与下面"评委模板/轮数/倒计时"区分开。 */}
+      <div
+        className="flex flex-col gap-2.5 rounded-md border p-3"
+        style={{
+          borderColor: 'var(--color-type-debate)',
+          background: 'var(--color-type-debate-bg)',
+        }}
+      >
+        <div className="flex items-baseline gap-2">
+          <span
+            className="font-display text-[13px] font-medium leading-none"
+            style={{ color: 'var(--color-ink-1)' }}
+          >
+            评价维度
+          </span>
+          <span
+            className="text-[11px] leading-none"
+            style={{ color: 'var(--color-type-debate)' }}
+            aria-hidden
+          >
+            ✱
+          </span>
+          <span
+            className="text-[11px] leading-snug"
+            style={{ color: 'var(--color-ink-mute)' }}
+          >
+            最关键 · AI 评委按这些维度逐项点评 + 综合给分
+          </span>
+        </div>
+        <EvalDimensionsInput
+          value={value.evalDimensions}
+          onChange={v => set('evalDimensions', v as DebateAgentConfig['evalDimensions'])}
+          preset={DEFAULT_EVAL_DIMENSIONS.debate}
+          chipBg="var(--color-type-debate-bg)"
+          chipFg="var(--color-type-debate-deep)"
+        />
       </div>
 
       <div className="grid grid-cols-3 gap-3">

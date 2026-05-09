@@ -2,7 +2,9 @@
 
 import { Field, INPUT_CX, TEXTAREA_CX, INPUT_STYLE, SUBJECTS, GRADES } from './Field';
 import { CourseFormPicker } from './CourseFormPicker';
+import { EvalDimensionsInput } from './EvalDimensionsInput';
 import type { DiscussionAgentConfig } from '@/lib/agent-schemas';
+import { DEFAULT_EVAL_DIMENSIONS } from '@/lib/agents-display';
 
 interface Props {
   value: Partial<DiscussionAgentConfig>;
@@ -121,6 +123,45 @@ export function DiscussionForm({ value, onChange }: Props) {
           {DURATION_MINUTES.map(m => <option key={m} value={m}>{m} 分钟</option>)}
         </select>
       </Field>
+
+      {/* 评价维度 —— 讨论智能体最关键的配置：决定了课堂如何评估学生发言。
+          独立成块（type-discussion 配色），与上方常规 Field 区分开。 */}
+      <div
+        className="flex flex-col gap-2.5 rounded-md border p-3"
+        style={{
+          borderColor: 'var(--color-type-discussion)',
+          background: 'var(--color-type-discussion-bg)',
+        }}
+      >
+        <div className="flex items-baseline gap-2">
+          <span
+            className="font-display text-[13px] font-medium leading-none"
+            style={{ color: 'var(--color-ink-1)' }}
+          >
+            评价维度
+          </span>
+          <span
+            className="text-[11px] leading-none"
+            style={{ color: 'var(--color-type-debate)' }}
+            aria-hidden
+          >
+            ✱
+          </span>
+          <span
+            className="text-[11px] leading-snug"
+            style={{ color: 'var(--color-ink-mute)' }}
+          >
+            最关键 · 课堂据此给学生发言打分 / 写反馈
+          </span>
+        </div>
+        <EvalDimensionsInput
+          value={value.evalDimensions}
+          onChange={v => set('evalDimensions', v as DiscussionAgentConfig['evalDimensions'])}
+          preset={DEFAULT_EVAL_DIMENSIONS.discuss}
+          chipBg="var(--color-type-discussion-bg)"
+          chipFg="var(--color-type-discussion-deep)"
+        />
+      </div>
 
       <Field label="6 个观点支架" hint="标签 + 模板句（含 <空> 占位）">
         <div className="flex flex-col gap-2">

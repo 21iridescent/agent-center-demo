@@ -59,9 +59,27 @@ export function Topbar({ crumb, right }: Props) {
         <div className="ml-auto flex items-center gap-3">{right}</div>
       ) : (
         <div
-          className="ml-auto flex items-center gap-3 text-[15px]"
+          className="ml-auto flex items-center gap-4 text-[15px]"
           style={{ color: 'var(--color-ink-3)' }}
         >
+          {/* "我的记录" 移到顶栏，和账户并列 ——
+              不再是首页 tab；老师在任意页（不只首页）都能直达。 */}
+          <Link
+            href="/records"
+            className="flex h-11 items-center gap-1.5 px-3 text-[14px] transition-colors hover:[color:var(--color-ink-1)]"
+            style={{
+              color: 'var(--color-ink-2)',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            <span aria-hidden style={{ opacity: 0.55 }}>📂</span>
+            <span>我的记录</span>
+          </Link>
+          <span
+            aria-hidden
+            className="h-5 w-px"
+            style={{ background: 'var(--color-paper-rule)' }}
+          />
           <span
             className="font-numeric flex h-11 w-11 items-center justify-center text-[16px] font-semibold"
             style={{

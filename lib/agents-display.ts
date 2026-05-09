@@ -27,6 +27,19 @@ export interface AgentSeed {
   name: string;
   subject: string;
   grade: string;
+  /**
+   * 卡片副描述行 — 一句话告诉老师"这是个什么"：
+   *  - xuewen: persona background 首句（"波兰裔法国物理学家…"）
+   *  - debate: topic（"一次性塑料袋是否应禁用"）
+   *  - discuss: topic（"水的三态变化"）
+   * 卡片走 line-clamp-2 截断，确保不变高
+   */
+  description?: string;
+  /**
+   * 评价维度 chips —— 辩论 / 讨论的"最重要配置"，老师看一眼就知道
+   * 学生会被按哪些维度评分。学问类目前不展示这个。
+   */
+  evalDimensions?: string[];
   /** 人类可读："昨天" / "上周" / "刚刚" —— AgentCard 直接渲染这个 */
   lastUsed: string;
   /** ISO 8601 时戳，供 /agents 页排序 */
@@ -39,6 +52,28 @@ export interface AgentSeed {
 const XUEWEN_BG_LAB = getBackground('xuewen', 'science-lab')?.src;
 const XUEWEN_BG_NATURAL = getBackground('xuewen', 'natural-history')?.src;
 const PLASTIC_THUMB = getTopicThumb('plastic-ocean')?.src;
+
+/**
+ * 评价维度兜底预设 —— 当辩论/讨论 config 没显式写 evalDimensions 时，
+ * 卡片 + 评委 prompt 都退到这里，老师才不会看到一片空白。
+ * （用户可在编辑表单里覆写。）
+ */
+export const DEFAULT_EVAL_DIMENSIONS: Record<'debate' | 'discuss', string[]> = {
+  debate: ['论据充分', '论证逻辑', '立场清晰', '反驳质量', '表达流畅'],
+  discuss: ['观点新颖', '论据合理', '倾听同伴', '提出追问', '总结深化'],
+};
+
+/**
+ * xuewen background → 卡面 description：取首句或前 ~40 字。
+ * persona background 多以"波兰裔法国物理学家与化学家…"这样的人物身份开头，
+ * 一句话最适合做副标。
+ */
+function summarizePersona(bg: string): string {
+  if (!bg) return '';
+  // 优先按句末标点切：。；！  保险起见加 ASCII fallback
+  const m = bg.match(/^[^。；！.!;]{6,80}/);
+  return (m ? m[0] : bg.slice(0, 40)).trim();
+}
 
 /**
  * 首页演示种子卡。seed-* id 与 lib/agent-storage.ts 的 SEED_AGENTS 配对，
@@ -55,6 +90,8 @@ export const INITIAL_AGENTS: AgentSeed[] = [
     name: '水的三态变化',
     subject: '科学',
     grade: '三年级',
+    description: '观察冰、水、水蒸气三种状态，找规律',
+    evalDimensions: ['观察细致', '解释合理', '联系实际', '倾听同伴'],
     lastUsed: '昨天',
     lastUsedAt: '2026-05-08T10:00:00.000Z',
     createdAt: '2026-03-20T00:00:00.000Z',
@@ -69,6 +106,7 @@ export const INITIAL_AGENTS: AgentSeed[] = [
     name: '居里夫人',
     subject: '科学',
     grade: '五年级',
+    description: '波兰裔法国物理学家、化学家，发现镭和钋',
     lastUsed: '昨天',
     lastUsedAt: '2026-05-08T11:00:00.000Z',
     createdAt: '2026-04-15T00:00:00.000Z',
@@ -83,6 +121,7 @@ export const INITIAL_AGENTS: AgentSeed[] = [
     name: '达尔文',
     subject: '科学',
     grade: '六年级',
+    description: '英国博物学家，乘小猎犬号航海五年，写下《物种起源》',
     lastUsed: '上周',
     lastUsedAt: '2026-05-02T10:00:00.000Z',
     createdAt: '2026-04-20T00:00:00.000Z',
@@ -97,6 +136,7 @@ export const INITIAL_AGENTS: AgentSeed[] = [
     name: '机器视觉博士',
     subject: '人工智能',
     grade: '五年级',
+    description: '用比喻给小学生讲机器如何"看图"',
     lastUsed: '3 天前',
     lastUsedAt: '2026-05-06T10:00:00.000Z',
     createdAt: '2026-04-01T00:00:00.000Z',
@@ -109,6 +149,8 @@ export const INITIAL_AGENTS: AgentSeed[] = [
     name: 'AI 该有自己判断吗',
     subject: '人工智能',
     grade: '六年级',
+    description: 'AI 该不该有自己的判断力 · 正方 AI / 反方学生',
+    evalDimensions: ['立场清晰', '论据充分', '反驳到位', '思维深度', '表达流畅'],
     lastUsed: '上周',
     lastUsedAt: '2026-05-02T11:00:00.000Z',
     createdAt: '2026-04-01T00:00:00.000Z',
@@ -122,6 +164,8 @@ export const INITIAL_AGENTS: AgentSeed[] = [
     name: '塑料袋该不该禁用',
     subject: '科学',
     grade: '六年级',
+    description: '一次性塑料袋是否应禁用 · 正方 AI / 反方学生',
+    evalDimensions: ['证据扎实', '论证逻辑', '立场清晰', '反驳质量', '表达流畅'],
     lastUsed: '4 天前',
     lastUsedAt: '2026-05-05T10:00:00.000Z',
     createdAt: '2026-04-22T00:00:00.000Z',
@@ -134,6 +178,8 @@ export const INITIAL_AGENTS: AgentSeed[] = [
     name: 'AI 该不该帮写作业',
     subject: '人工智能',
     grade: '五年级',
+    description: '小学生该不该用 AI 帮忙写作业 · 正方 AI / 反方学生',
+    evalDimensions: ['立场清晰', '论据充分', '反驳到位', '联系生活'],
     lastUsed: '2 天前',
     lastUsedAt: '2026-05-07T10:00:00.000Z',
     createdAt: '2026-04-25T00:00:00.000Z',
@@ -146,6 +192,8 @@ export const INITIAL_AGENTS: AgentSeed[] = [
     name: '磁铁的两极',
     subject: '科学',
     grade: '二年级',
+    description: '探索磁铁两极的吸引与排斥规律',
+    evalDimensions: ['观察细致', '动手探究', '解释清楚', '提出追问'],
     lastUsed: '2 周前',
     lastUsedAt: '2026-04-25T10:00:00.000Z',
     createdAt: '2026-03-25T00:00:00.000Z',
@@ -208,6 +256,9 @@ export function savedToSeed(a: SavedAgent): AgentSeed {
   // 从 config 解析视觉资产：xuewen 看 personaId / personaCustom + bgAsset；debate 看 thumbAsset
   let avatarUrl: string | undefined;
   let bgUrl: string | undefined;
+  let description: string | undefined;
+  let evalDimensions: string[] | undefined;
+
   if (a.kind === 'xuewen') {
     const resolved = getXuewenPersonaResolved({
       personaId: cfg.personaId as string | undefined,
@@ -215,14 +266,29 @@ export function savedToSeed(a: SavedAgent): AgentSeed {
       name,
     });
     avatarUrl = resolved.avatarUrl;
-    // 场景图作衬底（不是人物全身像）—— science-lab / natural-history / classical-academy
     const bg = getBackground('xuewen', cfg.bgAsset as string | undefined);
     bgUrl = bg?.src;
+    // 副标用 background 首句 —— 让老师一眼知道是个什么人物
+    description = summarizePersona((cfg.background as string) ?? '');
   } else if (a.kind === 'debate') {
-    // 只用 topic 封面（plastic-ocean 等），不退到通用 stage-balanced 擂台 ——
-    // 通用底图三张同图刷出来反而显得每个辩论都长一样。
     const thumb = getTopicThumb(cfg.thumbAsset as string | undefined);
     bgUrl = thumb?.src;
+    // 辩论副标 = topic（"一次性塑料袋是否应禁用"）
+    description = (cfg.topic as string) ?? undefined;
+    const dims = cfg.evalDimensions;
+    if (Array.isArray(dims) && dims.length > 0) {
+      evalDimensions = dims.filter((s): s is string => typeof s === 'string').slice(0, 6);
+    } else {
+      evalDimensions = DEFAULT_EVAL_DIMENSIONS.debate;
+    }
+  } else if (a.kind === 'discussion') {
+    description = (cfg.topic as string) ?? undefined;
+    const dims = cfg.evalDimensions;
+    if (Array.isArray(dims) && dims.length > 0) {
+      evalDimensions = dims.filter((s): s is string => typeof s === 'string').slice(0, 6);
+    } else {
+      evalDimensions = DEFAULT_EVAL_DIMENSIONS.discuss;
+    }
   }
 
   return {
@@ -234,6 +300,8 @@ export function savedToSeed(a: SavedAgent): AgentSeed {
     name,
     subject: (cfg.subject as string) ?? '科学',
     grade: (cfg.grade as string) ?? '一年级',
+    description,
+    evalDimensions,
     lastUsed: '刚刚',
     // updatedAt 做"上次使用"代理：edit 也会刷它，是当前最佳近似
     lastUsedAt: a.updatedAt,

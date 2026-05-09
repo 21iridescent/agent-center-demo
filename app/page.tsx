@@ -14,16 +14,17 @@ import type { AppRecord } from '@/lib/types';
 import { type AgentSeed } from '@/lib/agents-display';
 import { useAgents } from '@/lib/use-agents';
 
-// 记录 tab 现在是 1/3 的页面，给的额度比之前混排时多
+// 我的产出 tab 是首页 1/3 的页面，给的额度比之前混排时多
 const HOME_RECORDS_LIMIT = 8;
 
-type HomeTab = 'prep' | 'use' | 'records' | 'outputs';
+// 主分页：备课 / 授课 / 我的产出。"我的记录"已上移到 Topbar，与账户并列；
+// 不再占用主 tab 槽位。老式 #records hash 在下面 apply() 里转 prep 兜住。
+type HomeTab = 'prep' | 'use' | 'outputs';
 
 const TAB_DEFS: { id: HomeTab; num: string; label: string }[] = [
   { id: 'prep', num: '01', label: '备课' },
   { id: 'use', num: '02', label: '授课' },
-  { id: 'records', num: '03', label: '记录' },
-  { id: 'outputs', num: '04', label: '我的产出' },
+  { id: 'outputs', num: '03', label: '我的产出' },
 ];
 
 /**
@@ -256,7 +257,7 @@ function FabPrimary({
       </Link>
     );
   }
-  if (tab === 'records' || tab === 'outputs') {
+  if (tab === 'outputs') {
     return (
       <button
         type="button"
@@ -344,14 +345,13 @@ export default function Home() {
     return [...filtered].sort((a, b) => (a[key] < b[key] ? 1 : -1));
   }, [agents, agentSubject, agentGrade, agentType, agentSort]);
 
-  // 主分页：备课 / 授课 / 记录。url hash 同步，刷新 / 后退保留状态。
+  // 主分页：备课 / 授课 / 我的产出。url hash 同步，刷新 / 后退保留状态。
+  // 老式 #records 已下线，命中时退回 'prep'；老书签不会白屏。
   const [tab, setTab] = useState<HomeTab>('prep');
   useEffect(() => {
     const apply = () => {
       const h = window.location.hash.slice(1);
-      if (h === 'prep' || h === 'use' || h === 'records' || h === 'outputs') {
-        setTab(h);
-      }
+      if (h === 'prep' || h === 'use' || h === 'outputs') setTab(h);
     };
     apply();
     window.addEventListener('hashchange', apply);
@@ -385,13 +385,9 @@ export default function Home() {
     }
   }
 
-  // 首页"记录" + "我的产出"两个 tab 共用一次拉取：
-  //   recents     = 学生×AI 对话类（dialogue/debate/discussion）
-  //   prepRecents = 备课产出类（type === 'prep'）
+  // 我的产出 tab：拉取 type==='prep' 的备课产出。学生 × AI 对话类记录已下移至
+  // Topbar "我的记录" → /records，首页不再展示，少一次过滤。
   // FALLBACK 兜底避免首屏闪空；被在 /records 删掉的 FALLBACK demo 同步隐藏。
-  const [recents, setRecents] = useState<AppRecord[]>(
-    FALLBACK_RECORDS.filter(r => r.type !== 'prep').slice(0, HOME_RECORDS_LIMIT),
-  );
   const [prepRecents, setPrepRecents] = useState<AppRecord[]>(
     FALLBACK_RECORDS.filter(r => r.type === 'prep').slice(0, HOME_RECORDS_LIMIT),
   );
@@ -412,7 +408,6 @@ export default function Home() {
             r => !remoteIds.has(r.id) && !hiddenFallback.has(r.id),
           ),
         ];
-        setRecents(merged.filter(r => r.type !== 'prep').slice(0, HOME_RECORDS_LIMIT));
         setPrepRecents(merged.filter(r => r.type === 'prep').slice(0, HOME_RECORDS_LIMIT));
       })
       .catch(() => { /* 留 FALLBACK 兜底 */ });
@@ -583,38 +578,6 @@ export default function Home() {
                 </Link>
               )}
             </div>
-          </section>
-        )}
-
-        {/* 记录 tab — 学生 × AI 的对话记录（不含 prep 产出；那一类走顶栏"我的产出"） */}
-        {tab === 'records' && (
-          <section>
-            <SectionActions
-              sub="回看学生与 AI 的对话记录"
-              right={
-                <Link
-                  href="/records"
-                  className="text-[13px] transition-colors hover:underline"
-                  style={{ color: 'var(--color-text-3)' }}
-                >
-                  全部记录 →
-                </Link>
-              }
-            />
-            {recents.length === 0 ? (
-              <div
-                className="rounded-xl border bg-white p-6 text-center text-[13px]"
-                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-4)' }}
-              >
-                暂无记录
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {recents.map(r => (
-                  <RecordCard key={r.id} record={r} />
-                ))}
-              </div>
-            )}
           </section>
         )}
 

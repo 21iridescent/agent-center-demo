@@ -7,6 +7,7 @@ import {
   DebateHistorySchema,
   type DebateAgentConfig,
 } from '@/lib/agent-schemas';
+import { DEFAULT_EVAL_DIMENSIONS } from '@/lib/agents-display';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60; // reasoning 模型推理慢；textStreamResponse 会等 reasoning 走完才出 text
@@ -89,6 +90,14 @@ export async function POST(req: Request) {
   const grade = baseCfg.grade;
   const styleDesc = JUDGE_STYLE[judgeTemplate];
 
+  // 评价维度：用户配的 → fallback 默认 5 项，保证 prompt 永远有具体维度可点评
+  const dims =
+    baseCfg.evalDimensions && baseCfg.evalDimensions.length > 0
+      ? baseCfg.evalDimensions
+      : DEFAULT_EVAL_DIMENSIONS.debate;
+  const dimList = dims.map(d => `「${d}」`).join('、');
+  const dimBreakdown = dims.map(d => `- ${d}：1 句话评价正方 + 1 句话评价反方`).join('\n');
+
   // 把 history 拼成可读的辩论实录
   const transcript = history
     .map(h => `第 ${h.round} 轮 · ${h.side === 'pro' ? '正方' : '反方'}：${h.text}`)
@@ -97,28 +106,25 @@ export async function POST(req: Request) {
   const system = `你是一位 AI 评委，刚听完关于「${topic}」的小学${grade}辩论。
 评委风格：${styleDesc}
 
+本场评价维度（必须严格按这些维度逐项点评）：${dimList}
+
 请按以下结构输出点评（不要 markdown 标题）：
 
 【双方论点小结】
 （≤ 120 字，把正反方各自的核心立场和最有力的论据各 1-2 条凝练出来）
 
-【亮点】
-正方：1-2 条
-反方：1-2 条
-
-【可改进】
-正方：1-2 条
-反方：1-2 条
+【逐项维度点评】
+${dimBreakdown}
 
 【综合点评】
-（≤ 80 字，给出本场辩论的整体评价）
+（≤ 80 字，给出本场辩论的整体评价；指出双方各自最大亮点 + 最需改进点）
 
 在你输出的最末尾，单独一行输出综合评分（0-10 分小数，保留 1 位）：
 <score>X.X</score>
 
 要求：
 - 措辞符合${grade}小学生能听懂的语气
-- 不替任何一方"赢家"站台；评分基于论证质量、证据扎实程度、回应深度
+- 不替任何一方"赢家"站台；综合评分要把上面所有维度加权考虑
 - 必须以 <score>X.X</score> 结尾，否则前端无法提取分数`;
 
   const result = streamText({
