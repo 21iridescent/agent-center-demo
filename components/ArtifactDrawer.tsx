@@ -3,13 +3,14 @@
 import { Fragment, useMemo, useState } from 'react';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { exportMarkdownAsDocx } from '@/lib/word-export';
-import { findEditPosition } from '@/lib/canvas-edit';
+import { findEditPosition, type AnchorType } from '@/lib/canvas-edit';
 
 export interface PendingEdit {
   callId: string;
   find: string;
   replace: string;
   reason: string;
+  anchorType: AnchorType;
 }
 
 interface Props {
@@ -242,10 +243,10 @@ function buildSegments(
   }
 
   // 走 fuzzy 定位 — exact 失败时归一化空白后再匹配，避免 AI 写出来的 find
-  // 多/少一个空格就被 orphan 掉
+  // 多/少一个空格就被 orphan 掉。section 模式按 heading 锚定整节。
   const positioned = pendingEdits
     .map(edit => {
-      const pos = findEditPosition(source, edit.find);
+      const pos = findEditPosition(source, edit.find, edit.anchorType);
       return {
         edit,
         start: pos?.start ?? -1,
@@ -324,6 +325,19 @@ function PendingEditCard({
         >
           AI 提议改稿
         </span>
+        {edit.anchorType === 'section' && (
+          <span
+            className="font-numeric shrink-0 px-1.5 py-[1px] text-[10px] uppercase tracking-[0.14em]"
+            style={{
+              background: 'var(--color-type-dialogue-bg)',
+              color: 'var(--color-type-dialogue-deep)',
+              borderRadius: 'var(--radius-xs)',
+            }}
+            title="按 heading 锚定整节替换：find 是 heading 行，改动范围包含该节全部内容"
+          >
+            整节
+          </span>
+        )}
         {edit.reason && (
           <span
             className="text-[11.5px] truncate"
@@ -347,7 +361,7 @@ function PendingEditCard({
             className="font-numeric text-[10px] uppercase tracking-[0.14em] mr-2"
             style={{ color: 'var(--color-type-debate-deep)' }}
           >
-            原文
+            {edit.anchorType === 'section' ? 'heading 锚' : '原文'}
           </span>
           <span
             style={{
@@ -358,6 +372,14 @@ function PendingEditCard({
           >
             {edit.find}
           </span>
+          {edit.anchorType === 'section' && (
+            <div
+              className="mt-1 text-[10.5px]"
+              style={{ color: 'var(--color-ink-mute)' }}
+            >
+              ↳ 替换范围 = 该 heading 到下一同级 heading 之间的整节内容
+            </div>
+          )}
         </div>
         <div
           className="border-l-2 px-2 py-1.5"

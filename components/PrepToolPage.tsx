@@ -14,7 +14,7 @@ import { useToast } from './Toast';
 import type { PrepKind, Citation, ToolTraceEntry } from '@/lib/types';
 import { PREP_KIND_TITLE_SUFFIX } from '@/lib/types';
 import { exportMarkdownAsDocx } from '@/lib/word-export';
-import { applyEdit } from '@/lib/canvas-edit';
+import { applyEdit, type AnchorType } from '@/lib/canvas-edit';
 
 interface Props {
   toolName: string;
@@ -212,6 +212,8 @@ export interface PendingEdit {
   find: string;
   replace: string;
   reason: string;
+  /** 'exact'（默认）= find 是精确文本片段；'section' = find 是 heading，替换整节 */
+  anchorType: AnchorType;
 }
 
 /** 抽出所有 input 已就绪的 editCanvas 调用 —— 候选 pending 改动 */
@@ -227,24 +229,27 @@ function extractEditCalls(messages: UIMessage[]): PendingEdit[] {
       const callId = p.toolCallId;
       if (!callId) continue;
       const inp = p.input as
-        | { find?: unknown; replace?: unknown; reason?: unknown }
+        | { find?: unknown; replace?: unknown; reason?: unknown; anchorType?: unknown }
         | undefined;
       if (typeof inp?.find !== 'string' || typeof inp.replace !== 'string') continue;
       if (!inp.find) continue;
+      const anchorType: AnchorType =
+        inp.anchorType === 'section' ? 'section' : 'exact';
       out.push({
         callId,
         find: inp.find,
         replace: inp.replace,
         reason: typeof inp.reason === 'string' ? inp.reason : '',
+        anchorType,
       });
     }
   }
   return out;
 }
 
-/** 把一条 edit 应用到 markdown — 走 lib/canvas-edit 的 fuzzy 定位（吃空白差异） */
+/** 把一条 edit 应用到 markdown — 走 lib/canvas-edit；section 模式按 heading 锚定整节 */
 function applyOneEdit(md: string, e: PendingEdit): { md: string; matched: boolean } {
-  const r = applyEdit(md, e.find, e.replace);
+  const r = applyEdit(md, e.find, e.replace, e.anchorType);
   return { md: r.md, matched: r.matched };
 }
 

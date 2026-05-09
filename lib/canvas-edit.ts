@@ -24,14 +24,28 @@ export interface MatchPosition {
   fuzzy: boolean;
 }
 
+/** editCanvas 工具的两种锚定方式 —— 与 lib/tools/canvas.ts 的 inputSchema 同步 */
+export type AnchorType = 'exact' | 'section';
+
 /**
  * 在 source 里定位一段 find（可能模糊）。找不到返 null。
  * 调用方可以：source.slice(0, pos.start) + replace + source.slice(pos.end)
+ *
+ * - 'exact'   : find 必须是 source 里的精确（或归一化后等价）子串
+ * - 'section' : find 是一行 heading（如 "## 一、课前导入"），
+ *               匹配 [该 heading → 下一同级或更高级 heading) 的整节区间。
  */
-export function findEditPosition(source: string, find: string): MatchPosition | null {
+export function findEditPosition(
+  source: string,
+  find: string,
+  anchorType: AnchorType = 'exact',
+): MatchPosition | null {
   if (!find) return null;
+  if (anchorType === 'section') {
+    return findSectionPosition(source, find);
+  }
 
-  // 1. 精确匹配
+  // exact 模式 —— 1. 精确匹配
   const exact = source.indexOf(find);
   if (exact >= 0) {
     return { start: exact, end: exact + find.length, fuzzy: false };
@@ -53,14 +67,76 @@ export function findEditPosition(source: string, find: string): MatchPosition | 
 }
 
 /**
+ * Section 模式定位：find 是一行 heading（如 "## 一、课前导入（5 分钟）"），
+ * 在 source 里找到该 heading 所在行 → 区间到下一个同级或更高级 heading 为止
+ * （或文档末尾）。
+ *
+ * AI 调 editCanvas + anchorType='section' 时，只要 verbatim 抄 heading 行，
+ * 整节正文怎么变都能定位 —— 比抄整段几百字鲁棒得多。
+ *
+ * 找不到 heading 行返 null。
+ */
+function findSectionPosition(source: string, headingFind: string): MatchPosition | null {
+  // find 里第一个非空白行假定是 heading
+  const headingLine = headingFind.split('\n').map(l => l.trim()).find(Boolean) ?? '';
+  const m = headingLine.match(/^(#{1,6})\s+/);
+  if (!m) return null;
+  const level = m[1].length;
+
+  // 在 source 里找这行 heading（先精确，后归一化空白）
+  const lineStart = findLineStart(source, headingLine);
+  if (lineStart < 0) return null;
+
+  // 区间结束：从该 heading 行末之后开始，找下一个 #{1..level} 开头的行
+  const headingLineEnd = source.indexOf('\n', lineStart);
+  const searchFrom = headingLineEnd < 0 ? source.length : headingLineEnd + 1;
+  const nextHeading = findNextHeadingOfLevel(source, searchFrom, level);
+  const end = nextHeading < 0 ? source.length : nextHeading;
+  return { start: lineStart, end, fuzzy: false };
+}
+
+/** 在 source 里查找一整行 = headingLine 的起始位置（先精确，后归一化空白）。找不到 -1。 */
+function findLineStart(source: string, headingLine: string): number {
+  // 精确：行首匹配
+  let cursor = 0;
+  while (cursor < source.length) {
+    const lineEnd = source.indexOf('\n', cursor);
+    const line = source.slice(cursor, lineEnd < 0 ? source.length : lineEnd);
+    if (line === headingLine || line.trim() === headingLine.trim()) {
+      return cursor;
+    }
+    if (lineEnd < 0) break;
+    cursor = lineEnd + 1;
+  }
+  return -1;
+}
+
+/** 从 fromIdx 起找下一个 1..maxLevel 级 heading 的行起始位置；没有则 -1。 */
+function findNextHeadingOfLevel(source: string, fromIdx: number, maxLevel: number): number {
+  let cursor = fromIdx;
+  while (cursor < source.length) {
+    const lineEnd = source.indexOf('\n', cursor);
+    const line = source.slice(cursor, lineEnd < 0 ? source.length : lineEnd);
+    const m = line.match(/^(#{1,6})\s+/);
+    if (m && m[1].length <= maxLevel) {
+      return cursor;
+    }
+    if (lineEnd < 0) break;
+    cursor = lineEnd + 1;
+  }
+  return -1;
+}
+
+/**
  * 应用一条 find/replace。找不到返 { matched: false } + 原文不动。
  */
 export function applyEdit(
   source: string,
   find: string,
   replace: string,
+  anchorType: AnchorType = 'exact',
 ): { md: string; matched: boolean; fuzzy: boolean } {
-  const pos = findEditPosition(source, find);
+  const pos = findEditPosition(source, find, anchorType);
   if (!pos) return { md: source, matched: false, fuzzy: false };
   return {
     md: source.slice(0, pos.start) + replace + source.slice(pos.end),
