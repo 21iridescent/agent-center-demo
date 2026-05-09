@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import { useRouter } from 'next/navigation';
@@ -39,6 +39,17 @@ export function XuewenUsePage({ agent }: Props) {
   const [linkedCourseId, setLinkedCourseId] = useState<string | null>(
     (agent.config as { linkedCourseId?: string }).linkedCourseId ?? null,
   );
+
+  // unmount 防呆：保存路径里的 setTimeout(router.push) 和 finally setSaving 都要在
+  // 老师中途切走时不再触发；fetch await 之后的 setState 同步走 aliveRef
+  const aliveRef = useRef(true);
+  const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      aliveRef.current = false;
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
+    };
+  }, []);
 
   const cfg = agent.config as Partial<XuewenAgentConfig>;
   const name = cfg.name ?? '智能体';
@@ -131,17 +142,21 @@ export function XuewenUsePage({ agent }: Props) {
           linkedCourseId: linkedCourseId ?? undefined,
         }),
       });
+      if (!aliveRef.current) return; // 组件已卸载，吞所有后续 setState / nav
       if (!res.ok) {
         toast('保存失败：服务暂不可用');
         return;
       }
       toast('已保存对话到我的记录');
-      setTimeout(() => router.push('/records'), 700);
+      navTimerRef.current = setTimeout(() => {
+        if (!aliveRef.current) return;
+        router.push('/records');
+      }, 700);
     } catch (e) {
       console.error(e);
-      toast('保存失败：网络错误');
+      if (aliveRef.current) toast('保存失败：网络错误');
     } finally {
-      setSaving(false);
+      if (aliveRef.current) setSaving(false);
     }
   }
 

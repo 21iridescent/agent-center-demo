@@ -167,6 +167,17 @@ export function DebateUsePage({ agent }: Props) {
   const [lastFailedTurn, setLastFailedTurn] = useState<number | null>(null);
   const speechPopupRef = useRef<HTMLDivElement>(null);
 
+  // unmount 防呆：advanceTurn / summonJudge / endAndSave 都有 await 后的 setState；
+  // 老师中途切走（比如点 Topbar 跳别处）就要吞所有 setState 和 setTimeout
+  const aliveRef = useRef(true);
+  const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      aliveRef.current = false;
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
+    };
+  }, []);
+
   // 流式发言时弹窗内容自动贴底，新文字总在视口
   useEffect(() => {
     if (phase === 'ai-thinking' && speechPopupRef.current) {
@@ -261,8 +272,11 @@ export function DebateUsePage({ agent }: Props) {
             currentRound,
             overrides: buildOverrides(),
           },
-          chunk => setAiPartial(prev => prev + chunk),
+          chunk => {
+            if (aliveRef.current) setAiPartial(prev => prev + chunk);
+          },
         );
+        if (!aliveRef.current) return; // 流式期间组件卸载，吞一切
         setHistory(prev => [
           ...prev,
           { round: currentRound, side: currentSide, text: full.trim() },
@@ -272,6 +286,7 @@ export function DebateUsePage({ agent }: Props) {
         setPhase('idle');
       } catch (e) {
         console.error(e);
+        if (!aliveRef.current) return;
         toast('AI 发言失败，请重试');
         setLastFailedTurn(currentTurn); // 标记失败，禁用本轮自动推进，等待手动重试
         setPhase('idle');
@@ -326,13 +341,17 @@ export function DebateUsePage({ agent }: Props) {
       const full = await streamFetch(
         '/api/debate-judge',
         { agentId: agent.id, history, overrides: buildOverrides() },
-        chunk => setJudgeText(prev => prev + chunk),
+        chunk => {
+          if (aliveRef.current) setJudgeText(prev => prev + chunk);
+        },
       );
+      if (!aliveRef.current) return;
       const m = full.match(/<score>([\d.]+)<\/score>/);
       if (m && m[1]) setScore(parseFloat(m[1]));
       setPhase('judged');
     } catch (e) {
       console.error(e);
+      if (!aliveRef.current) return;
       toast('评委召唤失败，请重试');
       setPhase('idle');
     }
@@ -385,17 +404,21 @@ export function DebateUsePage({ agent }: Props) {
           linkedCourseId: linkedCourseId ?? undefined,
         }),
       });
+      if (!aliveRef.current) return;
       if (!res.ok) {
         toast('保存失败：服务暂不可用');
         return;
       }
       toast('已保存辩论到我的记录');
-      setTimeout(() => router.push('/records'), 700);
+      navTimerRef.current = setTimeout(() => {
+        if (!aliveRef.current) return;
+        router.push('/records');
+      }, 700);
     } catch (e) {
       console.error(e);
-      toast('保存失败：网络错误');
+      if (aliveRef.current) toast('保存失败：网络错误');
     } finally {
-      setSaving(false);
+      if (aliveRef.current) setSaving(false);
     }
   }
 
