@@ -235,13 +235,13 @@ export default function Home() {
               </button>
             ) : (
               <>
-                <button
-                  onClick={() => toast('暂未开放')}
+                <Link
+                  href="/agents"
                   className="text-[13px] transition-colors hover:underline"
                   style={{ color: 'var(--color-ink-3)' }}
                 >
                   查看全部 →
-                </button>
+                </Link>
                 <button
                   onClick={() => setManageMode(true)}
                   className="h-7 rounded-full border bg-white px-4 text-[12px] transition-colors hover:[border-color:var(--color-type-dialogue)] hover:[color:var(--color-type-dialogue)]"
