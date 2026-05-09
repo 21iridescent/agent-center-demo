@@ -26,7 +26,8 @@ interface Props {
  *
  * - 左 240px RoleCard（avatar/role/背景/知识库/音色）
  * - 右 useChat 流式对话区（ChatArea + ChatInput）
- * - systemPrompt 客户端拼：含 background + 年级约束 + 单人物口吻
+ * - systemPrompt 由服务端 /api/xuewen-chat 从 agentId 派生（不再客户端拼，
+ *   挡住浏览器 console 注入 / 撑 token）
  * - 顶部"结束并保存"→ POST /api/records (DialogueRecord) → 跳 /records
  *
  * 背景图作淡水印 — 不全屏铺，避免污染整站
@@ -52,18 +53,6 @@ export function XuewenUsePage({ agent }: Props) {
   });
   const bg = getBackground('xuewen', cfg.bgAsset);
 
-  const systemPrompt = useMemo(() => {
-    const personaLabel = persona.label ?? name;
-    return `你是${name}（原型：${personaLabel}），${background}
-
-对话原则：
-- 服务对象是${grade}小学生，用词浅显有比喻，避免学术术语
-- 始终保持人物口吻和性格，第一人称
-- 单轮回答 80-200 字，避免长篇大论
-- 不偏离${subject}学科范围
-- 当学生问到你时代之后的事或非本学科话题，礼貌引回主线`;
-  }, [name, background, persona.label, grade, subject]);
-
   const greeting = cfg.coldStart?.trim() || `你好！我是${name}。你想跟我聊点什么？`;
 
   const initialMessages: UIMessage[] = useMemo(
@@ -80,7 +69,8 @@ export function XuewenUsePage({ agent }: Props) {
   const { messages, sendMessage, status } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/xuewen-chat',
-      body: { systemPrompt },
+      // 只送 agentId；服务端 getAgent + Zod 校验 + 拼 system prompt
+      body: { agentId: agent.id },
     }),
     messages: initialMessages,
   });
