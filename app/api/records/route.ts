@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { listRecords, createRecord, listHiddenFallbackRecordIds } from '@/lib/kv';
-import type { AppRecord } from '@/lib/types';
+import { AppRecordWriteSchema } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
@@ -21,17 +21,26 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  let body: Omit<AppRecord, 'id' | 'createdAt'>;
+  let raw: unknown;
   try {
-    body = await req.json();
+    raw = await req.json();
   } catch {
     return NextResponse.json({ error: 'invalid json' }, { status: 400 });
   }
-  if (!body.type || !body.title) {
-    return NextResponse.json({ error: 'type and title required' }, { status: 400 });
+  // KV 持久化前必须走 Zod —— 防止任意 payload 落库 / 注入 / 撑爆 storage
+  const parsed = AppRecordWriteSchema.safeParse(raw);
+  if (!parsed.success) {
+    const detail = parsed.error.issues
+      .slice(0, 3)
+      .map(i => `${i.path.join('.') || '(root)'}: ${i.message}`)
+      .join('; ');
+    return NextResponse.json(
+      { error: 'invalid_record', detail },
+      { status: 400 },
+    );
   }
   try {
-    const record = await createRecord(body);
+    const record = await createRecord(parsed.data);
     return NextResponse.json({ record });
   } catch (e) {
     console.error('create record failed', e);

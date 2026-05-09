@@ -1,4 +1,5 @@
 import type { UIMessage } from 'ai';
+import { z } from 'zod';
 
 export type PrepKind = 'outline' | 'lesson' | 'exercise' | 'activity' | 'project';
 
@@ -118,3 +119,96 @@ export const PREP_KIND_TO_PATH: { [K in PrepKind]: string } = {
   activity: '/prep/activity',
   project: '/prep/project',
 };
+
+/* ═══════════════════════════════════════════════════════════════
+   POST /api/records 写路径可信化校验 schema
+   —— 之前 body 是 Omit<AppRecord, 'id'|'createdAt'>，无 Zod 闸，
+      客户端能塞兆字节 transcript / 注脚本片段进 summary / content。
+      下面按 RecordType 走 discriminated union 做有界校验。
+   ═══════════════════════════════════════════════════════════════ */
+
+const PREP_KIND = z.enum(['outline', 'lesson', 'exercise', 'activity', 'project']);
+
+// UIMessage 来自 'ai' 包内部结构复杂，整 schema 写不动；用 unknown + 数组上限挡住主要攻击面
+// 单条消息大小由 ai SDK 自带 max-length 约束，再挡住整体条数即可
+const BoundedMessages = z.array(z.unknown()).max(200);
+
+const CitationSchema = z.object({
+  url: z.string().url().max(500),
+  title: z.string().max(300),
+  snippet: z.string().max(500).optional(),
+  publishedDate: z.string().max(50).optional(),
+});
+
+const ToolTraceSchema = z.object({
+  name: z.string().max(64),
+  input: z.unknown(),
+  ok: z.boolean(),
+  ts: z.string().max(40),
+});
+
+const BaseFields = {
+  title: z.string().min(1).max(200),
+  summary: z.string().max(500),
+  time: z.string().max(80).optional(),
+  agentName: z.string().max(80).optional(),
+  meta: z.record(z.string(), z.string().optional()).optional(),
+  avatar: z.string().max(8).optional(),
+  avatarUrl: z.string().max(2000).optional(), // data: URL 头像可能比较长
+  linkedCourseId: z.string().max(80).optional(),
+};
+
+export const PrepRecordWriteSchema = z.object({
+  type: z.literal('prep'),
+  ...BaseFields,
+  kind: PREP_KIND,
+  content: z.string().max(50000).optional(), // 长 markdown，留 50KB 上限
+  citations: z.array(CitationSchema).max(50).optional(),
+  toolTrace: z.array(ToolTraceSchema).max(100).optional(),
+});
+
+export const DialogueRecordWriteSchema = z.object({
+  type: z.literal('dialogue'),
+  ...BaseFields,
+  turns: z.number().int().min(0).max(500).optional(),
+  transcript: z
+    .object({ messages: BoundedMessages })
+    .optional(),
+});
+
+export const DebateRecordWriteSchema = z.object({
+  type: z.literal('debate'),
+  ...BaseFields,
+  pro: z.number().min(0).max(10).optional(),
+  con: z.number().min(0).max(10).optional(),
+  score: z.number().min(0).max(10).optional(),
+  transcript: z
+    .object({
+      history: z.array(
+        z.object({
+          round: z.number().int().min(1).max(10),
+          side: z.enum(['pro', 'con']),
+          text: z.string().min(1).max(2000),
+        }),
+      ).max(40),
+      judgeText: z.string().max(8000),
+      score: z.number().min(0).max(10).optional(),
+    })
+    .optional(),
+});
+
+export const DiscussionRecordWriteSchema = z.object({
+  type: z.literal('discussion'),
+  ...BaseFields,
+  speeches: z.number().int().min(0).max(500).optional(),
+  scaffolds: z.number().int().min(0).max(20).optional(),
+});
+
+export const AppRecordWriteSchema = z.discriminatedUnion('type', [
+  PrepRecordWriteSchema,
+  DialogueRecordWriteSchema,
+  DebateRecordWriteSchema,
+  DiscussionRecordWriteSchema,
+]);
+
+export type AppRecordWriteInput = z.infer<typeof AppRecordWriteSchema>;
